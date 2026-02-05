@@ -83,29 +83,50 @@ export default function AiChartBuilder() {
     }, []);
 
     const generateSqlFromAi = async () => {
-        if (!aiPrompt.trim()) {
-            setError('Vennligst skriv inn hva du vil at KI skal lage');
-            return;
-        }
-
+        const promptToUse = aiPrompt.trim() || 'Vis meg sidevisninger per dag for siste 30 dager';
         setGeneratingAI(true);
-        setError(null);
 
         try {
-            // TODO: Implement actual AI API call
-            // This is a placeholder for now
-            console.log('AI Prompt:', aiPrompt);
+            const response = await fetch('http://localhost:8004/api/sql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    query: promptToUse,
+                    model: 'qwen2.5-coder:7b'
+                })
+            });
+
+            const data = await response.json();
             
-            // Simulated delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Check if response is in data.sql (wrapped JSON string)
+            let sqlResponse;
+            if (data?.sql) {
+                try {
+                    sqlResponse = typeof data.sql === 'string' ? JSON.parse(data.sql) : data.sql;
+                } catch {
+                    sqlResponse = data;
+                }
+            } else {
+                sqlResponse = data;
+            }
             
-            // Placeholder: Just generate a simple example query for now
-            const exampleSql = `-- AI Generated SQL based on: "${aiPrompt}"\nSELECT \n  website_id,\n  name\nFROM \n  \`fagtorsdag-prod-81a6.umami_student.public_website\`\nLIMIT 100;`;
-            
-            setQuery(exampleSql);
-            
+            if (sqlResponse?.response) {
+                // Remove markdown code blocks if present
+                let cleanedSql = sqlResponse.response;
+                if (cleanedSql.includes('```')) {
+                    cleanedSql = cleanedSql
+                        .replace(/```sql\n/g, '')
+                        .replace(/```sql/g, '')
+                        .replace(/```\n/g, '')
+                        .replace(/```/g, '');
+                }
+                cleanedSql = cleanedSql.trim();
+                setQuery(cleanedSql);
+            } else {
+                setQuery('-- API-svar mottatt men ingen SQL-respons funnet\n-- Debug:\n' + JSON.stringify(data, null, 2));
+            }
         } catch (err) {
-            setError('Kunne ikke generere SQL fra KI');
+            setQuery(`-- Feil: Kunne ikke koble til AI-serveren\n-- Sjekk at serveren kjører på http://localhost:8004\n\n${defaultQuery}`);
         } finally {
             setGeneratingAI(false);
         }
