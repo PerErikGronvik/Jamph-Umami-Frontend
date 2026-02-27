@@ -152,6 +152,18 @@ function Home() {
                         >
                             Gå til KI byggeren
                         </Link>
+                        <Link
+                            href="/prototype2"
+                            className="primary-button"
+                        >
+                            Prototype 2
+                        </Link>
+                        <Link
+                            href="/prototype3"
+                            className="primary-button"
+                        >
+                            Prototype 3
+                        </Link>
                     </div>
                 </div>
             </Page.Block>

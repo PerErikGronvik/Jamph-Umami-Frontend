@@ -1,4 +1,4 @@
-import { Search, Alert, BodyShort, Link, ReadMore, List, Skeleton } from "@navikt/ds-react";
+import { Search, Alert } from "@navikt/ds-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,16 +13,19 @@ interface Website {
 
 interface UrlSearchFormProps {
     children?: React.ReactNode;
+    targetPath?: string;
+    defaultValue?: string;
 }
 
-function UrlSearchForm({ children }: UrlSearchFormProps) {
+function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '' }: UrlSearchFormProps) {
     const navigate = useNavigate();
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
-    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState<string>(defaultValue);
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
     const [hasLoadedData, setHasLoadedData] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [searchError, setSearchError] = useState<string | null>(null);
+    const [pathOperator, setPathOperator] = useState<'equals' | 'starts-with'>('equals');
 
     const normalizeDomain = (domain: string) => {
         if (domain === "www.nav.no") return domain;
@@ -79,16 +82,6 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
         }
     };
 
-    const loadWebsitesData = () => {
-        fetchWebsites().catch(() => { });
-    };
-
-    const handleReadMoreToggle = (open: boolean) => {
-        if (open && !hasLoadedData) {
-            loadWebsitesData();
-        }
-    };
-
     const handleSearchChange = (value: string) => {
         setSearchQuery(value);
         setAlertVisible(false);
@@ -131,9 +124,7 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             );
 
             if (matchedWebsite) {
-                // Navigate to dashboard
-                // Pass domain/path info if useful
-                navigate(`/dashboard?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&name=${encodeURIComponent(matchedWebsite.name)}&path=${encodeURIComponent(urlObj.pathname)}`);
+                navigate(`${targetPath}?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&name=${encodeURIComponent(matchedWebsite.name)}&path=${encodeURIComponent(urlObj.pathname)}&pathOperator=${pathOperator}`);
             } else {
                 setAlertVisible(true);
             }
@@ -157,31 +148,21 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                         onChange={handleSearchChange}
                         onClear={() => setSearchQuery("")}
                     />
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-sm text-gray-600">URL-sti</span>
+                        <select
+                            className="text-sm bg-white border border-gray-300 rounded text-[#0067c5] font-medium cursor-pointer focus:outline-none py-1 px-2"
+                            value={pathOperator}
+                            onChange={(e) => setPathOperator(e.target.value as 'equals' | 'starts-with')}
+                        >
+                            <option value="equals">er lik</option>
+                            <option value="starts-with">starter med</option>
+                        </select>
+                        <span className="text-sm text-gray-500">den innlimte URL-stien</span>
+                    </div>
                     {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
                 </div>
                 {children}
-                <ReadMore size="small" style={{ marginTop: "24px" }} header="Hvilke nettsider / apper støttes?" onOpenChange={handleReadMoreToggle}>
-                    {isLoading ? (
-                        <List as="ul">
-                            {[...Array(3)].map((_, index) => (
-                                <List.Item key={`skeleton-${index}`}>
-                                    <Skeleton variant="text" width="60%" />
-                                </List.Item>
-                            ))}
-                        </List>
-                    ) : (
-                        <List as="ul">
-                            {filteredData && filteredData.map(item => (
-                                <List.Item key={item.id}>
-                                    {item.domain}
-                                </List.Item>
-                            ))}
-                        </List>
-                    )}
-                    <BodyShort className="mt-4 mb-2">
-                        Savner du en nettside eller app? <Link href="/komigang">Følg kom-i-gang-guiden!</Link>
-                    </BodyShort>
-                </ReadMore>
             </form>
         </div>
     );

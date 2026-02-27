@@ -12,6 +12,9 @@ import MetabaseGuide from "./pages/articles/MetabaseGuide.tsx";
 
 import SqlEditor from "./pages/analysis/SqlEditor.tsx";
 import AiChartBuilder from "./pages/analysis/AiChartBuilder.tsx";
+import Prototype2 from "./pages/analysis/Prototype2.tsx";
+import Prototype3 from "./pages/analysis/Prototype3.tsx";
+import AiBygger from "./pages/analysis/AiBygger.tsx";
 import Grafdeling from "./pages/analysis/Grafdeling.tsx";
 import UserJourney from "./pages/analysis/UserJourney.tsx";
 import Funnel from "./pages/analysis/Funnel.tsx";
@@ -43,6 +46,9 @@ const routes = [
     { path: "/taksonomi", component: <Taksonomi /> },
     { path: "/grafbygger", component: <Charts /> },
     { path: "/ai-builder", component: <AiChartBuilder /> },
+    { path: "/prototype2", component: <Prototype2 /> },
+    { path: "/prototype3", component: <Prototype3 /> },
+    { path: "/ai-bygger", component: <AiBygger /> },
     { path: "/metabase", component: <MetabaseGuide /> },
 
     { path: "/sql", component: <SqlEditor /> },
