@@ -456,7 +456,15 @@ const Prototype3 = () => {
     const widgets = widgetOrder
         .map(id => { const cw = customWidgetMap.get(id); return cw ? { id, customWidget: cw, colSpan: cw.size?.cols ?? 1, rowSpan: cw.size?.rows ?? 1 } : null; })
         .filter((w): w is NonNullable<typeof w> => w !== null);
-    const guideRows = Math.max(Math.ceil(widgets.length / 2), 1);
+    // Simulate 2-column grid auto-placement to get the actual row count,
+    // accounting for widgets that span multiple columns (e.g. colSpan: 2).
+    let _col = 0, _row = 0;
+    for (const w of widgets) {
+        const cs = Math.min(w.colSpan ?? 1, 2);
+        if (_col + cs > 2) { _row++; _col = 0; }
+        _col += cs;
+    }
+    const guideRows = Math.max(_row + 1, 1);
     const guideCells = guideRows * 2;
 
     const handleDrop = (targetId: string) => {
