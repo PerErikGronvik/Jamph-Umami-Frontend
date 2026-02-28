@@ -648,26 +648,14 @@ const ResultsPanel = ({
                   {(() => {
                     const chartData = prepareBarChartData();
                     console.log('Bar Chart Data:', chartData);
-                    // Check if too many items
                     let displayData: IVerticalBarChartDataPoint[] = [];
-                    let limitMessage = null;
 
                     if (chartData && Array.isArray(chartData.data)) {
                       if (chartData.data.length > 12) {
                         const top11 = chartData.data.slice(0, 11);
                         const others = chartData.data.slice(11);
                         const otherSum = others.reduce((sum, item) => sum + (item.y as number), 0);
-
-                        displayData = [
-                          ...top11,
-                          { x: 'Andre', y: otherSum }
-                        ];
-
-                        limitMessage = (
-                          <Alert variant="info" className="mb-4">
-                            Viser topp 11 kategorier, pluss "Andre" som samler de resterende {others.length} kategoriene.
-                          </Alert>
-                        );
+                        displayData = [...top11, { x: 'Andre', y: otherSum }];
                       } else {
                         displayData = chartData.data;
                       }
@@ -694,7 +682,6 @@ const ResultsPanel = ({
                     }
                     return (
                       <div className="w-full">
-                        {limitMessage}
                         <div className="overflow-y-auto max-h-[500px]" style={{ overflow: 'visible' }}>
                           <style>{`
                             .bar-chart-hide-xaxis .ms-Chart-xAxis text,
@@ -728,26 +715,14 @@ const ResultsPanel = ({
                   {(() => {
                     const chartData = preparePieChartData();
                     console.log('Pie Chart Data:', chartData);
-                    // Check if too many items
                     let displayData: any[] = [];
-                    let limitMessage = null;
 
                     if (chartData && Array.isArray(chartData.data)) {
                       if (chartData.data.length > 12) {
                         const top11 = chartData.data.slice(0, 11);
                         const others = chartData.data.slice(11);
                         const otherSum = others.reduce((sum, item) => sum + (item.y as number), 0);
-
-                        displayData = [
-                          ...top11,
-                          { x: 'Andre', y: otherSum }
-                        ];
-
-                        limitMessage = (
-                          <Alert variant="info" className="mb-4">
-                            Viser topp 11 kategorier, pluss "Andre" som samler de resterende {others.length} kategoriene.
-                          </Alert>
-                        );
+                        displayData = [...top11, { x: 'Andre', y: otherSum }];
                       } else {
                         displayData = chartData.data;
                       }
@@ -773,7 +748,6 @@ const ResultsPanel = ({
 
                     return (
                       <div>
-                        {limitMessage}
                         <div className="flex flex-col items-center">
                           <style>{`
                             /* Make the labels transparent but keep them for hover functionality */

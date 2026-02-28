@@ -30,11 +30,21 @@ const allTabs = [
     { value: 'piechart',  label: 'Kake' },
 ];
 
+type WidgetSize = { cols: number; rows: number; name: string };
+
+const WIDGET_SIZES: Record<string, WidgetSize[]> = {
+    table:     [{ cols: 1, rows: 1, name: 'Standard' }],
+    linechart: [{ cols: 1, rows: 1, name: 'Standard' }],
+    areachart: [{ cols: 1, rows: 1, name: 'Standard' }],
+    barchart:  [{ cols: 1, rows: 1, name: 'Standard' }],
+    piechart:  [{ cols: 1, rows: 1, name: 'Standard' }],
+};
+
 interface Props {
     readonly websiteId: string;
     readonly path: string;
     readonly pathOperator: string;
-    readonly onAddWidget?: (sql: string, chartType: string, result: any) => void;
+    readonly onAddWidget?: (sql: string, chartType: string, result: any, size: { cols: number; rows: number }) => void;
 }
 
 export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Props) {
@@ -53,6 +63,7 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
     const [error, setError] = useState<string | null>(null);
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+    const [pendingAdd, setPendingAdd] = useState<{ sql: string; chartType: string; result: any } | null>(null);
     const [tidligereOpen, setTidligereOpen] = useState(false);
     const [selectedTidligere, setSelectedTidligere] = useState<number | null>(null);
     const [metabaseCopySuccess, setMetabaseCopySuccess] = useState(false);
@@ -185,12 +196,16 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                     <div style={{ height: '10%', display: 'flex', alignItems: 'center' }}>
                         <h2 className="text-lg font-semibold text-gray-800">AI bygger — hvilken graf?</h2>
                     </div>
-                    <div style={{ height: '80%' }}>
-                        <Textarea
-                            label="" hideLabel value={aiPrompt}
+                    <div style={{ height: '80%', display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <textarea
+                            value={aiPrompt}
                             onChange={(e) => setAiPrompt(e.target.value)}
                             placeholder={`Eksempel: Daglige sidevisninger for ${pathLabel} i 2025`}
-                            style={{ width: '100%', height: '100%', resize: 'none' }}
+                            rows={5}
+                            className="navds-textarea__input w-full"
+                            style={{ width: '100%', resize: 'none', padding: '8px 12px', borderRadius: '4px', border: '1px solid #6a6a6a', fontSize: '1rem', fontFamily: 'inherit', lineHeight: '1.5', backgroundColor: '#fff', outline: 'none', boxShadow: 'none' }}
+                            onFocus={e => e.currentTarget.style.boxShadow = '0 0 0 3px #0067C5'}
+                            onBlur={e => e.currentTarget.style.boxShadow = 'none'}
                         />
                     </div>
                     <div style={{ height: '10%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -261,7 +276,14 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                                 <Button
                                     variant="primary" size="small"
                                     disabled={!result?.data?.length}
-                                    onClick={() => onAddWidget(query, p2Tab, result)}
+                                    onClick={() => {
+                                        const sizes = WIDGET_SIZES[p2Tab] ?? [{ cols: 1, rows: 1, name: 'Standard' }];
+                                        if (sizes.length === 1) {
+                                            onAddWidget(query, p2Tab, result, sizes[0]);
+                                        } else {
+                                            setPendingAdd({ sql: query, chartType: p2Tab, result });
+                                        }
+                                    }}
                                 >
                                     + Legg til
                                 </Button>
@@ -271,6 +293,26 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                     </div>
                     {query && <ShareResultsModal sql={query} open={shareModalOpen} onClose={() => setShareModalOpen(false)} />}
                     <DownloadResultsModal result={result} open={downloadModalOpen} onClose={() => setDownloadModalOpen(false)} />
+                    {pendingAdd && onAddWidget && (
+                        <Modal open onClose={() => setPendingAdd(null)} header={{ heading: 'Velg storrelse' }}>
+                            <Modal.Body>
+                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                    {(WIDGET_SIZES[pendingAdd.chartType] ?? [{ cols: 1, rows: 1, name: 'Standard' }]).map(size => (
+                                        <Button
+                                            key={size.name}
+                                            variant="secondary"
+                                            onClick={() => {
+                                                onAddWidget(pendingAdd.sql, pendingAdd.chartType, pendingAdd.result, size);
+                                                setPendingAdd(null);
+                                            }}
+                                        >
+                                            {size.name}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </Modal.Body>
+                        </Modal>
+                    )}
                 </div>
             )}
 

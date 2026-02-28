@@ -2,6 +2,45 @@
 // Used by ResultsPanel consumers — replaces copy-pasted prepare* functions in each page.
 import { translateValue } from './translations';
 
+/** Returns true if the value looks like a number (actual number or numeric string). */
+function isNumericValue(val: unknown): boolean {
+    if (typeof val === 'number') return !Number.isNaN(val);
+    if (typeof val === 'string') return val.trim() !== '' && !Number.isNaN(Number(val));
+    return false;
+}
+
+/**
+ * Given the first two keys and a sample row, returns { labelKey, valueKey }
+ * so that labelKey is always the categorical column and valueKey the numeric one.
+ * If the SQL returned the numeric column first, the two are swapped.
+ */
+function detectLabelValueKeys(
+    keys: string[],
+    firstRow: Record<string, unknown>,
+): { labelKey: string; valueKey: string } {
+    const [k0, k1] = keys;
+    if (isNumericValue(firstRow[k0]) && !isNumericValue(firstRow[k1])) {
+        return { labelKey: k1, valueKey: k0 };
+    }
+    return { labelKey: k0, valueKey: k1 };
+}
+
+/**
+ * Maps an x-axis value to a number or Date for Fluent charting.
+ * Date strings  → Date object
+ * Numbers/numeric strings → number
+ * Anything else (categorical) → 1-based row index so the line renders correctly.
+ */
+function resolveX(xValue: unknown, rowIndex: number): number | Date {
+    if (typeof xValue === 'number') return xValue;
+    if (typeof xValue === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}/.exec(xValue)) return new Date(xValue);
+        const asNum = Number(xValue);
+        if (!Number.isNaN(asNum)) return asNum;
+    }
+    return rowIndex + 1;
+}
+
 export function useChartDataPrep(result: any) {
     const prepareLineChartData = (includeAverage = false) => {
         if (!result?.data?.length) return null;
@@ -17,10 +56,7 @@ export function useChartDataPrep(result: any) {
                 if (!seriesMap.has(seriesValue)) seriesMap.set(seriesValue, []);
                 const xValue = row[xKey];
                 const yValue = typeof row[yKey] === 'number' ? row[yKey] : Number.parseFloat(row[yKey]) || 0;
-                const x = typeof xValue === 'string' && /^\d{4}-\d{2}-\d{2}/.exec(xValue)
-                    ? new Date(xValue)
-                    : typeof xValue === 'number' ? xValue : new Date(xValue).getTime() || 0;
-                seriesMap.get(seriesValue)!.push({ x, y: yValue, xAxisCalloutData: xValue, yAxisCalloutData: String(yValue) });
+                seriesMap.get(seriesValue)!.push({ x: resolveX(xValue, seriesMap.get(seriesValue)!.length), y: yValue, xAxisCalloutData: String(xValue), yAxisCalloutData: String(yValue) });
             });
             return {
                 data: { lineChartData: Array.from(seriesMap.entries()).map(([legend, pts]) => ({ legend, data: pts, color: '#0067C5' })) },
@@ -28,14 +64,11 @@ export function useChartDataPrep(result: any) {
             };
         }
 
-        const [xKey, yKey] = keys;
-        const chartPoints = data.map((row: any) => {
+        const { labelKey: xKey, valueKey: yKey } = detectLabelValueKeys(keys, data[0]);
+        const chartPoints = data.map((row: any, i: number) => {
             const xValue = row[xKey];
             const yValue = typeof row[yKey] === 'number' ? row[yKey] : Number.parseFloat(row[yKey]) || 0;
-            const x = typeof xValue === 'string' && /^\d{4}-\d{2}-\d{2}/.exec(xValue)
-                ? new Date(xValue)
-                : typeof xValue === 'number' ? xValue : new Date(xValue).getTime() || 0;
-            return { x, y: yValue, xAxisCalloutData: xValue, yAxisCalloutData: String(yValue) };
+            return { x: resolveX(xValue, i), y: yValue, xAxisCalloutData: String(xValue), yAxisCalloutData: String(yValue) };
         });
         const lineChartData: any[] = [{ legend: yKey, data: chartPoints, color: '#0067C5' }];
         if (includeAverage && chartPoints.length > 0) {
@@ -51,11 +84,11 @@ export function useChartDataPrep(result: any) {
     };
 
     const prepareBarChartData = () => {
-        if (!result?.data?.length || result.data.length > 12) return null;
+        if (!result?.data?.length) return null;
         const data = result.data;
         const keys = Object.keys(data[0]);
         if (keys.length < 2) return null;
-        const [labelKey, valueKey] = keys;
+        const { labelKey, valueKey } = detectLabelValueKeys(keys, data[0]);
         const total = data.reduce((s: number, r: any) => s + (typeof r[valueKey] === 'number' ? r[valueKey] : Number.parseFloat(r[valueKey]) || 0), 0);
         return {
             data: data.map((row: any) => {
@@ -70,11 +103,11 @@ export function useChartDataPrep(result: any) {
     };
 
     const preparePieChartData = () => {
-        if (!result?.data?.length || result.data.length > 12) return null;
+        if (!result?.data?.length) return null;
         const data = result.data;
         const keys = Object.keys(data[0]);
         if (keys.length < 2) return null;
-        const [labelKey, valueKey] = keys;
+        const { labelKey, valueKey } = detectLabelValueKeys(keys, data[0]);
         const total = data.reduce((s: number, r: any) => s + (typeof r[valueKey] === 'number' ? r[valueKey] : Number.parseFloat(r[valueKey]) || 0), 0);
         return {
             data: data.map((row: any) => ({

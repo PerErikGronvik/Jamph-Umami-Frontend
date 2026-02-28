@@ -110,7 +110,7 @@ const Prototype3 = () => {
     const dateModalRef = useRef<HTMLDialogElement>(null);
     const gridContainerRef = useRef<HTMLDivElement>(null);
     const [gridRowHeight, setGridRowHeight] = useState(0);
-    const [customWidgets, setCustomWidgets] = useState<Array<{ id: string; sql: string; chartType: string; result: any }>>([]);
+    const [customWidgets, setCustomWidgets] = useState<Array<{ id: string; sql: string; chartType: string; result: any; size: { cols: number; rows: number } }>>([]);
     const [widgetOrder, setWidgetOrder] = useState<string[]>([]);
     const [dragId, setDragId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
@@ -434,7 +434,7 @@ const Prototype3 = () => {
     // Widget list — pinned AI charts only, ordered by widgetOrder
     const customWidgetMap = new Map(customWidgets.map(cw => [cw.id, cw]));
     const widgets = widgetOrder
-        .map(id => { const cw = customWidgetMap.get(id); return cw ? { id, customWidget: cw, colSpan: 1, rowSpan: 1 } : null; })
+        .map(id => { const cw = customWidgetMap.get(id); return cw ? { id, customWidget: cw, colSpan: cw.size?.cols ?? 1, rowSpan: cw.size?.rows ?? 1 } : null; })
         .filter((w): w is NonNullable<typeof w> => w !== null);
     const guideRows = Math.max(Math.ceil(widgets.length / 2), 1);
     const guideCells = guideRows * 2;
@@ -583,9 +583,9 @@ const Prototype3 = () => {
                             websiteId={effectiveWebsiteId}
                             path={activeFilters.urlFilters[0] || '/'}
                             pathOperator={activeFilters.pathOperator || 'starts-with'}
-                            onAddWidget={(sql, chartType, result) => {
+                            onAddWidget={(sql, chartType, result, size) => {
                                 const id = crypto.randomUUID();
-                                setCustomWidgets(prev => [...prev, { id, sql, chartType, result }]);
+                                setCustomWidgets(prev => [...prev, { id, sql, chartType, result, size }]);
                                 setWidgetOrder(prev => [...prev, id]);
                             }}
                         />
