@@ -10,6 +10,7 @@ import UrlSearchForm from "../../components/dashboard/UrlSearchForm";
 import { AiByggerPanel } from "../../components/analysis/AiByggerPanel";
 import ResultsPanel from "../../components/chartbuilder/results/ResultsPanel";
 import { useChartDataPrep } from "../../lib/useChartDataPrep";
+import UmamiJourneyView from "../../components/analysis/journey/UmamiJourneyView";
 
 const AKSEL_WEBSITE_ID = 'fb69e1e9-1bd3-4fd9-b700-9d035cbf44e1';
 const DEFAULT_URL = 'https://aksel.nav.no/';
@@ -18,6 +19,13 @@ const DEFAULT_URL = 'https://aksel.nav.no/';
 function CustomResultWidget({ result, chartType, sql }: { result: any; chartType: string; sql: string }) {
     const { prepareLineChartData, prepareBarChartData, preparePieChartData } = useChartDataPrep(result);
     const extractWebsiteId = (s: string) => /website_id\s*=\s*['"]([0-9a-f-]{36})['"]/i.exec(s)?.[1];
+    if (chartType === 'stegvisning' && result?.nodes && result?.links) {
+        return (
+            <div style={{ position: 'absolute', inset: 0, overflow: 'auto', background: '#fff' }}>
+                <UmamiJourneyView nodes={result.nodes} links={result.links} journeyDirection="forward" />
+            </div>
+        );
+    }
     return (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#fff' }}>
             <ResultsPanel
@@ -326,9 +334,21 @@ const Prototype3 = () => {
             ))}
 
             {!dashboard.hiddenFilters?.dateRange && (
+                <div className="w-full sm:w-auto min-w-[160px]">
+                    <Select label="Type periode" size="small" value="maaned" onChange={() => {}}>
+                        <option value="maaned">Måned</option>
+                        <option value="uke">Uke</option>
+                        <option value="fra-til">Fra–til dato</option>
+                        <option value="kvartal">Kvartal</option>
+                        <option value="ar">År</option>
+                    </Select>
+                </div>
+            )}
+
+            {!dashboard.hiddenFilters?.dateRange && (
                 <div className="w-full sm:w-auto min-w-[200px]">
                     <Select
-                        label="Datoperiode"
+                        label="Periode"
                         size="small"
                         value={getVisualDateRange()}
                         onChange={(e) => {
@@ -583,6 +603,8 @@ const Prototype3 = () => {
                             websiteId={effectiveWebsiteId}
                             path={activeFilters.urlFilters[0] || '/'}
                             pathOperator={activeFilters.pathOperator || 'starts-with'}
+                            startDate={activeFilters.customStartDate}
+                            endDate={activeFilters.customEndDate}
                             onAddWidget={(sql, chartType, result, size) => {
                                 const id = crypto.randomUUID();
                                 setCustomWidgets(prev => [...prev, { id, sql, chartType, result, size }]);

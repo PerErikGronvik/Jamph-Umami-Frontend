@@ -4,11 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import ResultsPanel from '../chartbuilder/results/ResultsPanel';
 import ShareResultsModal from '../chartbuilder/results/ShareResultsModal';
 import DownloadResultsModal from '../chartbuilder/results/DownloadResultsModal';
-import { Button, Alert, Textarea, Modal } from '@navikt/ds-react';
+import { Button, Alert, Modal } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useChartDataPrep } from '../../lib/useChartDataPrep';
+import UmamiJourneyView from './journey/UmamiJourneyView';
 
 const defaultQuery = `SELECT
   website_id,
@@ -22,12 +23,23 @@ type Step = 1 | 2 | 3;
 
 const boxClass = 'bg-green-50 p-4 border border-green-100 w-full h-full flex flex-col';
 
+/** Picks the most likely chart type from a natural-language prompt. */
+function guessChartType(prompt: string): string {
+    const p = prompt.toLowerCase();
+    if (/sideflyt|beveger|flyt|navigasjon|navigerer|reise|brukerreise/.test(p)) return 'stegvisning';
+    if (/daglig|m.ned|ukentlig|tidslinje|over tid|trend|utvikling|per dag|per m.ned/.test(p)) return 'linechart';
+    if (/andel|prosent|fordeling|kake/.test(p)) return 'piechart';
+    if (/topp|mest|flest|rangering|sammenlign|stolpe/.test(p)) return 'barchart';
+    return 'table';
+}
+
 const allTabs = [
     { value: 'table',     label: 'Tabell' },
     { value: 'linechart', label: 'Linje' },
     { value: 'areachart', label: 'Område' },
     { value: 'barchart',  label: 'Stolpe' },
     { value: 'piechart',  label: 'Kake' },
+    { value: 'stegvisning', label: 'Sideflyt' },
 ];
 
 type WidgetSize = { cols: number; rows: number; name: string };
@@ -37,17 +49,20 @@ const WIDGET_SIZES: Record<string, WidgetSize[]> = {
     linechart: [{ cols: 1, rows: 1, name: 'Standard' }],
     areachart: [{ cols: 1, rows: 1, name: 'Standard' }],
     barchart:  [{ cols: 1, rows: 1, name: 'Standard' }],
-    piechart:  [{ cols: 1, rows: 1, name: 'Standard' }],
+    piechart:     [{ cols: 1, rows: 1, name: 'Standard' }],
+    stegvisning:  [{ cols: 2, rows: 1, name: 'Standard' }],
 };
 
 interface Props {
     readonly websiteId: string;
     readonly path: string;
     readonly pathOperator: string;
+    readonly startDate?: Date;
+    readonly endDate?: Date;
     readonly onAddWidget?: (sql: string, chartType: string, result: any, size: { cols: number; rows: number }) => void;
 }
 
-export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Props) {
+export function AiByggerPanel({ websiteId, path, pathOperator, startDate: propStartDate, endDate: propEndDate, onAddWidget }: Props) {
     const pathConditionSQL = pathOperator === 'starts-with'
         ? (path === '/' ? '' : `AND url_path LIKE '${path}%'`)
         : `AND url_path = '${path}'`;
@@ -57,7 +72,7 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
 
     const [step, setStep] = useState<Step>(1);
     const [query, setQuery] = useState(defaultQuery);
-    const [aiPrompt, setAiPrompt] = useState('');
+    const [aiPrompt, setAiPrompt] = useState(`Daglige sidevisninger for ${pathLabel} i 2025`);
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -72,6 +87,8 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
     const [shareSuccess, setShareSuccess] = useState(false);
     const [formatSuccess, setFormatSuccess] = useState(false);
     const shouldAutoExecuteRef = useRef(false);
+    const [journeyData, setJourneyData] = useState<{ nodes: any[]; links: any[] } | null>(null);
+    const [journeyLoading, setJourneyLoading] = useState(false);
 
     const MAX_VISIBLE_TABS = 5;
     const visibleTabs = allTabs.slice(0, MAX_VISIBLE_TABS);
@@ -92,8 +109,17 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
             sql: `SELECT\n  EXTRACT(MONTH FROM created_at) AS maaned,\n  COUNT(*) AS sidevisninger\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\nGROUP BY maaned\nORDER BY maaned ASC;`,
         },
         {
+            prompt: `Hvordan beveger brukerne seg pa siden?`,
+            sql: '',
+            tab: 'stegvisning',
+        },
+        {
             prompt: `Trafikkilder for ${pathLabel} i november 2025`,
             sql: `SELECT\n  COALESCE(NULLIF(referrer_domain, ''), '(direkte)') AS kilde,\n  COUNT(*) AS sidevisninger\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\n  AND EXTRACT(MONTH FROM created_at) = 11\nGROUP BY kilde\nORDER BY sidevisninger DESC\nLIMIT 15;`,
+        },
+        {
+            prompt: `Eksterne nettsider besøkende kommer fra`,
+            sql: `SELECT\n  COALESCE(NULLIF(referrer_domain, ''), '(direkte)') AS kilde,\n  COUNT(DISTINCT session_id) AS unike_besokende\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\nGROUP BY kilde\nORDER BY unike_besokende DESC\nLIMIT 1000;`,
         },
     ];
 
@@ -139,7 +165,9 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
         } catch {
             setQuery(`-- Feil: Kunne ikke koble til AI-serveren\n\n${defaultQuery}`);
         } finally {
-            shouldAutoExecuteRef.current = true;
+            const guessed = guessChartType(basePrompt);
+            setP2Tab(guessed);
+            shouldAutoExecuteRef.current = guessed !== 'stegvisning';
             setStep(2);
         }
     };
@@ -176,6 +204,135 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
         navigator.clipboard.writeText(`${globalThis.location.origin}/ai-bygger?sql=${encodeURIComponent(query)}`);
         setShareSuccess(true);
         setTimeout(() => setShareSuccess(false), 2000);
+    };
+
+    const [journeyError, setJourneyError] = useState<string | null>(null);
+
+    const fetchJourneyData = async () => {
+        setJourneyLoading(true);
+        setJourneyData(null);
+        setJourneyError(null);
+        try {
+            const now = new Date();
+            const resolvedEnd = propEndDate ?? now;
+            const resolvedStart = propStartDate ?? (() => { const d = new Date(resolvedEnd); d.setDate(d.getDate() - 30); return d; })();
+            const startUrl = (path && path !== '') ? path : '/';
+            const response = await fetch('/api/bigquery/journeys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    websiteId,
+                    startUrl,
+                    startDate: resolvedStart.toISOString(),
+                    endDate: resolvedEnd.toISOString(),
+                    steps: 3,
+                    limit: 5,
+                    direction: 'forward',
+                }),
+            });
+            if (!response.ok) throw new Error(`Feil fra server: ${response.status}`);
+            const data = await response.json();
+            if (data.nodes?.length && data.links?.length) {
+                setJourneyData({ nodes: data.nodes, links: data.links });
+            } else {
+                setJourneyError('Ingen sideflyt-data tilgjengelig for denne perioden og siden.');
+            }
+        } catch (e: any) {
+            setJourneyError(e.message || 'Kunne ikke laste sideflyt');
+        } finally {
+            setJourneyLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (p2Tab === 'stegvisning' && step === 2 && !journeyLoading) {
+            fetchJourneyData();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [p2Tab, step]);
+
+    const buildJourneySQL = () => {
+        const now = new Date();
+        const resolvedEnd = propEndDate ?? now;
+        const resolvedStart = propStartDate ?? (() => { const d = new Date(resolvedEnd); d.setDate(d.getDate() - 30); return d; })();
+        const startUrl = (path && path !== '') ? path : '/';
+        const steps = 3;
+        const limit = 5;
+        const direction = 'forward';
+        const windowFn = direction === 'backward' ? 'LAG' : 'LEAD';
+        const nextCol = direction === 'backward' ? 'prev_url' : 'next_url';
+        const timeOp = direction === 'backward' ? '<=' : '>=';
+        const orderDir = direction === 'backward' ? 'DESC' : 'ASC';
+        return `WITH session_events AS (
+  SELECT
+    session_id,
+    CASE
+      WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+      THEN '/'
+      ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+    END AS url_path,
+    created_at,
+    MIN(CASE
+      WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = '${startUrl}'
+      THEN created_at
+    END) OVER (PARTITION BY session_id) AS start_time
+  FROM \`fagtorsdag-prod-81a6.umami_student.event\`
+  WHERE website_id = '${websiteId}'
+    AND created_at BETWEEN '${resolvedStart.toISOString()}' AND '${resolvedEnd.toISOString()}'
+    AND event_type = 1
+),
+journey_steps AS (
+  SELECT
+    session_id,
+    url_path,
+    created_at,
+    ${windowFn}(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS ${nextCol}
+  FROM session_events
+  WHERE start_time IS NOT NULL
+    AND created_at ${timeOp} start_time
+),
+renumbered_steps AS (
+  SELECT
+    session_id,
+    url_path,
+    ${nextCol},
+    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at ${orderDir}) - 1 AS step
+  FROM journey_steps
+),
+raw_flows AS (
+  SELECT
+    step,
+    url_path AS source,
+    ${nextCol} AS target,
+    COUNT(*) AS value
+  FROM renumbered_steps
+  WHERE step < ${steps}
+    AND ${nextCol} IS NOT NULL
+    AND url_path != ${nextCol}
+    AND (step > 0 OR url_path = '${startUrl}')
+    AND NOT (step > 0 AND url_path = '${startUrl}')
+    AND NOT (step > 0 AND ${nextCol} = '${startUrl}')
+  GROUP BY 1, 2, 3
+),
+ranked AS (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY step ORDER BY value DESC) AS rank_in_step
+  FROM raw_flows
+),
+top_flows AS (
+  SELECT step, source, target, value
+  FROM ranked
+  WHERE rank_in_step <= ${limit}
+),
+valid_pages_per_step AS (
+  SELECT 0 AS step, '${startUrl}' AS page
+  UNION ALL
+  SELECT step + 1 AS step, target AS page FROM top_flows
+)
+SELECT t.step, t.source, t.target, t.value
+FROM top_flows t
+INNER JOIN valid_pages_per_step v
+  ON v.step = t.step AND v.page = t.source
+ORDER BY step, value DESC`;
     };
 
     const copyForMetabase = async () => {
@@ -255,7 +412,16 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                         </div>
                         <div style={{ height: '80%', overflow: 'hidden' }}>
                             <div style={{ width: '90%', height: '100%', overflow: 'auto', margin: '0 auto' }}>
-                                <ResultsPanel
+                                {p2Tab === 'stegvisning' ? (
+                                    journeyLoading
+                                        ? <div className="flex items-center justify-center h-full text-gray-500">Laster sideflyt...</div>
+                                        : journeyData
+                                            ? <UmamiJourneyView nodes={journeyData.nodes} links={journeyData.links} journeyDirection="forward" websiteId={websiteId} />
+                                            : <div className="flex flex-col items-center justify-center h-full gap-3">
+                                                <p className="text-gray-500 text-sm text-center">Klarer ikke å vise sideflyt. Ingen navigasjonsdata for valgt side og periode.</p>
+                                                <button type="button" className="text-sm text-blue-600 underline" onClick={fetchJourneyData}>Last inn på nytt</button>
+                                              </div>
+                                ) : <ResultsPanel
                                     result={result} loading={loading} error={error}
                                     queryStats={result?.queryStats} lastAction={null}
                                     showLoadingMessage={loading} executeQuery={executeQuery} handleRetry={executeQuery}
@@ -265,7 +431,7 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                                     sql={query} websiteId={sqlWebsiteId}
                                     containerStyle="none" hideHeading hideInternalShareButton hideInternalDownloadButton
                                     fixedAspect hideTabsList externalTab={p2Tab} onExternalTabChange={setP2Tab}
-                                />
+                                />}
                             </div>
                         </div>
                         <div style={{ height: '10%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -275,13 +441,14 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                             {onAddWidget && (
                                 <Button
                                     variant="primary" size="small"
-                                    disabled={!result?.data?.length}
+                                    disabled={p2Tab === 'stegvisning' ? !journeyData : !result?.data?.length}
                                     onClick={() => {
                                         const sizes = WIDGET_SIZES[p2Tab] ?? [{ cols: 1, rows: 1, name: 'Standard' }];
+                                        const widgetResult = p2Tab === 'stegvisning' ? journeyData : result;
                                         if (sizes.length === 1) {
-                                            onAddWidget(query, p2Tab, result, sizes[0]);
+                                            onAddWidget(query, p2Tab, widgetResult, sizes[0]);
                                         } else {
-                                            setPendingAdd({ sql: query, chartType: p2Tab, result });
+                                            setPendingAdd({ sql: query, chartType: p2Tab, result: widgetResult });
                                         }
                                     }}
                                 >
@@ -325,8 +492,9 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                     <div style={{ height: '80%', overflow: 'auto' }}>
                         <div className="border rounded overflow-hidden" style={{ height: '100%' }}>
                             <Editor
-                                height="100%" defaultLanguage="sql" value={query}
-                                onChange={(v) => { setQuery(v || ''); setFormatSuccess(false); }}
+                                height="100%" defaultLanguage="sql"
+                                value={p2Tab === 'stegvisning' ? buildJourneySQL() : query}
+                                onChange={(v) => { if (p2Tab !== 'stegvisning') { setQuery(v || ''); setFormatSuccess(false); } }}
                                 theme="vs-dark"
                                 options={{ minimap: { enabled: false }, fontSize: 14, lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 2, wordWrap: 'on', fixedOverflowWidgets: true, stickyScroll: { enabled: false }, lineNumbersMinChars: 4, glyphMargin: false }}
                             />
@@ -361,9 +529,14 @@ export function AiByggerPanel({ websiteId, path, pathOperator, onAddWidget }: Pr
                         if (selectedTidligere !== null) {
                             const item = tidligereSpørringer[selectedTidligere];
                             setAiPrompt(item.prompt);
-                            setQuery(item.sql);
-                            shouldAutoExecuteRef.current = true;
-                            setStep(2);
+                            if (item.tab) {
+                                setP2Tab(item.tab);
+                                setStep(2);
+                            } else {
+                                setQuery(item.sql);
+                                shouldAutoExecuteRef.current = true;
+                                setStep(2);
+                            }
                             setTidligereOpen(false);
                         }
                     }}>Kjør</Button>
