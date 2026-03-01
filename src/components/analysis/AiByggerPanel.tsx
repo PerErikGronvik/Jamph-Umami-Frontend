@@ -121,7 +121,77 @@ export function AiByggerPanel({ websiteId, path, pathOperator, startDate: propSt
 
     const buildRegressionSQLInline = () => {
         const pathFilter = pathConditionSQL.trim();
-        return `WITH base AS (\n  SELECT CAST(x AS FLOAT64) AS x, CAST(y AS FLOAT64) AS y FROM (\n    SELECT\n      DATE_DIFF(DATE(created_at), DATE('2025-01-01'), DAY) + 1 AS x,\n      COUNT(*) AS y\n    FROM \`fagtorsdag-prod-81a6.umami_student.event\`\n    WHERE event_type = 1\n      AND website_id = '${websiteId}'\n      ${pathFilter}\n      AND EXTRACT(YEAR FROM created_at) = 2025\n    GROUP BY x\n  )\n),\nstats AS (\n  SELECT COUNT(*) AS n, AVG(x) AS x_bar, AVG(y) AS y_bar,\n         VAR_SAMP(x) AS var_x, COVAR_SAMP(x, y) AS cov_xy\n  FROM base\n),\nparams AS (\n  SELECT n, x_bar, y_bar,\n    SAFE_DIVIDE(cov_xy, var_x) AS slope,\n    y_bar - SAFE_DIVIDE(cov_xy, var_x) * x_bar AS intercept\n  FROM stats\n)\nSELECT 'Skjæringspunkt (a)' AS term, ROUND(intercept, 4) AS estimat, n FROM params\nUNION ALL\nSELECT 'Stigningstall (b)', ROUND(slope, 4), n FROM params\nORDER BY term`;
+        return `WITH base AS (
+  SELECT CAST(x AS FLOAT64) AS x, CAST(y AS FLOAT64) AS y FROM (
+    SELECT
+      DATE_DIFF(DATE(created_at), DATE('2025-01-01'), DAY) + 1 AS x,
+      COUNT(*) AS y
+    FROM \`fagtorsdag-prod-81a6.umami_student.event\`
+    WHERE event_type = 1
+      AND website_id = '${websiteId}'
+      ${pathFilter}
+      AND EXTRACT(YEAR FROM created_at) = 2025
+    GROUP BY x
+  )
+),
+stats AS (
+  SELECT COUNT(*) AS n, AVG(x) AS x_bar, AVG(y) AS y_bar,
+         VAR_SAMP(x) AS var_x, COVAR_SAMP(x, y) AS cov_xy
+  FROM base
+),
+params AS (
+  SELECT n, x_bar, y_bar,
+    SAFE_DIVIDE(cov_xy, var_x) AS slope,
+    y_bar - SAFE_DIVIDE(cov_xy, var_x) * x_bar AS intercept
+  FROM stats
+),
+resid AS (
+  SELECT b.x, b.y, p.n, p.x_bar, p.y_bar, p.slope, p.intercept,
+    b.y - (p.intercept + p.slope * b.x) AS r
+  FROM base b CROSS JOIN params p
+),
+sums AS (
+  SELECT MIN(n) AS n, MIN(intercept) AS a, MIN(slope) AS b,
+         MIN(x_bar) AS x_bar, MIN(y_bar) AS y_bar,
+    SUM(POW(r, 2)) AS sse,
+    SUM(POW(y - y_bar, 2)) AS sst,
+    SUM(POW(x - x_bar, 2)) AS sxx
+  FROM resid
+),
+m AS (
+  SELECT n, a, b,
+    1 - SAFE_DIVIDE(sse, sst) AS r2,
+    SQRT(SAFE_DIVIDE(sse, n - 2)) AS rmse,
+    SQRT(SAFE_DIVIDE(SAFE_DIVIDE(sse, n - 2), sxx)) AS se_b,
+    SQRT(SAFE_DIVIDE(sse, n - 2) * (1.0 / n + POW(x_bar, 2) / sxx)) AS se_a
+  FROM sums
+),
+pv AS (
+  SELECT n, a, b, r2, rmse, se_a, se_b,
+    SAFE_DIVIDE(a, se_a) AS t_a,
+    SAFE_DIVIDE(b, se_b) AS t_b,
+    GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(a, se_a)), 2)) / 2.506628 * (
+       0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)))
+      - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 2)
+      + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 3))) AS p_a,
+    GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(b, se_b)), 2)) / 2.506628 * (
+       0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)))
+      - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 2)
+      + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 3))) AS p_b
+  FROM m
+)
+SELECT 'Skjæringspunkt (a)' AS term,
+  ROUND(a, 4) AS estimat, ROUND(se_a, 4) AS std_feil,
+  ROUND(t_a, 3) AS t_verdi, ROUND(p_a, 4) AS p_verdi,
+  ROUND(r2, 4) AS r2, ROUND(rmse, 3) AS rmse, n
+FROM pv
+UNION ALL
+SELECT 'Stigningstall (b)',
+  ROUND(b, 4), ROUND(se_b, 4),
+  ROUND(t_b, 3), ROUND(p_b, 4),
+  ROUND(r2, 4), ROUND(rmse, 3), n
+FROM pv
+ORDER BY term`;
     };
 
     const examplesAiBuilder = [
@@ -297,10 +367,10 @@ LIMIT 20;`,
     ${pathConditionSQL}
     AND EXTRACT(YEAR FROM created_at) = 2025
 ),
-neste_side AS (
+neste_sider AS (
   SELECT
     s.session_id,
-    e.url_path AS neste_side,
+    e.url_path AS side,
     ROW_NUMBER() OVER (PARTITION BY s.session_id, s.sok_tid ORDER BY e.created_at ASC) AS rn
   FROM sok_events s
   JOIN \`fagtorsdag-prod-81a6.umami_student.event\` e
@@ -311,11 +381,11 @@ neste_side AS (
     AND EXTRACT(YEAR FROM e.created_at) = 2025
 )
 SELECT
-  neste_side,
+  side AS neste_side,
   COUNT(*) AS antall_sok
-FROM neste_side
+FROM neste_sider
 WHERE rn = 1
-GROUP BY neste_side
+GROUP BY side
 ORDER BY antall_sok DESC
 LIMIT 25;`,
             tabOrder: ['table', 'barchart', 'piechart', 'linechart', 'areachart', 'stegvisning', 'kiforklaring'],
