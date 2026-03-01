@@ -10,6 +10,7 @@ import * as sqlFormatter from 'sql-formatter';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useChartDataPrep } from '../../lib/useChartDataPrep';
 import UmamiJourneyView from './journey/UmamiJourneyView';
+import DashboardStatCards from '../dashboard/DashboardStatCards';
 
 const defaultQuery = `SELECT
   website_id,
@@ -35,11 +36,12 @@ function guessChartType(prompt: string): string {
 }
 
 const allTabs = [
-    { value: 'table',     label: 'Tabell' },
-    { value: 'linechart', label: 'Linje' },
-    { value: 'areachart', label: 'Område' },
-    { value: 'barchart',  label: 'Stolpe' },
-    { value: 'piechart',  label: 'Kake' },
+    { value: 'table',      label: 'Tabell' },
+    { value: 'linechart',  label: 'Linje' },
+    { value: 'areachart',  label: 'Område' },
+    { value: 'barchart',   label: 'Stolpe' },
+    { value: 'piechart',   label: 'Kake' },
+    { value: 'statcards',  label: 'Nøkkeltall' },
     { value: 'stegvisning', label: 'Sideflyt' },
 ];
 
@@ -51,6 +53,7 @@ const WIDGET_SIZES: Record<string, WidgetSize[]> = {
     areachart:   [{ cols: 1, rows: 1, name: 'Standard' }],
     barchart:    [{ cols: 1, rows: 1, name: 'Standard' }],
     piechart:    [{ cols: 1, rows: 2, name: '1×2' }, { cols: 2, rows: 1, name: '2×1' }],
+    statcards:   [{ cols: 2, rows: 1, name: '2×1' }],
     stegvisning: [{ cols: 2, rows: 1, name: 'Standard' }],
     regresjon:   [{ cols: 1, rows: 1, name: 'Standard' }],
 };
@@ -160,6 +163,37 @@ export function AiByggerPanel({ websiteId, path, pathOperator, startDate: propSt
             title: `Regresjon: daglige sidevisninger – ${pathLabel}`,
             sql: buildRegressionSQLInline(),
             tabOrder: ['table','linechart','areachart','barchart','piechart','stegvisning'],
+        },
+        {
+            prompt: `Nøkkeltall: handlinger, navigering og frafall for ${pathLabel}`,
+            title: `Nøkkeltall – ${pathLabel}`,
+            sql: `WITH sessions AS (
+  SELECT
+    session_id,
+    COUNT(*) AS page_count,
+    COUNTIF(event_type = 2) AS event_count
+  FROM \`fagtorsdag-prod-81a6.umami_student.event\`
+  WHERE
+    event_type IN (1, 2)
+    AND website_id = '${websiteId}'
+    ${pathConditionSQL}
+    AND EXTRACT(YEAR FROM created_at) = 2025
+  GROUP BY session_id
+)
+SELECT 'Unike besøkende' AS kategori, COUNT(*) AS sesjoner FROM sessions
+UNION ALL
+SELECT 'Utførte handlinger', COUNTIF(event_count > 0) FROM sessions
+UNION ALL
+SELECT 'Navigering uten handling', COUNTIF(event_count = 0 AND page_count > 1) FROM sessions
+UNION ALL
+SELECT 'Forlot nettstedet', COUNTIF(page_count = 1 AND event_count = 0) FROM sessions;`,
+            tabOrder: ['statcards', 'table', 'barchart', 'piechart', 'linechart', 'areachart', 'stegvisning'],
+        },
+        {
+            prompt: `Hvilket operativsystem bruker brukerne av ${pathLabel}?`,
+            title: `Operativsystem – ${pathLabel}`,
+            sql: `SELECT\n  COALESCE(NULLIF(s.os, ''), '(ukjent)') AS operativsystem,\n  COUNT(DISTINCT e.session_id) AS unike_besokende\nFROM \`fagtorsdag-prod-81a6.umami_student.event\` e\nLEFT JOIN \`fagtorsdag-prod-81a6.umami_student.session\` s\n  ON e.session_id = s.session_id\nWHERE\n  e.event_type = 1\n  AND e.website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM e.created_at) = 2025\nGROUP BY operativsystem\nORDER BY unike_besokende DESC\nLIMIT 12;`,
+            tabOrder: ['piechart','barchart','table','areachart','linechart','stegvisning'],
         },
     ];
 
@@ -554,6 +588,10 @@ ORDER BY term`;
                                                 <p className="text-gray-500 text-sm text-center">{journeyError ?? 'Ingen navigasjonsdata for valgt side og periode.'}</p>
                                                 <button type="button" className="text-sm text-blue-600 underline" onClick={fetchJourneyData}>Last inn på nytt</button>
                                               </div>
+                                ) : p2Tab === 'statcards' ? (
+                                    result
+                                        ? <DashboardStatCards result={result} />
+                                        : <div className="flex items-center justify-center h-full text-gray-500 text-sm">Kjør spørringen for å se nøkkeltall</div>
                                 ) : <ResultsPanel
                                     result={result} loading={loading} error={error}
                                     queryStats={result?.queryStats} lastAction={null}

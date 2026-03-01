@@ -10,6 +10,7 @@ import DashboardAreaChart from './DashboardAreaChart';
 import DashboardBarChart from './DashboardBarChart';
 import DashboardJourney from './DashboardJourney';
 import DashboardPieChart from './DashboardPieChart';
+import DashboardStatCards from './DashboardStatCards';
 
 interface PinnedWidgetProps {
     result: any;
@@ -33,6 +34,8 @@ export default function PinnedWidget({ result, chartType, colSpan = 1, rowSpan =
             return <DashboardBarChart result={result} title={title} />;
         case 'piechart':
             return <DashboardPieChart result={result} title={title} wide={colSpan >= 2} />;
+        case 'statcards':
+            return <DashboardStatCards result={result} title={title} />;
         default:
             return <DashboardTable data={result?.data ?? []} title={title} />;
     }
