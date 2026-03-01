@@ -37,6 +37,7 @@ export interface FilterBarProps {
     // apply
     hasChanges: boolean;
     onUpdate: () => void;
+    onUrlResolved?: (websiteId: string, domain: string, name: string, pathname: string, pathOperator: string) => void;
 }
 
 export default function FilterBar({
@@ -55,6 +56,7 @@ export default function FilterBar({
     onCustomFilterChange,
     hasChanges,
     onUpdate,
+    onUrlResolved,
 }: FilterBarProps) {
     const [isDateModalOpen, setIsDateModalOpen] = useState(false);
     const dateModalRef = useRef<HTMLDialogElement>(null);
@@ -62,7 +64,7 @@ export default function FilterBar({
     return (
         <>
             <div className="w-full mb-2">
-                <UrlSearchForm targetPath="/prototype3" defaultValue={defaultUrlFormValue} />
+                <UrlSearchForm targetPath="/prototype3" defaultValue={defaultUrlFormValue} onResolved={onUrlResolved} />
             </div>
 
             {dashboard.customFilters?.map(filter => (
@@ -156,7 +158,7 @@ export default function FilterBar({
             )}
 
             <div className="flex items-end pb-[2px]">
-                <Button onClick={onUpdate} size="small" disabled={!hasChanges}>
+                <Button onClick={onUpdate} size="small" variant={hasChanges ? 'primary' : 'secondary'}>
                     Oppdater
                 </Button>
             </div>

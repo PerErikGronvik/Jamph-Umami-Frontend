@@ -60,7 +60,7 @@ export default function PinnedGrid({ widgets, onReorder, onDelete }: PinnedGridP
                             {isOver && (
                                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)', zIndex: 10, pointerEvents: 'none' }} />
                             )}
-                            <PinnedWidget result={w.customWidget.result} chartType={w.customWidget.chartType} colSpan={w.colSpan} rowSpan={w.rowSpan} title={w.customWidget.title} />
+                            <PinnedWidget result={w.customWidget.result} sql={w.customWidget.sql} chartType={w.customWidget.chartType} colSpan={w.colSpan} rowSpan={w.rowSpan} title={w.customWidget.title} />
                         </div>
                     );
                 })}

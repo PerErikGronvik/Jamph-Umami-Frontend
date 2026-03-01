@@ -1,4 +1,4 @@
-import { Search, Alert } from "@navikt/ds-react";
+import { TextField, Alert } from "@navikt/ds-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -15,9 +15,11 @@ interface UrlSearchFormProps {
     children?: React.ReactNode;
     targetPath?: string;
     defaultValue?: string;
+    /** If provided, called with resolved website info instead of navigating */
+    onResolved?: (websiteId: string, domain: string, name: string, pathname: string, pathOperator: string) => void;
 }
 
-function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '' }: UrlSearchFormProps) {
+function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '', onResolved }: UrlSearchFormProps) {
     const navigate = useNavigate();
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>(defaultValue);
@@ -124,7 +126,11 @@ function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '' 
             );
 
             if (matchedWebsite) {
-                navigate(`${targetPath}?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&name=${encodeURIComponent(matchedWebsite.name)}&path=${encodeURIComponent(urlObj.pathname)}&pathOperator=${pathOperator}`);
+                if (onResolved) {
+                    onResolved(matchedWebsite.id, matchedWebsite.domain, matchedWebsite.name, urlObj.pathname, pathOperator);
+                } else {
+                    navigate(`${targetPath}?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&name=${encodeURIComponent(matchedWebsite.name)}&path=${encodeURIComponent(urlObj.pathname)}&pathOperator=${pathOperator}`);
+                }
             } else {
                 setAlertVisible(true);
             }
@@ -139,14 +145,14 @@ function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '' 
         <div>
             <form role="search" onSubmit={handleSubmit}>
                 <div style={{ maxWidth: "600px" }}>
-                    <Search
+                    <TextField
                         label="Lim inn URL for å se webstatistikk"
-                        hideLabel={false}
-                        variant="primary"
                         value={searchQuery}
                         error={searchError}
-                        onChange={handleSearchChange}
-                        onClear={() => setSearchQuery("")}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(e as any); }}
+                        placeholder="https://aksel.nav.no/..."
+                        style={{ maxWidth: '600px' }}
                     />
                     <div className="flex items-center gap-2 mt-2">
                         <span className="text-sm text-gray-600">URL-sti</span>

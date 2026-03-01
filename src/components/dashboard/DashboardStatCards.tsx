@@ -1,7 +1,6 @@
 /**
  * DashboardStatCards — maks 4 nøkkeltallskort.
- * Første rad fra data = totalkort (hvit/nøytral, viser bare tall).
- * Rad 2–4 = fargede kort (blå/grønn/rød), viser % av første + råtall.
+ * Alle kort behandles likt — ingen "total"-referanse, ingen prosentberegning.
  */
 import '../../styles/charts.css';
 
@@ -11,29 +10,26 @@ interface Props {
 }
 
 const CARD_COLORS = [
-    // pos 0: nøytral (første kort – total)
-    {
-        bg: '#ffffff',
-        border: '#d1d5db',
-        label: '#6b7280',
-        value: '#111827',
-        sub: '#6b7280',
-    },
-    // pos 1: blå
+    // pos 0: blå
     {
         bg: '#eff6ff',
         border: '#bfdbfe',
         label: '#1d4ed8',
         value: '#1d4ed8',
-        sub: '#3b82f6',
     },
-    // pos 2: grønn
+    // pos 1: grønn
     {
         bg: '#f0fdf4',
         border: '#bbf7d0',
         label: '#15803d',
         value: '#15803d',
-        sub: '#22c55e',
+    },
+    // pos 2: amber
+    {
+        bg: '#fffbeb',
+        border: '#fde68a',
+        label: '#b45309',
+        value: '#b45309',
     },
     // pos 3: rød
     {
@@ -41,7 +37,6 @@ const CARD_COLORS = [
         border: '#fecdd3',
         label: '#991b1b',
         value: '#991b1b',
-        sub: '#ef4444',
     },
 ];
 
@@ -62,18 +57,17 @@ export default function DashboardStatCards({ result, title }: Props) {
     const keys = Object.keys(rows[0]);
     const labelKey = keys[0];
     const valueKey = keys[1] ?? keys[0];
-    const subLabel = valueKey; // bruker kolonnenavnet som undertekst (f.eks. "sesjoner")
-
-    const totalValue = Number(rows[0][valueKey]) || 1;
 
     return (
         <div className="widget-card">
             {title && <div className="widget-header"><span className="widget-title">{title}</span></div>}
             <div style={{ display: 'flex', flex: 1, gap: 12, padding: 12, overflow: 'hidden' }}>
                 {rows.map((row, i) => {
-                    const color = CARD_COLORS[i] ?? CARD_COLORS[3];
-                    const rawValue = Number(row[valueKey]) || 0;
-                    const pct = i === 0 ? null : ((rawValue / totalValue) * 100).toFixed(1) + '%';
+                    const color = CARD_COLORS[i % CARD_COLORS.length];
+                    const rawValue = Number(row[valueKey]);
+                    const displayValue = isNaN(rawValue)
+                        ? String(row[valueKey])
+                        : rawValue.toLocaleString('nb-NO');
 
                     return (
                         <div
@@ -96,14 +90,9 @@ export default function DashboardStatCards({ result, title }: Props) {
                             <span style={{ fontSize: 12, fontWeight: 600, color: color.label, lineHeight: 1.3 }}>
                                 {String(row[labelKey])}
                             </span>
-                            <span style={{ fontSize: pct ? 26 : 32, fontWeight: 700, color: color.value, lineHeight: 1.1 }}>
-                                {pct ?? rawValue.toLocaleString('nb-NO')}
+                            <span style={{ fontSize: 32, fontWeight: 700, color: color.value, lineHeight: 1.1 }}>
+                                {displayValue}
                             </span>
-                            {pct && (
-                                <span style={{ fontSize: 12, color: color.sub }}>
-                                    {rawValue.toLocaleString('nb-NO')} {subLabel}
-                                </span>
-                            )}
                         </div>
                     );
                 })}
