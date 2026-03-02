@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TextField, Button, Alert, Loader, Tabs, UNSAFE_Combobox } from '@navikt/ds-react';
-import { Share2, Check } from 'lucide-react';
+import { Share2, Check, ExternalLink } from 'lucide-react';
+import { format } from 'date-fns';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
@@ -11,6 +12,13 @@ import { copyToClipboard } from '../utils/clipboard.ts';
 import JourneyStatsGrid from './journey/JourneyStatsGrid.tsx';
 import JourneyVisualView from './journey/JourneyVisualView.tsx';
 import JourneyTableView from './journey/JourneyTableView.tsx';
+
+type SelectedFunnelStep = {
+    id: string;
+    eventName: string;
+    journeyOrder: number;
+    details: { key: string; value: string }[];
+};
 
 const EventJourney = () => {
     const {
@@ -37,6 +45,7 @@ const EventJourney = () => {
     const [excludedEventTypes, setExcludedEventTypes] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState<string>('visual');
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [selectedFunnelSteps, setSelectedFunnelSteps] = useState<SelectedFunnelStep[]>([]);
 
     const filteredData = filterJourneys(data, excludedEventTypes, filterText);
     const totalJourneySessions = data.reduce((total, journey) => total + journey.count, 0);
@@ -47,6 +56,48 @@ const EventJourney = () => {
             setCopySuccess(true);
             setTimeout(() => setCopySuccess(false), 2000);
         }
+    };
+
+    const toggleFunnelStep = (id: string, eventName: string, journeyOrder: number, details: { key: string; value: string }[]) => {
+        setSelectedFunnelSteps((current) => {
+            const exists = current.some((step) => step.id === id);
+            if (exists) {
+                return current.filter((step) => step.id !== id);
+            }
+            return [...current, { id, eventName, journeyOrder, details }];
+        });
+    };
+
+    const clearFunnelSteps = () => {
+        setSelectedFunnelSteps([]);
+    };
+
+    const navigateToFunnel = () => {
+        if (!selectedWebsite || selectedFunnelSteps.length === 0) return;
+
+        const params = new URLSearchParams();
+        params.set('websiteId', selectedWebsite.id);
+        params.set('period', period);
+        params.set('strict', 'true');
+
+        if (period === 'custom' && customStartDate && customEndDate) {
+            params.set('from', format(customStartDate, 'yyyy-MM-dd'));
+            params.set('to', format(customEndDate, 'yyyy-MM-dd'));
+        }
+
+        params.append('step', normalizeUrlToPath(urlPath));
+
+        const orderedEventSteps = [...selectedFunnelSteps].sort((a, b) => a.journeyOrder - b.journeyOrder);
+        orderedEventSteps.forEach((step) => {
+            const encodedEventName = encodeURIComponent(step.eventName);
+            const encodedFilters = step.details
+                .filter((detail) => detail.key.trim() && detail.value.trim())
+                .map((detail) => `|param:${encodeURIComponent(detail.key)}=${encodeURIComponent(detail.value)}`)
+                .join('');
+            params.append('step', `event:${encodedEventName}|current-path${encodedFilters}`);
+        });
+
+        window.open(`/trakt?${params.toString()}`, '_blank');
     };
 
     return (
@@ -154,13 +205,47 @@ const EventJourney = () => {
                         </Tabs.List>
 
                         <Tabs.Panel value="visual" className="pt-4">
-                            <JourneyVisualView journeys={filteredData} totalSessions={totalJourneySessions} />
+                            <JourneyVisualView
+                                journeys={filteredData}
+                                totalSessions={totalJourneySessions}
+                                selectedStepIds={selectedFunnelSteps.map((step) => step.id)}
+                                onToggleFunnelStep={toggleFunnelStep}
+                            />
                         </Tabs.Panel>
 
                         <Tabs.Panel value="table" className="pt-4">
                             <JourneyTableView journeys={filteredData} totalSessions={totalJourneySessions} />
                         </Tabs.Panel>
                     </Tabs>
+
+                    {selectedFunnelSteps.length > 0 && (
+                        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 border border-gray-700 text-white px-6 py-4 rounded-full shadow-2xl z-50 flex items-center gap-6">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-lg">{selectedFunnelSteps.length} hendelser valgt</span>
+                                <span className="text-sm text-gray-300">
+                                    URL-stien blir automatisk første steg i trakten
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="tertiary"
+                                    size="small"
+                                    onClick={clearFunnelSteps}
+                                    className="!text-white hover:!text-white hover:!bg-white/10"
+                                >
+                                    Tøm valgte
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    size="small"
+                                    onClick={navigateToFunnel}
+                                    icon={<ExternalLink size={16} />}
+                                >
+                                    Opprett traktanalyse
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex justify-end mt-8">
                         <Button
@@ -191,4 +276,3 @@ const EventJourney = () => {
 };
 
 export default EventJourney;
-

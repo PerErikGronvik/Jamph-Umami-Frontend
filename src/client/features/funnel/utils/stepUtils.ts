@@ -1,6 +1,14 @@
 import type { FunnelStep, StepParam } from '../model/types';
 import { normalizeUrlToPath } from '../../../shared/lib/utils';
 
+const decodeParamToken = (value: string): string => {
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return value;
+    }
+};
+
 /**
  * Parse funnel steps from URL search params.
  */
@@ -12,7 +20,7 @@ export function parseStepsFromParams(searchParams: URLSearchParams): FunnelStep[
         if (param.startsWith('event:')) {
             // Format: event:name|scope|param:key=value|...
             const parts = param.split('|');
-            const eventName = parts[0].substring(6);
+            const eventName = decodeParamToken(parts[0].substring(6));
 
             let scope: 'current-path' | 'anywhere' = 'current-path';
             const params: StepParam[] = [];
@@ -23,9 +31,10 @@ export function parseStepsFromParams(searchParams: URLSearchParams): FunnelStep[
                     scope = part;
                 } else if (part.startsWith('param:')) {
                     const [key, ...valParts] = part.substring(6).split('=');
-                    const val = valParts.join('=');
-                    if (key && val) {
-                        params.push({ key, value: val, operator: 'equals' });
+                    const decodedKey = decodeParamToken(key);
+                    const decodedValue = decodeParamToken(valParts.join('='));
+                    if (decodedKey && decodedValue) {
+                        params.push({ key: decodedKey, value: decodedValue, operator: 'equals' });
                     }
                 }
             }
@@ -136,4 +145,3 @@ export function updateStepParam(
 export function normalizeStepUrl(value: string): string {
     return value.trim() ? normalizeUrlToPath(value) : value;
 }
-
