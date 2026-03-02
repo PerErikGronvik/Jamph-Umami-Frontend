@@ -577,7 +577,7 @@ const Funnel = () => {
                                     {/* Timing Data Tab */}
                                     {!steps.some(s => s.type === 'event') && (
                                         <Tabs.Panel value="timing" className="pt-4">
-                                            <Heading level="3" size="small" className="mb-3">
+                                            <Heading level="3" size="small" className="mb-6">
                                                 Tid per steg og for hele trakten
                                             </Heading>
 
@@ -610,16 +610,16 @@ const Funnel = () => {
                                                 return (
                                                     <>
                                                         {totalTiming && (
-                                                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                                                <div className="border rounded-lg p-4 bg-blue-50 border-blue-100">
-                                                                    <div className="text-sm text-blue-800 font-medium mb-1">Total tid (Gjennomsnitt)</div>
-                                                                    <div className="text-2xl font-bold text-blue-900">{formatDuration(totalTiming.avgSeconds)}</div>
-                                                                    <div className="text-xs text-blue-600 mt-1">Gjennomsnittlig tid fra første til siste steg.</div>
+                                                            <div className="mt-2 grid grid-cols-2 gap-4 mb-6">
+                                                                <div className="border rounded-lg p-4 bg-[var(--ax-bg-neutral-soft)] border-[var(--ax-border-neutral-subtle)]">
+                                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Total tid (Gjennomsnitt)</div>
+                                                                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">{formatDuration(totalTiming.avgSeconds)}</div>
+                                                                    <div className="text-xs text-[var(--ax-text-subtle)] mt-1">Gjennomsnittlig tid fra første til siste steg.</div>
                                                                 </div>
-                                                                <div className="border rounded-lg p-4 bg-green-50 border-green-100">
-                                                                    <div className="text-sm text-green-800 font-medium mb-1">Total tid (Median)</div>
-                                                                    <div className="text-2xl font-bold text-green-900">{formatDuration(totalTiming.medianSeconds)}</div>
-                                                                    <div className="text-xs text-green-600 mt-1">Median tid fra første til siste steg.</div>
+                                                                <div className="border rounded-lg p-4 bg-[var(--ax-bg-neutral-soft)] border-[var(--ax-border-neutral-subtle)]">
+                                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Total tid (Median)</div>
+                                                                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">{formatDuration(totalTiming.medianSeconds)}</div>
+                                                                    <div className="text-xs text-[var(--ax-text-subtle)] mt-1">Median tid fra første til siste steg.</div>
                                                                 </div>
                                                             </div>
                                                         )}
