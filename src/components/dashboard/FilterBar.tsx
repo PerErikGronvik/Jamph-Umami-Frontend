@@ -173,9 +173,9 @@ export default function FilterBar({
                 </div>
             )}
 
-            <div className="flex flex-col">
-                <span className="navds-label navds-form-field__label" style={{ marginBottom: '6px' }}>Dashboard handlinger</span>
-                <div className="flex items-center gap-2">
+            <div className="aksel-form-field aksel-form-field--small w-full sm:w-auto" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <label className="aksel-form-field__label aksel-label aksel-label--small">Dashboard handlinger</label>
+                <div className="flex items-center gap-2" style={{ marginTop: 6 }}>
                     <Button onClick={onUpdate} size="small" variant={isActive ? 'primary' : 'secondary'}>
                         Oppdater
                     </Button>

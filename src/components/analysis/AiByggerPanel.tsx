@@ -750,7 +750,10 @@ ORDER BY term`;
                     <div style={{ height: '10%', display: 'flex', alignItems: 'center' }}>
                         <h2 className="text-lg font-semibold text-gray-800">AI bygger — hvilken graf?</h2>
                     </div>
-                    <div style={{ height: '80%', display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <div style={{ height: '80%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '10px', width: '100%' }}>
+                        <p style={{ fontSize: '1rem', color: '#1a1a1a', lineHeight: '1.5', margin: 0, marginBottom: '16px' }}>
+                            Skriv det du ønsker å se i chat-boksen under. Du kan ekskludere ting. Foreløpig sendes alt du skriver i denne prototypen og resultatet du får inn til lagring i Nettskjema for å samle brukerinformasjon. Nettskjema er sikker lagring med tofaktor som følger GDPR, men vennligst unngå å skrive personopplysninger om deg selv eller andre. Chatten bruker innstillingene fra filteret på toppen. Får du ikke grafen du ønsker deg, trykk tilbake og rediger teksten. Du kan også trykke videre på Avansert og redigere koden. Send oss gjerne JSON-filer med dashboard dere har laget og tilbakemeldinger.
+                        </p>
                         <textarea
                             value={aiPrompt}
                             onChange={(e) => setAiPrompt(e.target.value)}
