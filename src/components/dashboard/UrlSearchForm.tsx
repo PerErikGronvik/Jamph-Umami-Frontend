@@ -17,9 +17,11 @@ interface UrlSearchFormProps {
     defaultValue?: string;
     /** If provided, called with resolved website info instead of navigating */
     onResolved?: (websiteId: string, domain: string, name: string, pathname: string, pathOperator: string) => void;
+    /** Called on every keystroke so parent can detect uncommitted changes */
+    onInputChange?: (value: string) => void;
 }
 
-function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '', onResolved }: UrlSearchFormProps) {
+function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '', onResolved, onInputChange }: UrlSearchFormProps) {
     const navigate = useNavigate();
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>(defaultValue);
@@ -88,6 +90,7 @@ function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '',
         setSearchQuery(value);
         setAlertVisible(false);
         setSearchError(null);
+        onInputChange?.(value);
     };
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -128,6 +131,7 @@ function UrlSearchForm({ children, targetPath = '/dashboard', defaultValue = '',
             if (matchedWebsite) {
                 if (onResolved) {
                     onResolved(matchedWebsite.id, matchedWebsite.domain, matchedWebsite.name, urlObj.pathname, pathOperator);
+                    onInputChange?.('');
                 } else {
                     navigate(`${targetPath}?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&name=${encodeURIComponent(matchedWebsite.name)}&path=${encodeURIComponent(urlObj.pathname)}&pathOperator=${pathOperator}`);
                 }

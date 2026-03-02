@@ -65,11 +65,22 @@ export default function FilterBar({
 }: FilterBarProps) {
     const [isDateModalOpen, setIsDateModalOpen] = useState(false);
     const dateModalRef = useRef<HTMLDialogElement>(null);
+    const [urlDirty, setUrlDirty] = useState(false);
+
+    const isActive = hasChanges || urlDirty;
 
     return (
         <>
             <div className="w-full mb-2">
-                <UrlSearchForm targetPath="/prototype3" defaultValue={defaultUrlFormValue} onResolved={onUrlResolved} />
+                <UrlSearchForm
+                    targetPath="/prototype3"
+                    defaultValue={defaultUrlFormValue}
+                    onResolved={(websiteId, domain, name, pathname, pathOperator) => {
+                        setUrlDirty(false);
+                        onUrlResolved?.(websiteId, domain, name, pathname, pathOperator);
+                    }}
+                    onInputChange={(value) => setUrlDirty(value !== defaultUrlFormValue)}
+                />
             </div>
 
             {dashboard.customFilters?.map(filter => (
@@ -165,7 +176,7 @@ export default function FilterBar({
             <div className="flex flex-col">
                 <span className="navds-label navds-form-field__label" style={{ marginBottom: '6px' }}>Dashboard handlinger</span>
                 <div className="flex items-center gap-2">
-                    <Button onClick={onUpdate} size="small" variant={hasChanges ? 'primary' : 'secondary'}>
+                    <Button onClick={onUpdate} size="small" variant={isActive ? 'primary' : 'secondary'}>
                         Oppdater
                     </Button>
                     {onExport && (
