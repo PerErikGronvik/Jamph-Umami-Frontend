@@ -91,7 +91,7 @@ const Funnel = () => {
 
     const copyTimingMetabaseSql = async () => {
         if (!selectedWebsite) return;
-        const sql = generateMetabaseTimingSql(timingData, steps, selectedWebsite, onlyDirectEntry);
+        const sql = timingSql ?? generateMetabaseTimingSql(timingData, steps, selectedWebsite, onlyDirectEntry);
         if (!sql) return;
         const ok = await copyToClipboard(sql);
         if (ok) {
@@ -371,9 +371,7 @@ const Funnel = () => {
                                         <Tabs.Tab value="vertical" label="Vertikal trakt" />
                                         <Tabs.Tab value="horizontal" label="Horisontal trakt" />
                                         <Tabs.Tab value="table" label="Tabell" />
-                                        {!steps.some(s => s.type === 'event') && (
-                                            <Tabs.Tab value="timing" label="Tidsbruk" />
-                                        )}
+                                        <Tabs.Tab value="timing" label="Tidsbruk" />
                                     </Tabs.List>
 
                                     <Tabs.Panel value="vertical" className="pt-4">
@@ -575,8 +573,8 @@ const Funnel = () => {
                                     </Tabs.Panel>
 
                                     {/* Timing Data Tab */}
-                                    {!steps.some(s => s.type === 'event') && (
-                                        <Tabs.Panel value="timing" className="pt-4">
+                                    <Tabs.Panel value="timing" className="pt-4">
+                                        <>
                                             <Heading level="3" size="small" className="mb-6">
                                                 Tid per steg og for hele trakten
                                             </Heading>
@@ -600,6 +598,12 @@ const Funnel = () => {
                                             {timingError && (
                                                 <Alert variant="error" className="mb-4">
                                                     {timingError}
+                                                </Alert>
+                                            )}
+
+                                            {showTiming && !timingError && timingData.length === 0 && (
+                                                <Alert variant="info" className="mb-4">
+                                                    Fant ingen tidsdata for disse stegene i valgt periode.
                                                 </Alert>
                                             )}
 
@@ -641,7 +645,7 @@ const Funnel = () => {
                                                                                 <td className="px-6 py-4 text-base text-[var(--ax-text-default)]">
                                                                                     <div className="flex flex-col gap-0.5">
                                                                                         <span className="font-medium">Steg {timing.fromStep + 1}</span>
-                                                                                        {timing.fromUrl && selectedWebsite ? (
+                                                                                        {steps[timing.fromStep]?.type === 'url' && timing.fromUrl && selectedWebsite ? (
                                                                                             <span
                                                                                                 className="text-base text-blue-600 hover:underline cursor-pointer break-all flex items-center gap-1"
                                                                                                 onClick={() => setSelectedTimingUrl(timing.fromUrl || null)}
@@ -649,14 +653,14 @@ const Funnel = () => {
                                                                                                 {timing.fromUrl} <ExternalLink className="h-4 w-4 flex-shrink-0" />
                                                                                             </span>
                                                                                         ) : (
-                                                                                            <span className="text-base text-gray-500 break-all">{timing.fromUrl}</span>
+                                                                                            <span className="text-base text-[var(--ax-text-default)] break-all">{timing.fromUrl}</span>
                                                                                         )}
                                                                                     </div>
                                                                                 </td>
                                                                                 <td className="px-6 py-4 text-base text-[var(--ax-text-default)]">
                                                                                     <div className="flex flex-col gap-0.5">
                                                                                         <span className="font-medium">Steg {timing.toStep + 1}</span>
-                                                                                        {timing.toUrl && selectedWebsite ? (
+                                                                                        {steps[timing.toStep]?.type === 'url' && timing.toUrl && selectedWebsite ? (
                                                                                             <span
                                                                                                 className="text-base text-blue-600 hover:underline cursor-pointer break-all flex items-center gap-1"
                                                                                                 onClick={() => setSelectedTimingUrl(timing.toUrl || null)}
@@ -664,7 +668,7 @@ const Funnel = () => {
                                                                                                 {timing.toUrl} <ExternalLink className="h-4 w-4 flex-shrink-0" />
                                                                                             </span>
                                                                                         ) : (
-                                                                                            <span className="text-base text-gray-500 break-all">{timing.toUrl}</span>
+                                                                                            <span className="text-base text-[var(--ax-text-default)] break-all">{timing.toUrl}</span>
                                                                                         )}
                                                                                     </div>
                                                                                 </td>
@@ -683,7 +687,7 @@ const Funnel = () => {
                                                             <div className="p-3 bg-[var(--ax-bg-neutral-soft)] border-t flex justify-between items-center">
                                                                 <div>
                                                                     {timingQueryStats && (
-                                                                        <span className="text-sm text-[var(--ax-text-subtle]">
+                                                                        <span className="text-sm text-[var(--ax-text-subtle)]">
                                                                             Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
                                                                         </span>
                                                                     )}
@@ -719,8 +723,8 @@ const Funnel = () => {
                                                 websiteId={selectedWebsite?.id}
                                                 period={period}
                                             />
-                                        </Tabs.Panel>
-                                    )}
+                                        </>
+                                    </Tabs.Panel>
                                 </Tabs>
                             </>
                         )

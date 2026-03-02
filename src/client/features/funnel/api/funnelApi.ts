@@ -110,6 +110,10 @@ export interface FetchTimingResult {
     error: string | null;
 }
 
+function isErrorResponse(data: unknown): data is { error: string } {
+    return typeof data === 'object' && data !== null && 'error' in data && typeof (data as { error?: unknown }).error === 'string';
+}
+
 export async function fetchTimingData(params: FetchTimingParams): Promise<FetchTimingResult> {
     const { websiteId, steps, period, customStartDate, customEndDate, onlyDirectEntry } = params;
 
@@ -140,7 +144,17 @@ export async function fetchTimingData(params: FetchTimingParams): Promise<FetchT
         });
 
         if (!response.ok) {
-            return { data: [], sql: null, queryStats: null, error: 'Kunne ikke hente tidsdata' };
+            let errorMessage = 'Kunne ikke hente tidsdata';
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                const errorData: unknown = await response.json();
+                if (isErrorResponse(errorData)) {
+                    errorMessage = errorData.error;
+                }
+            } catch {
+                // no-op: keep default error message
+            }
+            return { data: [], sql: null, queryStats: null, error: errorMessage };
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -180,4 +194,3 @@ export async function fetchWebsiteEvents(websiteId: string): Promise<string[]> {
     }
     return [];
 }
-
