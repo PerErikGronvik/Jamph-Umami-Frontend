@@ -251,44 +251,71 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
           LANGUAGE js AS """
               if (!hits || !steps || steps.length < 2) return [];
             
-              var currentStepIdx = 0;
+              var stepIndices = [];
               var stepTimes = [];
-              var lastHitIndex = -1;
               var result = [];
-            
-              for (var i = 0; i < hits.length; i++) {
-                  if (hits[i].url === steps[0]) {
-                      stepTimes.push(hits[i].ts);
-                      lastHitIndex = i;
-                      currentStepIdx = 1;
-                      break;
-                  }
-              }
-            
-              if (currentStepIdx === 0) return [];
-            
-              for (var s = 1; s < steps.length; s++) {
-                  var targetUrl = steps[s];
-                  var stepFound = false;
-                
-                  if (strict) {
-                      if (lastHitIndex + 1 < hits.length && hits[lastHitIndex + 1].url === targetUrl) {
-                          stepTimes.push(hits[lastHitIndex + 1].ts);
-                          lastHitIndex++;
-                          stepFound = true;
+
+              if (!strict) {
+                  var lastHitIndex = -1;
+
+                  for (var i = 0; i < hits.length; i++) {
+                      if (hits[i].url === steps[0]) {
+                          stepIndices.push(i);
+                          stepTimes.push(hits[i].ts);
+                          lastHitIndex = i;
+                          break;
                       }
-                  } else {
-                      for (var i = lastHitIndex + 1; i < hits.length; i++) {
-                          if (hits[i].url === targetUrl) {
-                              stepTimes.push(hits[i].ts);
-                              lastHitIndex = i;
+                  }
+
+                  if (stepIndices.length === 0) return [];
+
+                  for (var s = 1; s < steps.length; s++) {
+                      var targetUrl = steps[s];
+                      var stepFound = false;
+
+                      for (var j = lastHitIndex + 1; j < hits.length; j++) {
+                          if (hits[j].url === targetUrl) {
+                              stepIndices.push(j);
+                              stepTimes.push(hits[j].ts);
+                              lastHitIndex = j;
                               stepFound = true;
                               break;
                           }
                       }
+
+                      if (!stepFound) break;
                   }
-                
-                  if (!stepFound) break; 
+              } else {
+                  var chainBroken = false;
+
+                  for (var s = 1; s < steps.length; s++) {
+                      var targetUrl = steps[s];
+                      var prevUrl = steps[s - 1];
+                      var minIndex = (s === 1) ? 1 : (stepIndices[s - 1] + 1);
+                      var matchIndex = -1;
+
+                      for (var k = minIndex; k < hits.length; k++) {
+                          if (hits[k].url === targetUrl && hits[k - 1].url === prevUrl) {
+                              matchIndex = k;
+                              break;
+                          }
+                      }
+
+                      if (matchIndex === -1) {
+                          chainBroken = true;
+                          break;
+                      }
+
+                      if (s === 1) {
+                          stepIndices[0] = matchIndex - 1;
+                          stepTimes[0] = hits[matchIndex - 1].ts;
+                      }
+
+                      stepIndices[s] = matchIndex;
+                      stepTimes[s] = hits[matchIndex].ts;
+                  }
+
+                  if (chainBroken && stepTimes.length < 2) return [];
               }
             
               for (var i = 0; i < stepTimes.length - 1; i++) {
@@ -406,4 +433,3 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
 
   return router;
 }
-

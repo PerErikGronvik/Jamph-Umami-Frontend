@@ -191,16 +191,16 @@ export function useFunnel(): FunnelState {
         }
     }, [fetchData, hasAutoSubmitted, loading, searchParams, selectedWebsite, steps]);
 
-    // Reset timing data when configuration changes
+    // Reset timing state when funnel configuration changes.
+    // Keep this effect scoped to config dependencies so timing results are not
+    // immediately cleared after a successful fetch.
     useEffect(() => {
-        if (timingData.length > 0) {
-            setTimingData([]);
-            setShowTiming(false);
-            setTimingQueryStats(null);
-            setTimingError(null);
-            setTimingSql(null);
-        }
-    }, [customEndDate, customStartDate, onlyDirectEntry, period, selectedWebsite, steps, timingData.length]);
+        setTimingData([]);
+        setShowTiming(false);
+        setTimingQueryStats(null);
+        setTimingError(null);
+        setTimingSql(null);
+    }, [customEndDate, customStartDate, onlyDirectEntry, period, selectedWebsite, steps]);
 
     const copyShareLink = async () => {
         try {
@@ -291,4 +291,3 @@ export function useFunnel(): FunnelState {
         setTimingMetabaseCopySuccess,
     };
 }
-
