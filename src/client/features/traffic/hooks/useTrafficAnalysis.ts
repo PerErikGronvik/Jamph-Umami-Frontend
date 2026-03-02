@@ -857,9 +857,27 @@ export const useTrafficAnalysis = () => {
 
     const navigateToJourney = () => {
         const params = new URLSearchParams();
+        const effectivePeriod = submittedPeriod || period;
+        const effectiveUrlPath = submittedUrlPaths.length > 0 ? submittedUrlPaths[0] : urlPaths[0];
+        const effectiveCustomStartDate = submittedCustomStartDate ?? customStartDate;
+        const effectiveCustomEndDate = submittedCustomEndDate ?? customEndDate;
+
         if (selectedWebsite?.id) params.set('websiteId', selectedWebsite.id);
-        if (period) params.set('period', period);
-        if (urlPaths.length > 0) params.set('urlPath', urlPaths[0]);
+        if (effectivePeriod) params.set('period', effectivePeriod);
+        if (effectiveUrlPath) params.set('urlPath', effectiveUrlPath);
+
+        if (effectivePeriod === 'custom' && effectiveCustomStartDate && effectiveCustomEndDate) {
+            params.set('from', format(effectiveCustomStartDate, 'yyyy-MM-dd'));
+            params.set('to', format(effectiveCustomEndDate, 'yyyy-MM-dd'));
+        } else {
+            const from = searchParams.get('from');
+            const to = searchParams.get('to');
+            if (effectivePeriod === 'custom' && from && to) {
+                params.set('from', from);
+                params.set('to', to);
+            }
+        }
+
         void navigate(`/brukerreiser?${params.toString()}`);
     };
 
@@ -959,4 +977,3 @@ export const useTrafficAnalysis = () => {
         getVisitorLabelWithBadge,
     };
 };
-

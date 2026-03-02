@@ -3,6 +3,7 @@ import type { IChartProps } from '@fluentui/react-charting';
 import type { Website } from '../../../shared/types/chart';
 import type { JourneyData, JourneyNode, JourneyLink, QueryStats } from '../model';
 import { getDateRangeFromPeriod, normalizeUrlToPath } from '../../../shared/lib/utils';
+import { format } from 'date-fns';
 import { buildAppliedFilterKey } from '../utils';
 
 export function useJourneyData(
@@ -120,6 +121,13 @@ export function useJourneyData(
         newParams.set('direction', journeyDirection);
         newParams.set('urlPath', normalizedStartUrl);
         newParams.delete('startUrl');
+        if (period === 'custom' && customStartDate && customEndDate) {
+          newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
+          newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
+        } else {
+          newParams.delete('from');
+          newParams.delete('to');
+        }
 
         window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
         setLastAppliedFilterKey(appliedFilterKey);
@@ -145,4 +153,3 @@ export function useJourneyData(
     fetchData,
   };
 }
-
