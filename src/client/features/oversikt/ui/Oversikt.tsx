@@ -495,6 +495,7 @@ const Oversikt = () => {
         projectName: string;
         dashboardId: number;
         dashboardName: string;
+        categoryId?: number;
         chartName: string;
         websiteId?: string;
     }) => {
@@ -520,7 +521,9 @@ const Oversikt = () => {
                 selectedProjectId === params.projectId && selectedDashboardId === params.dashboardId;
             const preferredSameDashboardCategoryId = isSameDashboard ? activeCategoryId : null;
 
-            if (preferredSameDashboardCategoryId && targetCategories.some((category) => category.id === preferredSameDashboardCategoryId)) {
+            if (params.categoryId && targetCategories.some((category) => category.id === params.categoryId)) {
+                targetCategoryId = params.categoryId;
+            } else if (preferredSameDashboardCategoryId && targetCategories.some((category) => category.id === preferredSameDashboardCategoryId)) {
                 targetCategoryId = preferredSameDashboardCategoryId;
             } else if (targetCategories.length > 0) {
                 targetCategoryId = targetCategories[0].id;
@@ -1493,6 +1496,7 @@ const Oversikt = () => {
                 }}
                 sourceWebsiteId={copyChartTarget?.sourceWebsiteId}
                 loadDashboards={fetchDashboards}
+                loadCategories={fetchCategories}
                 onCopy={handleCopyChart}
             />
 

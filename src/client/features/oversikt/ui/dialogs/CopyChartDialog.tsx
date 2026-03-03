@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Modal, Select, TextField } from '@navikt/ds-react';
-import type { DashboardDto, ProjectDto } from '../../model/types.ts';
+import type { DashboardDto, GraphCategoryDto, ProjectDto } from '../../model/types.ts';
 import type { Website } from '../../../../shared/types/website.ts';
 import { fetchWebsites } from '../../../../shared/api/websiteApi.ts';
 
@@ -15,11 +15,13 @@ type CopyChartDialogProps = {
     error?: string | null;
     onClose: () => void;
     loadDashboards: (projectId: number) => Promise<DashboardDto[]>;
+    loadCategories: (projectId: number, dashboardId: number) => Promise<GraphCategoryDto[]>;
     onCopy: (params: {
         projectId: number;
         projectName: string;
         dashboardId: number;
         dashboardName: string;
+        categoryId?: number;
         chartName: string;
         websiteId?: string;
     }) => Promise<void>;
@@ -35,6 +37,7 @@ const CopyChartDialog = ({
     error,
     onClose,
     loadDashboards,
+    loadCategories,
     onCopy,
     sourceWebsiteId,
 }: CopyChartDialogProps) => {
@@ -42,6 +45,9 @@ const CopyChartDialog = ({
     const [dashboardId, setDashboardId] = useState<number>(selectedDashboardId ?? 0);
     const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
     const [loadingDashboards, setLoadingDashboards] = useState(false);
+    const [categories, setCategories] = useState<GraphCategoryDto[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
+    const [categoryId, setCategoryId] = useState<number>(0);
     const [localError, setLocalError] = useState<string | null>(null);
     const [websites, setWebsites] = useState<Website[]>([]);
     const [websiteId, setWebsiteId] = useState(sourceWebsiteId ?? '');
@@ -52,6 +58,7 @@ const CopyChartDialog = ({
         if (!open) return;
         setProjectId(selectedProjectId ?? 0);
         setDashboardId(selectedDashboardId ?? 0);
+        setCategoryId(0);
         setWebsiteId(sourceWebsiteId ?? '');
         setChartName(chart?.title ?? '');
         setLocalError(null);
@@ -103,6 +110,41 @@ const CopyChartDialog = ({
         void run();
     }, [open, projectId, loadDashboards]);
 
+    useEffect(() => {
+        const run = async () => {
+            if (!open || !projectId || !dashboardId) {
+                setCategories([]);
+                setCategoryId(0);
+                return;
+            }
+
+            setLoadingCategories(true);
+            try {
+                const items = await loadCategories(projectId, dashboardId);
+                setCategories(items);
+                setCategoryId((prev) => {
+                    if (prev && items.some((category) => category.id === prev)) return prev;
+                    return items[0]?.id ?? 0;
+                });
+            } catch (err: unknown) {
+                setLocalError(err instanceof Error ? err.message : 'Kunne ikke laste faner');
+                setCategories([]);
+                setCategoryId(0);
+            } finally {
+                setLoadingCategories(false);
+            }
+        };
+
+        void run();
+    }, [open, projectId, dashboardId, loadCategories]);
+
+    const getCategoryDisplayName = (name?: string) => {
+        const trimmed = name?.trim() ?? '';
+        if (!trimmed) return 'Fane 1';
+        if (trimmed.toLowerCase() === 'general') return 'Fane 1';
+        return trimmed;
+    };
+
     const handleCopy = async () => {
         if (!chart) return;
         if (!projectId) {
@@ -111,6 +153,10 @@ const CopyChartDialog = ({
         }
         if (!dashboardId) {
             setLocalError('Velg dashboard');
+            return;
+        }
+        if (categories.length > 1 && !categoryId) {
+            setLocalError('Velg fane');
             return;
         }
         if (!chartName.trim()) {
@@ -126,6 +172,7 @@ const CopyChartDialog = ({
             projectName: selectedProjectName,
             dashboardId,
             dashboardName: selectedDashboardName,
+            categoryId: categoryId || undefined,
             chartName: chartName.trim(),
             websiteId: websiteId || undefined,
         });
@@ -162,7 +209,10 @@ const CopyChartDialog = ({
                     <Select
                         label="Dashboard"
                         value={dashboardId ? String(dashboardId) : ''}
-                        onChange={(event) => setDashboardId(Number(event.target.value))}
+                        onChange={(event) => {
+                            setDashboardId(Number(event.target.value));
+                            setCategoryId(0);
+                        }}
                         size="small"
                         disabled={!projectId || loadingDashboards}
                     >
@@ -173,6 +223,26 @@ const CopyChartDialog = ({
                             </option>
                         ))}
                     </Select>
+
+                    {categories.length > 1 && (
+                        <Select
+                            label="Fane"
+                            value={categoryId ? String(categoryId) : ''}
+                            onChange={(event) => {
+                                setCategoryId(Number(event.target.value));
+                                setLocalError(null);
+                            }}
+                            size="small"
+                            disabled={!dashboardId || loadingCategories}
+                        >
+                            <option value="">Velg fane</option>
+                            {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {getCategoryDisplayName(category.name)}
+                                </option>
+                            ))}
+                        </Select>
+                    )}
 
                     <TextField
                         label="Navn på kopi"

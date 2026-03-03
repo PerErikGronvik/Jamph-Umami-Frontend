@@ -658,17 +658,20 @@ const ProjectManager = () => {
         projectName: string;
         dashboardId: number;
         dashboardName: string;
+        categoryId?: number;
         chartName: string;
         websiteId?: string;
     }) => {
         if (!copyChartTarget) return;
         setCopyChartError(null);
 
-        // Resolve a target category (use first existing or create a default)
+        // Resolve a target category (use selected if valid, else first existing or create a default)
         let targetCategoryId: number;
         try {
             const categories = await api.fetchCategories(params.projectId, params.dashboardId);
-            if (categories.length > 0) {
+            if (params.categoryId && categories.some((category) => category.id === params.categoryId)) {
+                targetCategoryId = params.categoryId;
+            } else if (categories.length > 0) {
                 targetCategoryId = categories[0].id;
             } else {
                 const created = await api.createCategory(params.projectId, params.dashboardId, 'Standard');
@@ -1540,6 +1543,7 @@ const ProjectManager = () => {
                     setCopyChartError(null);
                 }}
                 loadDashboards={api.fetchDashboards}
+                loadCategories={api.fetchCategories}
                 onCopy={handleCopyChart}
             />
 
