@@ -1435,6 +1435,7 @@ const Oversikt = () => {
                 }
                 loading={savingEdit}
                 error={mutationError}
+                defaultShowSql
                 onClose={() => {
                     setEditChart(null);
                     setMutationError(null);

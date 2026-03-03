@@ -13,6 +13,7 @@ type EditChartDialogProps = {
     defaultDashboardId?: number | null;
     loading?: boolean;
     error?: string | null;
+    defaultShowSql?: boolean;
     onClose: () => void;
     onSave: (params: {
         name: string;
@@ -60,6 +61,7 @@ const EditChartDialog = ({
     defaultDashboardId = null,
     loading = false,
     error,
+    defaultShowSql = false,
     onClose,
     onSave,
     onRenameVariant,
@@ -164,11 +166,11 @@ const EditChartDialog = ({
         setAddAsVariant(false);
         setVariantName('');
         setShowAddVariantControls(false);
-        setShowSql(false);
+        setShowSql(defaultShowSql);
         setShowRenameVariantField(false);
         setRenameVariantValue(selectedVariant?.queryName ?? '');
         setLocalError(null);
-    }, [open, chart]);
+    }, [open, chart, defaultShowSql]);
 
     const selectedVariant = variants.find((variant) => variant.queryId === selectedVariantQueryId) ?? variants[0] ?? null;
     const selectedVariantIsDraft = (selectedVariant?.queryId ?? 0) < 0;
