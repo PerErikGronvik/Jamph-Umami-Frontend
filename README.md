@@ -26,8 +26,15 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
 
 **Install and start**:
    Jamph-Umami-Frontend
-   npm install (If first time)
-   npm run start
+   # If pnpm is not on PATH, use Corepack
+   corepack prepare pnpm@9.12.2 --activate
+   corepack pnpm install (If first time)
+   corepack pnpm start
    Click the link to continue
+
    
-   Note: To restart the server, press `Ctrl+C` to stop it, then run `npm run start` again.
+   Note: To restart the server, press `Ctrl+C` to stop it, then run `corepack pnpm start` again.
+
+
+
+   
