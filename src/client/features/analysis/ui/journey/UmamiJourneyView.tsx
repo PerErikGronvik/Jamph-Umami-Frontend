@@ -59,8 +59,8 @@ const UmamiJourneyView: React.FC<UmamiJourneyFullViewProps> = ({
                             <div key={stepData.step} className="flex-shrink-0 w-60 flex flex-col gap-4">
                                 {/* Step Header */}
                                 <div className="flex flex-col items-center mb-2">
-                                    <div className="w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-sm mb-2 shadow-sm border border-transparent dark:border-[var(--ax-border-neutral-subtle)]" style={{ backgroundColor: 'var(--funnel-box-bg, rgb(19, 17, 54))' }}>
-                                        {stepData.displayStep}
+                                    <div className="h-8 px-3 rounded-full text-white flex items-center justify-center font-bold text-sm mb-2 shadow-sm border border-transparent dark:border-[var(--ax-border-neutral-subtle)] whitespace-nowrap" style={{ backgroundColor: 'var(--funnel-box-bg, rgb(19, 17, 54))' }}>
+                                        Steg {stepData.displayStep}
                                     </div>
                                     <div className="text-sm font-semibold text-[var(--ax-text-default)]">
                                         {stepData.totalValue.toLocaleString('nb-NO')} besøkende

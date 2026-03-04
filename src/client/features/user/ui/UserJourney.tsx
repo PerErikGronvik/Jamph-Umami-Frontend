@@ -1,17 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
   Loader,
   ReadMore,
   Select,
-  Tabs,
+  Switch,
   TextField,
 } from "@navikt/ds-react";
-import {
-  ResponsiveContainer,
-  SankeyChart,
-} from "@fluentui/react-charting";
 import { Download, Minimize2, ExternalLink } from "lucide-react";
 import ChartLayout from "../../analysis/ui/ChartLayout.tsx";
 import WebsitePicker from "../../analysis/ui/WebsitePicker.tsx";
@@ -76,12 +72,11 @@ const UserJourney = () => {
   } = journeyData;
 
   // UI state
-  const [activeTab, setActiveTab] = useState<string>("steps");
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [showTableSection, setShowTableSection] = useState<boolean>(false);
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
   const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
-  const sankeyContainerRef = useRef<HTMLDivElement | null>(null);
 
   const hasUnappliedFilterChanges = lastAppliedFilterKey
     ? buildAppliedFilterKey(
@@ -260,132 +255,76 @@ const UserJourney = () => {
 
       {!loading && data && data.SankeyChartData?.nodes?.length && data.SankeyChartData?.nodes?.length > 0 && (
         <>
-          <Tabs value={activeTab} onChange={setActiveTab}>
-            <Tabs.List>
-              <Tabs.Tab value="steps" label="Stegvisning" />
-              <Tabs.Tab value="sankey" label="Flytdiagram" />
-              <Tabs.Tab value="table" label="Tabell" />
-            </Tabs.List>
-
-            <Tabs.Panel value="sankey" className="pt-2">
-              <div
-                className={`${
-                  isFullscreen
-                    ? "fixed inset-0 z-50 bg-[var(--ax-bg-default)] p-8 overflow-auto"
-                    : ""
-                }`}
+          <div
+            className={`${
+              isFullscreen
+                ? "fixed inset-0 z-50 bg-[var(--ax-bg-default)] p-8 overflow-auto"
+                : "-mt-2 md:-mt-4"
+            }`}
+          >
+            {!isFullscreen && (
+              <ReadMore
+                header="Slik leser du flyten"
+                defaultOpen={true}
+                size="large"
+                className="mt-0 mb-6"
               >
-                {isFullscreen && (
-                  <div className="mb-4 flex justify-end">
-                    <Button
-                      size="small"
-                      variant="tertiary"
-                      onClick={() => setIsFullscreen(false)}
-                      icon={<Minimize2 size={20} />}
-                    >
-                      Lukk fullskjerm
-                    </Button>
-                  </div>
-                )}
-
-                <div className="overflow-x-auto w-full" ref={sankeyContainerRef}>
-                  <div
-                    style={{
-                      height: isFullscreen ? "calc(100vh - 120px)" : "700px",
-                      minWidth: `${Math.max(1000, steps * 350)}px`,
-                    }}
-                  >
-                    <ResponsiveContainer>
-                      <SankeyChart data={data} />
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-                {queryStats && (
-                  <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
-                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                  </div>
-                )}
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>
+                    Klikk på et steg for å utheve trafikken via den siden
+                  </li>
+                  <li>Bruk + for å legge til steget i en traktanalyse</li>
+                  <li>
+                    Bytt reiseretning for å se brukerreisen bakover
+                  </li>
+                </ul>
+              </ReadMore>
+            )}
+            {isFullscreen && (
+              <div className="mb-4 flex justify-end">
+                <Button
+                  size="small"
+                  variant="tertiary"
+                  onClick={() => setIsFullscreen(false)}
+                  icon={<Minimize2 size={20} />}
+                >
+                  Lukk fullskjerm
+                </Button>
               </div>
-            </Tabs.Panel>
+            )}
 
-            <Tabs.Panel value="steps" className="pt-4">
-              <div
-                className={`${
-                  isFullscreen
-                    ? "fixed inset-0 z-50 bg-[var(--ax-bg-default)] p-8 overflow-auto"
-                    : ""
-                }`}
+            <UmamiJourneyView
+              nodes={rawData?.nodes || []}
+              links={rawData?.links || []}
+              isFullscreen={isFullscreen}
+              reverseVisualOrder={reverseVisualOrder}
+              journeyDirection={journeyDirection}
+              websiteId={selectedWebsite?.id}
+              period={period}
+              customStartDate={customStartDate}
+              customEndDate={customEndDate}
+              domain={selectedWebsite?.domain}
+              onLoadMore={handleLoadMore}
+              isLoadingMore={isUpdating}
+            />
+            {queryStats && (
+              <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
+                Data prosessert: {queryStats.totalBytesProcessedGB} GB
+              </div>
+            )}
+            <div className="mt-4 flex justify-end">
+              <Switch
+                checked={showTableSection}
+                onChange={(e) => setShowTableSection(e.target.checked)}
+                size="small"
               >
-                {!isFullscreen && (
-                  <ReadMore
-                    header="Slik bruker du denne analysen"
-                    defaultOpen={true}
-                    size="large"
-                    className="mb-6"
-                  >
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>
-                        Klikk på et steg-kortene for å utheve flyten via bestemte
-                        sider
-                      </li>
-                      <li>Bruk pluss-ikonet (+) for å legge til steg i en traktanalyse.</li>
-                      <li>
-                        Juster reiseretningen, for å se brukerreisen i motsatt
-                        retning
-                      </li>
-                    </ul>
-                  </ReadMore>
-                )}
-                {isFullscreen && (
-                  <div className="mb-4 flex justify-end">
-                    <Button
-                      size="small"
-                      variant="tertiary"
-                      onClick={() => setIsFullscreen(false)}
-                      icon={<Minimize2 size={20} />}
-                    >
-                      Lukk fullskjerm
-                    </Button>
-                  </div>
-                )}
-                {/*
-                            {!isFullscreen && (
-                                <div className="mb-2 flex justify-end">
-                                    <Button
-                                        size="small"
-                                        variant="tertiary"
-                                        onClick={() => setIsFullscreen(true)}
-                                        icon={<Maximize2 size={20} />}
-                                    >
-                                        Fullskjerm
-                                    </Button>
-                                </div>
-                            )}
-                            */}
+                Vis tabell
+              </Switch>
+            </div>
+          </div>
 
-                <UmamiJourneyView
-                  nodes={rawData?.nodes || []}
-                  links={rawData?.links || []}
-                  isFullscreen={isFullscreen}
-                  reverseVisualOrder={reverseVisualOrder}
-                  journeyDirection={journeyDirection}
-                  websiteId={selectedWebsite?.id}
-                  period={period}
-                  customStartDate={customStartDate}
-                  customEndDate={customEndDate}
-                  domain={selectedWebsite?.domain}
-                  onLoadMore={handleLoadMore}
-                  isLoadingMore={isUpdating}
-                />
-                {queryStats && (
-                  <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
-                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                  </div>
-                )}
-              </div>
-            </Tabs.Panel>
-
-            <Tabs.Panel value="table" className="pt-4">
+          {showTableSection && (
+            <div className="pt-4">
               <div className="border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
                   <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
@@ -425,14 +364,16 @@ const UserJourney = () => {
                           return (
                             <tr key={idx} className="hover:bg-[var(--ax-bg-neutral-soft)]">
                               <td className="px-4 py-2 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
-                                {step}
+                                {step === "-" ? "-" : `Steg ${step}`}
                               </td>
                               <td className="px-4 py-2 text-sm">
                                 {targetNode?.name && selectedWebsite ? (
                                   <span
                                     className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
                                     onClick={() => {
-                                      if (typeof targetNode.name === "string") setSelectedTableUrl(targetNode.name);
+                                      if (typeof targetNode.name === "string") {
+                                        setSelectedTableUrl(targetNode.name);
+                                      }
                                     }}
                                   >
                                     {targetNode.name}{" "}
@@ -449,7 +390,9 @@ const UserJourney = () => {
                                   <span
                                     className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
                                     onClick={() => {
-                                      if (typeof sourceNode.name === "string") setSelectedTableUrl(sourceNode.name);
+                                      if (typeof sourceNode.name === "string") {
+                                        setSelectedTableUrl(sourceNode.name);
+                                      }
                                     }}
                                   >
                                     {sourceNode.name}{" "}
@@ -498,17 +441,17 @@ const UserJourney = () => {
                   </Button>
                 </div>
               </div>
+            </div>
+          )}
 
-              <AnalysisActionModal
-                open={!!selectedTableUrl}
-                onClose={() => setSelectedTableUrl(null)}
-                urlPath={selectedTableUrl}
-                websiteId={selectedWebsite?.id}
-                period={period}
-                domain={selectedWebsite?.domain}
-              />
-            </Tabs.Panel>
-          </Tabs>
+          <AnalysisActionModal
+            open={!!selectedTableUrl}
+            onClose={() => setSelectedTableUrl(null)}
+            urlPath={selectedTableUrl}
+            websiteId={selectedWebsite?.id}
+            period={period}
+            domain={selectedWebsite?.domain}
+          />
           <div className="flex justify-end mt-8">
             <Button
               size="small"
