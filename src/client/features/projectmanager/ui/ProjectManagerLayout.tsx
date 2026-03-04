@@ -47,7 +47,7 @@ const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = ({
                             <div className="md:hidden">
                                 <Accordion size="small" headingSize="xsmall">
                                     <Accordion.Item>
-                                        <Accordion.Header>Prosjekter</Accordion.Header>
+                                        <Accordion.Header>Team</Accordion.Header>
                                         <Accordion.Content className="p-0 border-t border-[var(--ax-border-neutral-subtle)]">
                                             <div className="p-3">{sidebar}</div>
                                         </Accordion.Content>
