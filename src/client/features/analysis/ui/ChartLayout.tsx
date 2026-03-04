@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Page, Accordion } from "@navikt/ds-react";
 import { type AnalyticsPage, analyticsPages } from '../model/analyticsNavigation.ts';
 import { type ChartGroup } from '../model/chartGroups.tsx';
@@ -26,12 +26,32 @@ interface SidebarNavigationContentProps {
     onNavigate: (e: React.MouseEvent, href: string) => void;
 }
 
+const SkipSidebarLink: React.FC = () => {
+    const [isFocused, setIsFocused] = useState(false);
+
+    return (
+        <a
+            href="#chart-layout-main-content"
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className={
+                isFocused
+                    ? 'mb-3 inline-block rounded-md bg-[var(--ax-bg-default)] px-3 py-2 text-sm text-[var(--ax-text-default)] shadow-md'
+                    : 'absolute left-[-9999px] top-auto h-px w-px overflow-hidden'
+            }
+        >
+            Hopp over menyen for analysetyper
+        </a>
+    );
+};
+
 const SidebarNavigationContent: React.FC<SidebarNavigationContentProps> = ({
     filteredChartGroups,
     currentPage,
     onNavigate
 }) => (
     <>
+        <SkipSidebarLink />
         {filteredChartGroups.map((group) => (
             <div key={group.title}>
                 <div className="flex items-center gap-2 px-3 mb-2 text-sm font-semibold text-[var(--ax-text-subtle)] tracking-wide mt-4">
@@ -88,7 +108,6 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
 
             <Page.Block width="2xl" gutters className="pb-16">
                 <div className="rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)] overflow-hidden">
-
                     {/* Unified Top Bar */}
                     {(sidebarContent || (!hideSidebar && filters)) && (
                     <div className="border-b border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-subtle)] flex flex-col md:flex-row md:min-h-[80px]">
@@ -145,7 +164,11 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                         )}
 
                         {/* ================= COL 2: CONTENT ================= */}
-                        <div className="flex-1 min-w-0 bg-[var(--ax-bg-default)] flex flex-col z-0 relative">
+                        <div
+                            id="chart-layout-main-content"
+                            tabIndex={-1}
+                            className="flex-1 min-w-0 bg-[var(--ax-bg-default)] flex flex-col z-0 relative focus:outline-none"
+                        >
                             <div className="p-6 md:p-8 flex-1 overflow-x-auto">
                                 {children}
                             </div>

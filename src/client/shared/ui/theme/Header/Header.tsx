@@ -223,11 +223,7 @@ export default function Header({ theme }: HeaderProps) {
                     )}
                   </div>
                   <span
-                    className={
-                      theme === "dark"
-                        ? "text-xs md:text-sm text-[var(--ax-text-subtle)] whitespace-nowrap"
-                        : "text-xs md:text-sm text-white/80 whitespace-nowrap"
-                    }
+                    className="text-xs md:text-sm text-current opacity-80 whitespace-nowrap"
                   >
                     Data fra Umami og Siteimprove
                   </span>
