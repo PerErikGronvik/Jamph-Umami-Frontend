@@ -1,4 +1,5 @@
-import { Button, Alert, Loader, Tabs, Heading, BodyShort } from '@navikt/ds-react';
+import { useState } from 'react';
+import { Button, Alert, Loader, Switch, Heading, BodyShort } from '@navikt/ds-react';
 import { ResponsiveContainer, LineChart } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
@@ -31,8 +32,6 @@ const Retention = () => {
         loading,
         error,
         hasAttemptedFetch,
-        activeTab,
-        setActiveTab,
         copySuccess,
         hasUnappliedFilterChanges,
         cookieBadge,
@@ -44,6 +43,7 @@ const Retention = () => {
         downloadCSV,
         copyShareLink,
     } = useRetention();
+    const [showTableSection, setShowTableSection] = useState(false);
 
     return (
         <ChartLayout
@@ -152,38 +152,42 @@ const Retention = () => {
 
                     {retentionStats && <RetentionStatsCards stats={retentionStats} />}
 
-                    <Tabs value={activeTab} onChange={setActiveTab}>
-                        <Tabs.List>
-                            <Tabs.Tab value="chart" label="Linjediagram" />
-                            <Tabs.Tab value="table" label="Tabell" />
-                        </Tabs.List>
-
-                        <Tabs.Panel value="chart" className="pt-4">
-                            <div style={{ width: '100%', height: '500px' }}>
-                                {chartData && (
-                                    <ResponsiveContainer>
-                                        <LineChart
-                                            data={chartData.data}
-                                            legendsOverflowText={'Overflow Items'}
-                                            yAxisTickFormat={(d: number | string) => `${Number(d)}% `}
-                                            legendProps={{
-                                                allowFocusOnLegends: true,
-                                                styles: {
-                                                    text: { color: 'var(--ax-text-default)' },
-                                                }
-                                            }}
-                                        />
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                            {queryStats && (
-                                <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
-                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                                </div>
+                    <div className="pt-4">
+                        <div style={{ width: '100%', height: '500px' }}>
+                            {chartData && (
+                                <ResponsiveContainer>
+                                    <LineChart
+                                        data={chartData.data}
+                                        legendsOverflowText={'Overflow Items'}
+                                        yAxisTickFormat={(d: number | string) => `${Number(d)}% `}
+                                        legendProps={{
+                                            allowFocusOnLegends: true,
+                                            styles: {
+                                                text: { color: 'var(--ax-text-default)' },
+                                            }
+                                        }}
+                                    />
+                                </ResponsiveContainer>
                             )}
-                        </Tabs.Panel>
+                        </div>
+                        {queryStats && (
+                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
+                                Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                            </div>
+                        )}
+                        <div className="mt-4 flex justify-end">
+                            <Switch
+                                checked={showTableSection}
+                                onChange={(e) => setShowTableSection(e.target.checked)}
+                                size="small"
+                            >
+                                Vis tabell
+                            </Switch>
+                        </div>
+                    </div>
 
-                        <Tabs.Panel value="table" className="pt-4">
+                    {showTableSection && (
+                        <div className="pt-4">
                             <div className="border rounded-lg overflow-hidden">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
@@ -227,8 +231,8 @@ const Retention = () => {
                                     )}
                                 </div>
                             </div>
-                        </Tabs.Panel>
-                    </Tabs>
+                        </div>
+                    )}
                     <div className="flex justify-end mt-8">
                         <Button
                             size="small"
