@@ -92,8 +92,8 @@ export default function Header({ theme }: HeaderProps) {
   const linkButton =
     "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " +
     (theme === "dark"
-      ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]"
-      : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
+      ? "!text-[var(--ax-text-default)] visited:!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]"
+      : "!text-white visited:!text-white hover:!text-white active:!text-white focus:!text-black focus:!bg-blue-100");
 
   const environmentBadgeLabel = isLocalhost ? "Localhost" : "Dev";
 
@@ -176,7 +176,7 @@ export default function Header({ theme }: HeaderProps) {
     <div
       style={{
         background:
-          theme === "dark" ? "var(--ax-bg-default)" : "rgba(19,17,54)",
+          theme === "dark" ? "var(--ax-bg-default)" : "rgba(19, 17, 54, 1)",
       }}
       className="border-b border-[var(--ax-border-neutral-subtle)]"
     >
@@ -188,7 +188,6 @@ export default function Header({ theme }: HeaderProps) {
               variant="tertiary"
               className={`${linkButton} !px-0`}
               href="/"
-              aria-label="Innblikk"
             >
               <div className="flex items-start gap-2.5 py-1">
                 <span

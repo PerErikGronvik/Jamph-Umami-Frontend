@@ -29,6 +29,8 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             item.name.toLowerCase().includes(normalizedAkselSearchQuery)
         );
     });
+    const hasVisibleWebsites = (visibleWebsites?.length ?? 0) > 0;
+    const showNoMatches = hasLoadedData && !hasVisibleWebsites && !isLoading;
 
     const normalizeDomain = (domain: string) => {
         const cleaned = domain
@@ -208,21 +210,28 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                             ))}
                         </List>
                     ) : (
-                        <List as="ul" style={{ marginBottom: "16px" }}>
-                            {visibleWebsites && visibleWebsites.map(item => (
-                                <List.Item key={item.id}>
-                                    <Link
-                                        href={`/trafikkanalyse?websiteId=${item.id}&domain=${item.domain}&urlPath=%2F`}
-                                        onClick={(event) => {
-                                            event.preventDefault();
-                                            navigateToTrafficAnalysis(item, "/");
-                                        }}
-                                    >
-                                        {item.domain}
-                                    </Link>
-                                </List.Item>
-                            ))}
-                        </List>
+                        hasVisibleWebsites ? (
+                            <List as="ul" style={{ marginBottom: "16px" }}>
+                                {visibleWebsites?.map(item => (
+                                    <List.Item key={item.id}>
+                                        <Link
+                                            href={`/trafikkanalyse?websiteId=${item.id}&domain=${item.domain}&urlPath=%2F`}
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                navigateToTrafficAnalysis(item, "/");
+                                            }}
+                                        >
+                                            {item.domain}
+                                        </Link>
+                                    </List.Item>
+                                ))}
+                            </List>
+                        ) : showNoMatches ? (
+                            <BodyShort style={{ marginBottom: "16px" }}>
+                                Ingen nettsider matcher søket.
+                            </BodyShort>
+                        ) : null
+                        
                     )}
                     <BodyShort className="mt-4 mb-2">
                         Savner du en nettside eller app? <Link href="/komigang">Følg kom-i-gang-guiden!</Link>
