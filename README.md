@@ -25,14 +25,8 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
    - Paste the file `fagtorsdag-prod-81a6-52ac69097f46.json` into the `Jamph-Umami-Frontend` folder. Keep the file secret, do not share it.
 
 **Install and start**:
-   Jamph-Umami-Frontend
-   # If pnpm is not on PATH, use Corepack
-   corepack prepare pnpm@9.12.2 --activate
-   corepack pnpm install (If first time)
-   corepack pnpm start
-   Click the link to continue
 
-   
+   > **Note:** This project uses **pnpm** as its package manager (declared in `package.json` as `"packageManager": "pnpm@9.12.2"` and tracked via `pnpm-lock.yaml`). Please use pnpm for all install and start commands to avoid creating a conflicting `package-lock.json` or dependency drift.
 
    ### macOS / Linux
    ```bash
@@ -43,11 +37,10 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
    ```
 
    ### Windows
-   > **OBS:** `corepack enable` krever admin-rettigheter på Windows og feiler uten det. Kan åpne powershell som admin eller bruke npm til å  installere pnpm.
-   > Installer pnpm via npm i stedet – det fungerer uten admin.
+   > **OBS:** `corepack enable` krever admin-rettigheter på Windows og feiler uten det. Bruk heller npm til å installere pnpm-verktøyet én gang – prosjektet bruker fortsatt pnpm som pakkebehandler.
    ```powershell
-   npm install -g pnpm   # én gang, krever ikke admin
-   pnpm install          # første gang
+   npm install -g pnpm   # installer pnpm-verktøyet én gang (krever ikke admin)
+   pnpm install          # første gang – bruker pnpm-lock.yaml
    pnpm start
    ```
    Click the link to continue
