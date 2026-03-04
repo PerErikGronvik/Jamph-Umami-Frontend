@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Select, Button, Modal, DatePicker, Accordion } from '@navikt/ds-react';
 import { format } from 'date-fns';
-import UrlSearchForm from './UrlSearchForm';
+import UrlSearchFormPrototype from './UrlSearchFormPrototype';
 
 type MetricType = 'visitors' | 'pageviews' | 'proportion';
 
@@ -82,7 +82,7 @@ export default function FilterBar({
     return (
         <>
             <div className="w-full mb-2">
-                <UrlSearchForm
+                <UrlSearchFormPrototype
                     targetPath="/prototype3"
                     defaultValue={defaultUrlFormValue}
                     onResolved={(websiteId, domain, name, pathname, pathOperator) => {

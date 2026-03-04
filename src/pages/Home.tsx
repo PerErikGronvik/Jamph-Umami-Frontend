@@ -143,6 +143,8 @@ function Home() {
                         <Link
                             href="/grafbygger"
                             className="primary-button"
+                            onClick={(e) => e.preventDefault()}
+                            style={{ opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(1)', pointerEvents: 'none' }}
                         >
                             Gå til Grafbyggeren
                         </Link>
@@ -155,6 +157,8 @@ function Home() {
                         <Link
                             href="/prototype2"
                             className="primary-button"
+                            onClick={(e) => e.preventDefault()}
+                            style={{ opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(1)', pointerEvents: 'none' }}
                         >
                             Prototype 2
                         </Link>
