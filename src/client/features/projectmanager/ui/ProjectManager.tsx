@@ -867,21 +867,6 @@ const ProjectManager = () => {
         }));
     }, [selectedProject]);
 
-    const dashboardChartCountById = useMemo(() => {
-        if (!selectedProject) return new Map<number, number>();
-        return new Map(selectedProject.dashboards.map((dashboard) => [dashboard.id, dashboard.charts.length]));
-    }, [selectedProject]);
-    const categoryChartCountByKey = useMemo(() => {
-        if (!selectedProject) return new Map<string, number>();
-        const entries: Array<[string, number]> = [];
-        selectedProject.dashboards.forEach((dashboard) => {
-            dashboard.categories.forEach((category) => {
-                entries.push([`${dashboard.id}-${category.id}`, category.charts.length]);
-            });
-        });
-        return new Map(entries);
-    }, [selectedProject]);
-
     const isInitialLoading = loading && projectSummaries.length === 0 && !error;
     const categoryRowKeys = useMemo(() => {
         const keys = new Set<string>();
@@ -1125,19 +1110,18 @@ const ProjectManager = () => {
                     )}
 
                     {!isInitialLoading && selectedProject && fileRows.length > 0 && (
-                        <Table size="small" className="table-fixed">
+                        <Table size="small" className="w-full">
                             <Table.Header>
                                 <Table.Row>
                                     <Table.HeaderCell scope="col">Dashboard</Table.HeaderCell>
-                                    <Table.HeaderCell scope="col" className="w-28 text-right">Grafer</Table.HeaderCell>
-                                    <Table.HeaderCell scope="col" className="w-14">
+                                    <Table.HeaderCell scope="col" className="w-12 sm:w-14 text-right">
                                         <span className="sr-only">Handlinger</span>
                                     </Table.HeaderCell>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
                                 {visibleFileRows.map((row, index) => {
-                                    const paddingClass = row.indentLevel === 2 ? 'pl-12' : row.indentLevel === 1 ? 'pl-6' : '';
+                                    const paddingClass = row.indentLevel === 2 ? 'pl-6 sm:pl-12' : row.indentLevel === 1 ? 'pl-3 sm:pl-6' : '';
                                     const overviewHref = `/oversikt?projectId=${selectedProject.project.id}&dashboardId=${row.dashboardId}${row.categoryId ? `&categoryId=${row.categoryId}` : ''}`;
                                     const isDashboardExpanded = expandedDashboards.has(row.dashboardId);
                                     const nextRow = visibleFileRows[index + 1];
@@ -1152,17 +1136,12 @@ const ProjectManager = () => {
                                         : hasCategoryRow && !!row.categoryId && !!nextRow && (
                                             nextRow.dashboardId !== row.dashboardId || nextRow.categoryId !== row.categoryId
                                         );
-                                    const chartCountValue = row.type === 'dashboard'
-                                        ? String(dashboardChartCountById.get(row.dashboardId) ?? 0)
-                                        : row.type === 'category'
-                                            ? String(categoryChartCountByKey.get(categoryKey) ?? 0)
-                                        : '';
                                     return (
                                         <Fragment key={row.id}>
                                             <Table.Row>
-                                                <Table.HeaderCell scope="row">
-                                                    <span className={`inline-flex items-center gap-2 min-w-0 ${paddingClass}`}>
-                                                        <span className="text-[var(--ax-text-subtle)]">
+                                                <Table.HeaderCell scope="row" className="w-full min-w-0">
+                                                    <span className={`flex w-full min-w-0 items-center gap-2 overflow-hidden ${paddingClass}`}>
+                                                        <span className="shrink-0 text-[var(--ax-text-subtle)]">
                                                             {row.type === 'dashboard' ? (
                                                                 <button
                                                                     type="button"
@@ -1216,15 +1195,12 @@ const ProjectManager = () => {
                                                                 </Tooltip>
                                                             )}
                                                         </span>
-                                                        <Link as={RouterLink} to={overviewHref}>
+                                                        <Link as={RouterLink} to={overviewHref} className="block min-w-0 flex-1 truncate">
                                                             {row.type === 'category' ? getCategoryDisplayName(row.name) : row.name}
                                                         </Link>
                                                     </span>
                                                 </Table.HeaderCell>
-                                                <Table.DataCell className="w-28 text-right whitespace-nowrap">
-                                                    {chartCountValue}
-                                                </Table.DataCell>
-                                                <Table.DataCell>
+                                                <Table.DataCell className="w-12 sm:w-14 text-right">
                                                     <div className="flex justify-end">
                                                         {row.type === 'chart' ? (
                                                             <ActionMenu>
@@ -1333,28 +1309,26 @@ const ProjectManager = () => {
                                             {isRowCategoryExpanded && isLastRowInCategory && (
                                                 <Table.Row>
                                                     <Table.HeaderCell scope="row">
-                                                        <div className="inline-flex items-center gap-2 pl-12">
+                                                        <div className="inline-flex items-center gap-2 pl-6 sm:pl-12">
                                                             <span className="text-[var(--ax-text-subtle)]">
                                                                 <Plus aria-hidden size={14} />
                                                             </span>
                                                             {renderAddMenu(row.dashboardId)}
                                                         </div>
                                                     </Table.HeaderCell>
-                                                    <Table.DataCell />
                                                     <Table.DataCell />
                                                 </Table.Row>
                                             )}
                                             {isDashboardExpanded && isLastRowInDashboard && (
                                                 <Table.Row>
                                                     <Table.HeaderCell scope="row">
-                                                        <div className="inline-flex items-center gap-2 pl-6">
+                                                        <div className="inline-flex items-center gap-2 pl-3 sm:pl-6">
                                                             <span className="text-[var(--ax-text-subtle)]">
                                                                 <Plus aria-hidden size={14} />
                                                             </span>
                                                             {renderAddMenu(row.dashboardId)}
                                                         </div>
                                                     </Table.HeaderCell>
-                                                    <Table.DataCell />
                                                     <Table.DataCell />
                                                 </Table.Row>
                                             )}
