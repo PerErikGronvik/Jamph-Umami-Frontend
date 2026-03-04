@@ -1,9 +1,9 @@
-Start Umami
+Innblikk
 ================
 
 For å måle brukeradferd effektivt, trenger du verktøy som gir innsikt uten å gå på bekostning av brukervennlighet, datasikkerhet eller personvern..
 
-Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde dashboards, med mulighet for dypere produktanalyser i verktøy som Metabase, Grafana og Jupyter Notebook.
+Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde dashboards, med mulighet for dypere produktanalyser i verktøy som Innblikk, Metabase, Grafana og Knast.
 
 ---
 # Utvikling
@@ -27,7 +27,7 @@ pnpm run dev
 ```
 
 # Env
-- `BACKEND_BASE_URL`: Base URL for the start umami backend, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`) to avoid hardcoded endpoints.
+- `BACKEND_BASE_URL`: Base URL for the innblikk backend, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`) to avoid hardcoded endpoints.
 - `BACKEND_TOKEN_URL`: Optional token endpoint for service-to-service token exchange. In local development, defaults to `http://localhost:8080/issueissue/token`.
 - `BACKEND_TOKEN_CLIENT_ID`, `BACKEND_TOKEN_CLIENT_SECRET`, `BACKEND_TOKEN_AUDIENCE`: Optional token request params. In local development against `issueissue`, defaults are `start-umami`, `unused`, `start-umami`.
 - `BACKEND_TOKEN`: Optional static fallback token used by `/api/backend` only if no incoming auth token exists and dynamic service token fetch is unavailable.
@@ -38,7 +38,7 @@ pnpm run dev
 
 # Bruk a KI
 
-Start Umami er utviklet med hjelp av KI.
+Innblikk er utviklet med hjelp av KI.
 
 # Henvendelser og veiledning
 
