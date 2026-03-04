@@ -302,7 +302,7 @@ const MetricSelector = forwardRef(({
 
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <Heading level="3" size="xsmall" >
+            <Heading level="2" size="xsmall" >
               Målt som...
             </Heading>
             <HelpText title="Hva er en måling?">

@@ -366,7 +366,7 @@ const GroupingOptions = forwardRef(({
 
         <div className="space-y-4 mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <Heading level="3" size="xsmall" >
+            <Heading level="2" size="xsmall" >
               Grupper etter...
             </Heading>
             <HelpText title="Hva er en gruppering?">
@@ -697,7 +697,7 @@ const GroupingOptions = forwardRef(({
         </div>
 
         <div>
-          <Heading level="3" size="xsmall" spacing className="mt-6">
+          <Heading level="2" size="xsmall" spacing className="mt-6">
             Visningsvalg
           </Heading>
           <div className="flex flex-col gap-4 pb-4">

@@ -32,7 +32,7 @@ export const KontaktSeksjon = ({ showMarginBottom = false, narrowContent = false
 
 const KontaktContent = () => (
     <>
-        <Heading as="h3" size="medium" style={{ marginBottom: '24px' }}>
+        <Heading as="h2" size="medium" style={{ marginBottom: '24px' }}>
             Ønsker du noen å sparre med?
         </Heading>
 
@@ -49,7 +49,7 @@ const KontaktContent = () => (
                 border: '1px solid var(--ax-border-neutral-subtle)'
             }}>
                 <Link href="https://nav-it.slack.com/archives/C02UGFS2J4B" target="_blank">
-                    <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
+                    <Heading as="h2" size="medium" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
                         Chat med ResearchOps
                     </Heading>
                 </Link>
@@ -70,7 +70,7 @@ const KontaktContent = () => (
                 border: '1px solid var(--ax-border-neutral-subtle)'
             }}>
                 <Link href="https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/" target="_blank">
-                    <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
+                    <Heading as="h2" size="medium" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
                         Du kan også booke en samtale
                     </Heading>
                 </Link>

@@ -14,12 +14,12 @@ function Komigang() {
             <Page.Block width="xl" gutters className="pb-16 px-4">
                 <div className="max-w-[800px] mx-auto">
                     <div className="pt-16 pb-8">
-                        <Heading spacing={true} as="h3" size="medium">Start med å teste Umami i dev-miljø</Heading>
+                        <Heading spacing={true} as="h2" size="medium">Start med å teste Umami i dev-miljø</Heading>
                     </div>
 
                     <div className="flex flex-col gap-8">
                         <div>
-                            <Heading size="xsmall" level="4" spacing>
+                            <Heading size="xsmall" level="3" spacing>
                                 Bruker du dekoratøren?
                             </Heading>
                             <BodyShort spacing>
@@ -41,7 +41,7 @@ function Komigang() {
                         </div>
 
                         <div>
-                            <Heading size="xsmall" level="4" spacing>
+                            <Heading size="xsmall" level="3" spacing>
                                 Bruker du ikke dekoratøren?
                             </Heading>
                             <BodyShort spacing>
@@ -55,7 +55,7 @@ function Komigang() {
 
 
                     <div className="pt-16 pb-8">
-                        <Heading spacing={true} as="h3" size="medium">Få klarsignal for Umami i produksjon</Heading>
+                        <Heading spacing={true} as="h2" size="medium">Få klarsignal for Umami i produksjon</Heading>
                     </div>
 
                     <BodyShort spacing>
@@ -80,7 +80,7 @@ function Komigang() {
                     </BodyShort>
 
                     <div className="pt-16 pb-8">
-                        <Heading spacing={true} as="h3" size="medium">Måle</Heading>
+                        <Heading spacing={true} as="h2" size="medium">Måle</Heading>
                     </div>
                     <Heading size="xsmall" level="3" spacing>Mål det som betyr noe</Heading>
                     <List as="ol">
@@ -109,7 +109,7 @@ function Komigang() {
                     </BodyShort>
 
                     <div className="pt-16 pb-8">
-                        <Heading spacing={true} as="h3" size="medium">Analysere</Heading>
+                        <Heading spacing={true} as="h2" size="medium">Analysere</Heading>
                     </div>
                     <Heading size="xsmall" level="3" spacing>Her finner du Umami-data</Heading>
                     <List as="ul">
@@ -142,7 +142,7 @@ function Komigang() {
                     </List>
 
                     <div className="pt-16 pb-8">
-                        <Heading spacing={true} as="h3" size="medium">Dele og lære</Heading>
+                        <Heading spacing={true} as="h2" size="medium">Dele og lære</Heading>
                     </div>
                     <Heading size="xsmall" level="3" spacing>Bli med på kaffeprat? ☕</Heading>
                     <List as="ul">
