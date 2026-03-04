@@ -908,6 +908,26 @@ const ProjectManager = () => {
             }),
         [fileRows, expandedDashboards, expandedCategories, categoryRowKeys],
     );
+    const renderAddMenu = (dashboardId: number) => (
+            <ActionMenu>
+                <ActionMenu.Trigger>
+                    <Button size="xsmall" variant="secondary">
+                    Legg til
+                    </Button>
+                </ActionMenu.Trigger>
+            <ActionMenu.Content align="start">
+                <ActionMenu.Item as="a" href="/grafbygger">
+                    Legg til graf
+                </ActionMenu.Item>
+                <ActionMenu.Item onClick={() => openImportChart(dashboardId)}>
+                    Importer graf
+                </ActionMenu.Item>
+                <ActionMenu.Item onClick={() => openCreateDashboardTab(dashboardId)}>
+                    Legg til fane
+                </ActionMenu.Item>
+            </ActionMenu.Content>
+        </ActionMenu>
+    );
 
     return (
         <>
@@ -1130,6 +1150,14 @@ const ProjectManager = () => {
                                     const isLastRowInDashboard = !nextRow || nextRow.dashboardId !== row.dashboardId;
                                     const categoryKey = row.categoryId ? `${row.dashboardId}-${row.categoryId}` : '';
                                     const isCategoryExpanded = row.type === 'category' && expandedCategories.has(categoryKey);
+                                    const isRowCategoryExpanded = !!row.categoryId && expandedCategories.has(categoryKey);
+                                    const hasCategoryRow = !!row.categoryId && categoryRowKeys.has(categoryKey);
+                                    const isLastRowInCategory = hasCategoryRow
+                                        && !nextRow
+                                        ? true
+                                        : hasCategoryRow && !!row.categoryId && !!nextRow && (
+                                            nextRow.dashboardId !== row.dashboardId || nextRow.categoryId !== row.categoryId
+                                        );
                                     const chartCountValue = row.type === 'dashboard'
                                         ? String(dashboardChartCountById.get(row.dashboardId) ?? 0)
                                         : row.type === 'category'
@@ -1303,6 +1331,21 @@ const ProjectManager = () => {
                                                     </div>
                                                 </Table.DataCell>
                                             </Table.Row>
+                                            {isRowCategoryExpanded && isLastRowInCategory && (
+                                                <Table.Row>
+                                                    <Table.HeaderCell scope="row">
+                                                        <div className="inline-flex items-center gap-2 pl-12">
+                                                            <span className="text-[var(--ax-text-subtle)]">
+                                                                <Plus aria-hidden size={14} />
+                                                            </span>
+                                                            {renderAddMenu(row.dashboardId)}
+                                                        </div>
+                                                    </Table.HeaderCell>
+                                                    <Table.DataCell />
+                                                    <Table.DataCell />
+                                                    <Table.DataCell />
+                                                </Table.Row>
+                                            )}
                                             {isDashboardExpanded && isLastRowInDashboard && (
                                                 <Table.Row>
                                                     <Table.HeaderCell scope="row">
@@ -1310,21 +1353,7 @@ const ProjectManager = () => {
                                                             <span className="text-[var(--ax-text-subtle)]">
                                                                 <Plus aria-hidden size={14} />
                                                             </span>
-                                                                <ActionMenu>
-                                                                    <ActionMenu.Trigger>
-                                                                        <Button size="xsmall" variant="secondary">
-                                                                        Legg til graf
-                                                                        </Button>
-                                                                    </ActionMenu.Trigger>
-                                                                <ActionMenu.Content align="start">
-                                                                    <ActionMenu.Item as="a" href="/grafbygger">
-                                                                        Legg til ny graf
-                                                                    </ActionMenu.Item>
-                                                                    <ActionMenu.Item onClick={() => openImportChart(row.dashboardId)}>
-                                                                        Importer graf
-                                                                    </ActionMenu.Item>
-                                                                </ActionMenu.Content>
-                                                            </ActionMenu>
+                                                            {renderAddMenu(row.dashboardId)}
                                                         </div>
                                                     </Table.HeaderCell>
                                                     <Table.DataCell />
