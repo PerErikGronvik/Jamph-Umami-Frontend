@@ -31,6 +31,7 @@ interface ResultsPanelProps {
   containerStyle?: 'green' | 'white' | 'none';
   showCost?: boolean;
   showDownloadReadMore?: boolean;
+  hideTabList?: boolean;
   // Optional props for AnalysisActionModal
   websiteId?: string;
   period?: string;
@@ -56,6 +57,7 @@ const ResultsPanel = ({
   containerStyle = 'green',
   showCost = false,
   showDownloadReadMore = true,
+  hideTabList = false,
   websiteId,
   period,
 }: ResultsPanelProps) => {
@@ -147,6 +149,12 @@ const ResultsPanel = ({
     const urlHiddenTabs = hideTabsParam ? hideTabsParam.split(',') : [];
     return [...new Set([...urlHiddenTabs, ...propHiddenTabs])];
   })();
+
+  useEffect(() => {
+    if (hiddenTabs.includes(activeTab)) {
+      setActiveTab('table');
+    }
+  }, [activeTab, hiddenTabs]);
 
   // Update URL when tab changes
   const handleTabChange = (newTab: string) => {
@@ -560,13 +568,15 @@ const ResultsPanel = ({
           <div className="mt-2 space-y-3">
             {/* Tabbed Display */}
             <Tabs value={activeTab} onChange={handleTabChange}>
-              <Tabs.List>
-                {!hiddenTabs.includes('table') && <Tabs.Tab value="table" label="Tabell" />}
-                {!hiddenTabs.includes('linechart') && <Tabs.Tab value="linechart" label="Linje" />}
-                {!hiddenTabs.includes('areachart') && <Tabs.Tab value="areachart" label="Område" />}
-                {!hiddenTabs.includes('barchart') && <Tabs.Tab value="barchart" label="Stolpe" />}
-                {!hiddenTabs.includes('piechart') && <Tabs.Tab value="piechart" label="Kake" />}
-              </Tabs.List>
+              {!hideTabList && (
+                <Tabs.List>
+                  {!hiddenTabs.includes('table') && <Tabs.Tab value="table" label="Tabell" />}
+                  {!hiddenTabs.includes('linechart') && <Tabs.Tab value="linechart" label="Linje" />}
+                  {!hiddenTabs.includes('areachart') && <Tabs.Tab value="areachart" label="Område" />}
+                  {!hiddenTabs.includes('barchart') && <Tabs.Tab value="barchart" label="Stolpe" />}
+                  {!hiddenTabs.includes('piechart') && <Tabs.Tab value="piechart" label="Kake" />}
+                </Tabs.List>
+              )}
 
               {/* Table Tab */}
               <Tabs.Panel value="table" className="pt-4">
