@@ -216,7 +216,7 @@ const TrafficAnalysis = () => {
 
             {!loading && hasAttemptedFetch && !error && (
                 <>
-                    <div className="pt-4">
+                    <div>
                         <OversiktTabContent
                             hasAttemptedFetch={hasAttemptedFetch}
                             isLoadingPageMetrics={isLoadingPageMetrics}
