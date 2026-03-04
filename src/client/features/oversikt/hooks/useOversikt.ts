@@ -378,11 +378,15 @@ export const useOversikt = () => {
         try {
             const graphItems = await fetchGraphs(selectedProjectId, selectedDashboardId, categoryIdToLoad);
             const graphsWithQueries = await Promise.all(
-                graphItems.map(async (graph) => ({
-                    graph,
-                    queries: await fetchQueries(selectedProjectId, selectedDashboardId, categoryIdToLoad, graph.id),
-                    categoryId: categoryIdToLoad,
-                })),
+                graphItems.map(async (graph) => {
+                    const queryItems = await fetchQueries(selectedProjectId, selectedDashboardId, categoryIdToLoad, graph.id);
+                    const sortedQueries = [...queryItems].sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0));
+                    return {
+                        graph,
+                        queries: sortedQueries,
+                        categoryId: categoryIdToLoad,
+                    };
+                }),
             );
             setGraphs(graphsWithQueries);
         } catch (err: unknown) {

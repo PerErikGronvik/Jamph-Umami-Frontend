@@ -25,6 +25,7 @@ import {
     updateCategoryOrdering,
     updateCategory,
     updateGraph,
+    updateQueryOrdering,
     updateQuery,
 } from '../api/oversiktApi.ts';
 import EditChartDialog from './dialogs/EditChartDialog.tsx';
@@ -118,6 +119,9 @@ const Oversikt = () => {
     const [reorderingCategoryId, setReorderingCategoryId] = useState<number | null>(null);
     const [draggedCategoryId, setDraggedCategoryId] = useState<number | null>(null);
     const [dropTargetCategoryId, setDropTargetCategoryId] = useState<number | null>(null);
+    const [reorderingVariantGraphId, setReorderingVariantGraphId] = useState<number | null>(null);
+    const [draggedVariant, setDraggedVariant] = useState<{ graphId: number; queryId: number } | null>(null);
+    const [dropTargetVariant, setDropTargetVariant] = useState<{ graphId: number; queryId: number } | null>(null);
     const [reorderAnnouncement, setReorderAnnouncement] = useState('');
     const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
     const [stats, setStats] = useState<Record<string, { gb: number; title: string }>>({});
@@ -397,6 +401,54 @@ const Oversikt = () => {
             await refreshGraphs(editChart.categoryId);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Kunne ikke slette variant';
+            setMutationError(message);
+            throw (err instanceof Error ? err : new Error(message));
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleReorderChartVariants = async (params: { queryIds: number[] }) => {
+        if (!editChart || !selectedProjectId || !selectedDashboardId) throw new Error('Ingen graf valgt');
+        const queryIds = params.queryIds;
+        if (queryIds.length <= 1) return;
+
+        const previousVariants = editChart.variants ?? [];
+        const orderMap = new Map(queryIds.map((queryId, index) => [queryId, index]));
+        const reorderedVariants = [...previousVariants].sort((a, b) => {
+            const orderA = orderMap.get(a.queryId) ?? Number.MAX_SAFE_INTEGER;
+            const orderB = orderMap.get(b.queryId) ?? Number.MAX_SAFE_INTEGER;
+            return orderA - orderB;
+        });
+
+        setEditChart((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                variants: reorderedVariants,
+            };
+        });
+
+        setSavingEdit(true);
+        setMutationError(null);
+        try {
+            await updateQueryOrdering(
+                selectedProjectId,
+                selectedDashboardId,
+                editChart.categoryId,
+                editChart.graphId,
+                queryIds.map((id, index) => ({ id, ordering: index })),
+            );
+            await refreshGraphs(editChart.categoryId);
+        } catch (err) {
+            setEditChart((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    variants: previousVariants,
+                };
+            });
+            const message = err instanceof Error ? err.message : 'Kunne ikke endre rekkefølge på varianter';
             setMutationError(message);
             throw (err instanceof Error ? err : new Error(message));
         } finally {
@@ -913,6 +965,91 @@ const Oversikt = () => {
         setDropTargetCategoryId(null);
     };
 
+    const handleMoveChartVariant = async (graphId: number, fromIndex: number, toIndex: number): Promise<boolean> => {
+        if (!selectedProjectId || !selectedDashboardId) return false;
+        if (fromIndex === toIndex) return true;
+
+        const chart = charts.find((item) => item.graphId === graphId);
+        const variants = chart?.variants ?? [];
+        if (!chart || variants.length <= 1) return false;
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= variants.length || toIndex >= variants.length) return false;
+
+        const reordered = [...variants];
+        const [moved] = reordered.splice(fromIndex, 1);
+        if (!moved) return false;
+        reordered.splice(toIndex, 0, moved);
+
+        setReorderingVariantGraphId(graphId);
+        try {
+            await updateQueryOrdering(
+                selectedProjectId,
+                selectedDashboardId,
+                chart.categoryId,
+                graphId,
+                reordered.map((variant, index) => ({
+                    id: variant.queryId,
+                    ordering: index,
+                })),
+            );
+            await refreshGraphs(chart.categoryId);
+            setReorderAnnouncement(`${getVariantDisplayName(moved.queryName, toIndex)} flyttet til plass ${toIndex + 1} av ${variants.length}.`);
+            return true;
+        } catch (err: unknown) {
+            setMutationError(err instanceof Error ? err.message : 'Kunne ikke endre rekkefølge på varianter');
+            setReorderAnnouncement('Kunne ikke flytte variant. Prøv igjen.');
+            return false;
+        } finally {
+            setReorderingVariantGraphId(null);
+        }
+    };
+
+    const handleVariantDragStart = (
+        event: DragEvent<HTMLSpanElement>,
+        graphId: number,
+        queryId: number,
+        queryName: string,
+        index: number,
+        total: number,
+    ) => {
+        if (!isEditPanelOpen || total <= 1 || reorderingVariantGraphId !== null) return;
+        setDraggedVariant({ graphId, queryId });
+        setDropTargetVariant(null);
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', `${graphId}:${queryId}`);
+        setReorderAnnouncement(`${getVariantDisplayName(queryName, index)} valgt for flytting. Plass ${index + 1} av ${total}.`);
+    };
+
+    const handleDropOnVariant = async (
+        event: DragEvent<HTMLSpanElement>,
+        targetGraphId: number,
+        targetQueryId: number,
+    ) => {
+        if (!isEditPanelOpen || reorderingVariantGraphId !== null) return;
+        event.preventDefault();
+
+        const payload = event.dataTransfer.getData('text/plain');
+        const [payloadGraphId, payloadQueryId] = payload.split(':').map(Number);
+        const sourceGraphId =
+            draggedVariant?.graphId
+            ?? (Number.isFinite(payloadGraphId) ? payloadGraphId : NaN);
+        const sourceQueryId =
+            draggedVariant?.queryId
+            ?? (Number.isFinite(payloadQueryId) ? payloadQueryId : NaN);
+
+        if (!Number.isFinite(sourceGraphId) || !Number.isFinite(sourceQueryId)) return;
+        if (sourceGraphId !== targetGraphId) return;
+
+        const chart = charts.find((item) => item.graphId === targetGraphId);
+        const variants = chart?.variants ?? [];
+        const fromIndex = variants.findIndex((variant) => variant.queryId === sourceQueryId);
+        const toIndex = variants.findIndex((variant) => variant.queryId === targetQueryId);
+        if (fromIndex < 0 || toIndex < 0) return;
+
+        await handleMoveChartVariant(targetGraphId, fromIndex, toIndex);
+        setDraggedVariant(null);
+        setDropTargetVariant(null);
+    };
+
     const openImportModal = () => {
         if (!selectedDashboardId) return;
         setCategoryMutationError(null);
@@ -984,6 +1121,8 @@ const Oversikt = () => {
                 setGrabbedGraphId(null);
                 setDraggedGraphId(null);
                 setDropTargetGraphId(null);
+                setDraggedVariant(null);
+                setDropTargetVariant(null);
                 setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
             }
             return next;
@@ -1351,7 +1490,61 @@ const Oversikt = () => {
                                                         <Tabs.Tab
                                                             key={variant.queryId}
                                                             value={String(variant.queryId)}
-                                                            label={getVariantDisplayName(variant.queryName, variantIndex)}
+                                                            label={(
+                                                                <span
+                                                                    className={`inline-flex items-center gap-1 rounded ${dropTargetVariant?.graphId === chart.graphId && dropTargetVariant?.queryId === variant.queryId ? 'outline outline-2 outline-[var(--ax-border-accent)] outline-offset-2' : ''}`}
+                                                                    draggable={isEditPanelOpen && (chart.variants?.length ?? 0) > 1 && reorderingVariantGraphId === null}
+                                                                    onDragStart={(event) => {
+                                                                        handleVariantDragStart(
+                                                                            event,
+                                                                            chart.graphId,
+                                                                            variant.queryId,
+                                                                            variant.queryName,
+                                                                            variantIndex,
+                                                                            chart.variants?.length ?? 0,
+                                                                        );
+                                                                    }}
+                                                                    onDragEnd={() => {
+                                                                        setDraggedVariant(null);
+                                                                        setDropTargetVariant(null);
+                                                                    }}
+                                                                    onDragOver={(event) => {
+                                                                        if (
+                                                                            !isEditPanelOpen
+                                                                            || !draggedVariant
+                                                                            || draggedVariant.graphId !== chart.graphId
+                                                                            || reorderingVariantGraphId !== null
+                                                                        ) return;
+                                                                        event.preventDefault();
+                                                                        event.dataTransfer.dropEffect = 'move';
+                                                                    }}
+                                                                    onDragEnter={() => {
+                                                                        if (
+                                                                            !isEditPanelOpen
+                                                                            || !draggedVariant
+                                                                            || draggedVariant.graphId !== chart.graphId
+                                                                            || draggedVariant.queryId === variant.queryId
+                                                                        ) return;
+                                                                        setDropTargetVariant({ graphId: chart.graphId, queryId: variant.queryId });
+                                                                    }}
+                                                                    onDragLeave={() => {
+                                                                        if (dropTargetVariant?.graphId === chart.graphId && dropTargetVariant?.queryId === variant.queryId) {
+                                                                            setDropTargetVariant(null);
+                                                                        }
+                                                                    }}
+                                                                    onDrop={(event) => {
+                                                                        void handleDropOnVariant(event, chart.graphId, variant.queryId);
+                                                                    }}
+                                                                    style={{
+                                                                        opacity: draggedVariant?.graphId === chart.graphId && draggedVariant?.queryId === variant.queryId ? 0.65 : 1,
+                                                                    }}
+                                                                >
+                                                                    {isEditPanelOpen && (chart.variants?.length ?? 0) > 1 && (
+                                                                        <GripVertical aria-hidden size={14} />
+                                                                    )}
+                                                                    <span>{getVariantDisplayName(variant.queryName, variantIndex)}</span>
+                                                                </span>
+                                                            )}
                                                         />
                                                     ))}
                                                 </Tabs.List>
@@ -1443,6 +1636,7 @@ const Oversikt = () => {
                 onSave={handleSaveChart}
                 onRenameVariant={handleRenameChartVariant}
                 onDeleteVariant={handleDeleteChartVariant}
+                onReorderVariants={handleReorderChartVariants}
             />
 
             <DeleteChartDialog

@@ -51,6 +51,11 @@ export type QueryDto = {
     graphId: number;
     name: string;
     sqlText: string;
+    ordering?: number;
     updatedAt?: string;
 };
 
+export type QueryOrderingEntry = {
+    id: number;
+    ordering: number;
+};
