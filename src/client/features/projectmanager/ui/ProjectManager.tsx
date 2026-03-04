@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon, TabsIcon } from '@navikt/aksel-icons';
+import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon } from '@navikt/aksel-icons';
 import { ChevronDown, ChevronUp, MoreVertical, Plus } from 'lucide-react';
 import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Loader, Modal, Search, Select, Table, TextField, Tooltip } from '@navikt/ds-react';
+import { Link as RouterLink } from 'react-router-dom';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
 import CopyChartDialog from '../../oversikt/ui/dialogs/CopyChartDialog.tsx';
 import EditChartDialog from '../../oversikt/ui/dialogs/EditChartDialog.tsx';
@@ -140,6 +141,7 @@ const ProjectManager = () => {
     const [showNoSearchResultsAlert, setShowNoSearchResultsAlert] = useState(true);
     const [showNoSelectedProjectAlert, setShowNoSelectedProjectAlert] = useState(true);
     const [expandedDashboards, setExpandedDashboards] = useState<Set<number>>(new Set());
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const projectNameInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
@@ -195,6 +197,7 @@ const ProjectManager = () => {
 
             const rows: FileTableRow[] = [dashboardRow];
             if (!hasMultipleCategories) {
+                const singleCategoryId = dashboard.categories[0]?.id;
                 rows.push(...dashboard.charts.map((chart) => ({
                     id: `chart-${chart.id}`,
                     type: 'chart' as const,
@@ -202,7 +205,7 @@ const ProjectManager = () => {
                     indentLevel: 1 as const,
                     dashboardId: dashboard.id,
                     dashboardName: dashboard.name,
-                    categoryId: chart.categoryId,
+                    categoryId: chart.categoryId ?? singleCategoryId,
                     graphType: chart.graphType,
                     graphId: chart.id,
                 })));
@@ -228,7 +231,7 @@ const ProjectManager = () => {
                     indentLevel: 2 as const,
                     dashboardId: dashboard.id,
                     dashboardName: dashboard.name,
-                    categoryId: chart.categoryId,
+                    categoryId: chart.categoryId ?? category.id,
                     categoryName: category.name,
                     graphType: chart.graphType,
                     graphId: chart.id,
@@ -281,8 +284,20 @@ const ProjectManager = () => {
     }, [selectedProjectId, projectSummaries.length]);
 
     useEffect(() => {
+        const selectedSummary = projectSummaries.find((item) => item.project.id === selectedProjectId);
+        if (!selectedSummary) {
+            setExpandedDashboards(new Set());
+            setExpandedCategories(new Set());
+            return;
+        }
+        if (selectedSummary.dashboards.length === 1) {
+            setExpandedDashboards(new Set([selectedSummary.dashboards[0].id]));
+            setExpandedCategories(new Set());
+            return;
+        }
         setExpandedDashboards(new Set());
-    }, [selectedProjectId]);
+        setExpandedCategories(new Set());
+    }, [selectedProjectId, projectSummaries]);
 
     const openEdit = (summary: ProjectSummary) => {
         setLocalError(null);
@@ -861,11 +876,37 @@ const ProjectManager = () => {
         if (!selectedProject) return new Map<number, number>();
         return new Map(selectedProject.dashboards.map((dashboard) => [dashboard.id, dashboard.charts.length]));
     }, [selectedProject]);
+    const categoryChartCountByKey = useMemo(() => {
+        if (!selectedProject) return new Map<string, number>();
+        const entries: Array<[string, number]> = [];
+        selectedProject.dashboards.forEach((dashboard) => {
+            dashboard.categories.forEach((category) => {
+                entries.push([`${dashboard.id}-${category.id}`, category.charts.length]);
+            });
+        });
+        return new Map(entries);
+    }, [selectedProject]);
 
     const isInitialLoading = loading && projectSummaries.length === 0 && !error;
+    const categoryRowKeys = useMemo(() => {
+        const keys = new Set<string>();
+        fileRows.forEach((row) => {
+            if (row.type === 'category' && row.categoryId) keys.add(`${row.dashboardId}-${row.categoryId}`);
+        });
+        return keys;
+    }, [fileRows]);
     const visibleFileRows = useMemo(
-        () => fileRows.filter((row) => row.type === 'dashboard' || expandedDashboards.has(row.dashboardId)),
-        [fileRows, expandedDashboards],
+        () =>
+            fileRows.filter((row) => {
+                if (row.type === 'dashboard') return true;
+                if (!expandedDashboards.has(row.dashboardId)) return false;
+                if (row.type === 'category') return true;
+                if (!row.categoryId) return true;
+                const categoryKey = `${row.dashboardId}-${row.categoryId}`;
+                if (categoryRowKeys.has(categoryKey)) return expandedCategories.has(categoryKey);
+                return true;
+            }),
+        [fileRows, expandedDashboards, expandedCategories, categoryRowKeys],
     );
 
     return (
@@ -1081,13 +1122,18 @@ const ProjectManager = () => {
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {visibleFileRows.map((row) => {
+                                {visibleFileRows.map((row, index) => {
                                     const paddingClass = row.indentLevel === 2 ? 'pl-12' : row.indentLevel === 1 ? 'pl-6' : '';
                                     const overviewHref = `/oversikt?projectId=${selectedProject.project.id}&dashboardId=${row.dashboardId}${row.categoryId ? `&categoryId=${row.categoryId}` : ''}`;
-                                    const isEmptyDashboardRow = row.type === 'dashboard' && (dashboardChartCountById.get(row.dashboardId) ?? 0) === 0;
-                                    const isDashboardExpanded = row.type === 'dashboard' && expandedDashboards.has(row.dashboardId);
+                                    const isDashboardExpanded = expandedDashboards.has(row.dashboardId);
+                                    const nextRow = visibleFileRows[index + 1];
+                                    const isLastRowInDashboard = !nextRow || nextRow.dashboardId !== row.dashboardId;
+                                    const categoryKey = row.categoryId ? `${row.dashboardId}-${row.categoryId}` : '';
+                                    const isCategoryExpanded = row.type === 'category' && expandedCategories.has(categoryKey);
                                     const chartCountValue = row.type === 'dashboard'
                                         ? String(dashboardChartCountById.get(row.dashboardId) ?? 0)
+                                        : row.type === 'category'
+                                            ? String(categoryChartCountByKey.get(categoryKey) ?? 0)
                                         : '';
                                     return (
                                         <Fragment key={row.id}>
@@ -1116,12 +1162,31 @@ const ProjectManager = () => {
                                                                     {isDashboardExpanded ? <ChevronUp aria-hidden size={14} /> : <ChevronDown aria-hidden size={14} />}
                                                                 </button>
                                                             ) : row.type === 'category' ? (
-                                                                <TabsIcon aria-hidden fontSize="0.9rem" />
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`${isCategoryExpanded ? 'Skjul' : 'Vis'} grafer i ${getCategoryDisplayName(row.name)}`}
+                                                                    aria-expanded={isCategoryExpanded}
+                                                                    onClick={() => {
+                                                                        if (!row.categoryId) return;
+                                                                        setExpandedCategories((prev) => {
+                                                                            const next = new Set(prev);
+                                                                            if (next.has(categoryKey)) {
+                                                                                next.delete(categoryKey);
+                                                                            } else {
+                                                                                next.add(categoryKey);
+                                                                            }
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                    className="inline-flex h-5 w-5 items-center justify-center rounded border border-transparent hover:border-[var(--ax-border-neutral)] hover:bg-[var(--ax-bg-neutral-moderate)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ax-border-accent)]"
+                                                                >
+                                                                    {isCategoryExpanded ? <ChevronUp aria-hidden size={14} /> : <ChevronDown aria-hidden size={14} />}
+                                                                </button>
                                                             ) : (
                                                                 getChartIcon(row.graphType)
                                                             )}
                                                         </span>
-                                                        <Link href={overviewHref}>
+                                                        <Link as={RouterLink} to={overviewHref}>
                                                             {row.type === 'category' ? getCategoryDisplayName(row.name) : row.name}
                                                         </Link>
                                                     </span>
@@ -1145,7 +1210,7 @@ const ProjectManager = () => {
                                                                     />
                                                                 </ActionMenu.Trigger>
                                                                 <ActionMenu.Content align="end">
-                                                                    <ActionMenu.Item as="a" href={overviewHref}>
+                                                                    <ActionMenu.Item as={RouterLink} to={overviewHref}>
                                                                         Åpne i dashboard
                                                                     </ActionMenu.Item>
                                                                     {selectedProject && (
@@ -1223,7 +1288,7 @@ const ProjectManager = () => {
                                                                     />
                                                                 </ActionMenu.Trigger>
                                                                 <ActionMenu.Content align="end">
-                                                                    <ActionMenu.Item as="a" href={overviewHref}>
+                                                                    <ActionMenu.Item as={RouterLink} to={overviewHref}>
                                                                         Åpne fane i dashboard
                                                                     </ActionMenu.Item>
                                                                     <ActionMenu.Item onClick={() => openRenameDashboardTab(row)}>
@@ -1238,7 +1303,7 @@ const ProjectManager = () => {
                                                     </div>
                                                 </Table.DataCell>
                                             </Table.Row>
-                                            {isEmptyDashboardRow && isDashboardExpanded && (
+                                            {isDashboardExpanded && isLastRowInDashboard && (
                                                 <Table.Row>
                                                     <Table.HeaderCell scope="row">
                                                         <div className="inline-flex items-center gap-2 pl-6">

@@ -403,7 +403,8 @@ export const useOversikt = () => {
         setCategories([]);
         setActiveCategoryId(null);
         setGraphs([]);
-        void refreshCategories();
+        const preferredCategoryId = parseId(searchParams.get('categoryId'));
+        void refreshCategories(preferredCategoryId);
         // Intentionally only run when dashboard changes, not when active tab changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedProjectId, selectedDashboardId]);
@@ -462,8 +463,14 @@ export const useOversikt = () => {
         const currentProjectId = searchParams.get('projectId');
         const currentDashboardId = searchParams.get('dashboardId');
         const currentCategoryId = searchParams.get('categoryId');
+
+        // Preserve deep-link params while state is still resolving during initial/load transitions.
+        if (currentProjectId && !selectedProjectId) return;
+        if (currentDashboardId && !selectedDashboardId) return;
+
         const nextProjectId = selectedProjectId ? String(selectedProjectId) : null;
         const nextDashboardId = selectedDashboardId ? String(selectedDashboardId) : null;
+        if (selectedDashboardId && !activeCategoryId && currentCategoryId) return;
         const nextCategoryId = selectedDashboardId && activeCategoryId ? String(activeCategoryId) : null;
 
         if (currentProjectId === nextProjectId && currentDashboardId === nextDashboardId && currentCategoryId === nextCategoryId) return;
