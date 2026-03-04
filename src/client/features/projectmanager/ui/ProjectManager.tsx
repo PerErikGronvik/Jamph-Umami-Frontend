@@ -290,11 +290,6 @@ const ProjectManager = () => {
             setExpandedCategories(new Set());
             return;
         }
-        if (selectedSummary.dashboards.length === 1) {
-            setExpandedDashboards(new Set([selectedSummary.dashboards[0].id]));
-            setExpandedCategories(new Set());
-            return;
-        }
         setExpandedDashboards(new Set());
         setExpandedCategories(new Set());
     }, [selectedProjectId, projectSummaries]);
