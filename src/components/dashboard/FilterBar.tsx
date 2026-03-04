@@ -43,6 +43,8 @@ export interface FilterBarProps {
     onImport?: () => void;
     // ai bygger accordion
     aiByggerPanel?: React.ReactNode;
+    aiByggerOpen?: boolean;
+    onAiByggerOpenChange?: (open: boolean) => void;
 }
 
 export default function FilterBar({
@@ -65,8 +67,12 @@ export default function FilterBar({
     onExport,
     onImport,
     aiByggerPanel,
+    aiByggerOpen: aiByggerOpenProp,
+    onAiByggerOpenChange,
 }: FilterBarProps) {
-    const [aiByggerOpen, setAiByggerOpen] = useState(false);
+    const [aiByggerOpenInternal, setAiByggerOpenInternal] = useState(false);
+    const aiByggerOpen = aiByggerOpenProp ?? aiByggerOpenInternal;
+    const setAiByggerOpen = onAiByggerOpenChange ?? setAiByggerOpenInternal;
     const [isDateModalOpen, setIsDateModalOpen] = useState(false);
     const dateModalRef = useRef<HTMLDialogElement>(null);
     const [urlDirty, setUrlDirty] = useState(false);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import PinnedWidget from './PinnedWidget';
 
 export interface PinnedItem {
@@ -16,23 +16,49 @@ export interface PinnedItem {
     rowSpan: number;
 }
 
+type ExternalWidgetDrop = { chartType: string; sql: string; result: any; title: string; aiPrompt?: string; size: { cols: number; rows: number } };
+
 interface PinnedGridProps {
     widgets: PinnedItem[];
     onReorder: (fromId: string, toId: string) => void;
     onDelete: (id: string) => void;
     onEdit?: (widget: PinnedItem) => void;
+    onDropExternal?: (data: ExternalWidgetDrop) => void;
 }
 
-export default function PinnedGrid({ widgets, onReorder, onDelete, onEdit }: PinnedGridProps) {
+export default function PinnedGrid({ widgets, onReorder, onDelete, onEdit, onDropExternal }: PinnedGridProps) {
     const [dragId, setDragId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
     const [overDelete, setOverDelete] = useState(false);
+    const [externalOver, setExternalOver] = useState(false);
 
-    if (widgets.length === 0) return null;
+    function handleExternalDrop(e: React.DragEvent) {
+        const raw = e.dataTransfer.getData('application/aibygger');
+        if (raw && onDropExternal) { try { onDropExternal(JSON.parse(raw)); } catch { /* ignore */ } }
+    }
+
+    if (widgets.length === 0) {
+        return (
+            <div
+                onDragOver={(e) => { if (e.dataTransfer.types.includes('application/aibygger')) { e.preventDefault(); setExternalOver(true); } }}
+                onDragLeave={() => setExternalOver(false)}
+                onDrop={(e) => { e.preventDefault(); handleExternalDrop(e); setExternalOver(false); }}
+                style={{ minHeight: 120, border: `2px dashed ${externalOver ? '#0067C5' : '#d1d5db'}`, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 13, transition: 'border-color 0.15s, background 0.15s', background: externalOver ? '#eff6ff' : 'transparent', margin: '8px 0' }}
+            >
+                Slipp her for å legge til widget
+            </div>
+        );
+    }
 
     return (
         <>
-            <div className="grid grid-cols-2 gap-0">
+            <div
+                className="grid grid-cols-2 gap-0"
+                onDragOver={(e) => { if (e.dataTransfer.types.includes('application/aibygger')) { e.preventDefault(); setExternalOver(true); } }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setExternalOver(false); }}
+                onDrop={(e) => { const raw = e.dataTransfer.getData('application/aibygger'); if (raw) { e.preventDefault(); handleExternalDrop(e); setExternalOver(false); } }}
+                style={{ outline: externalOver ? '2px dashed #0067C5' : 'none', outlineOffset: 2, borderRadius: 4, transition: 'outline-color 0.15s' }}
+            >
                 {widgets.map((w) => {
                     const isOver = overId === w.id && dragId !== w.id;
                     const isDragging = dragId === w.id;
@@ -41,12 +67,12 @@ export default function PinnedGrid({ widgets, onReorder, onDelete, onEdit }: Pin
                             key={w.id}
                             draggable
                             onDoubleClick={() => onEdit?.(w)}
-                            onDragStart={(e) => { e.dataTransfer.setData('text/plain', w.id); e.dataTransfer.effectAllowed = 'move'; setDragId(w.id); }}
+                            onDragStart={(e) => { e.dataTransfer.setData('text/plain', w.id); e.dataTransfer.effectAllowed = 'move'; setDragId(w.id); setExternalOver(false); }}
                             onDragEnd={() => { setDragId(null); setOverId(null); setOverDelete(false); }}
                             onDragEnter={(e) => { e.preventDefault(); if (dragId !== w.id) setOverId(w.id); }}
                             onDragOver={(e) => e.preventDefault()}
                             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverId(prev => prev === w.id ? null : prev); }}
-                            onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); if (id && id !== w.id) { onReorder(id, w.id); } setDragId(null); setOverId(null); }}
+                            onDrop={(e) => { e.preventDefault(); const raw = e.dataTransfer.getData('application/aibygger'); if (raw) { e.stopPropagation(); handleExternalDrop(e); setExternalOver(false); return; } const id = e.dataTransfer.getData('text/plain'); if (id && id !== w.id) { onReorder(id, w.id); } setDragId(null); setOverId(null); }}
                             style={{
                                 gridColumn: `span ${w.colSpan}`,
                                 gridRow: `span ${w.rowSpan}`,

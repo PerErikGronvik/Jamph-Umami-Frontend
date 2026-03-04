@@ -91,6 +91,7 @@ const Prototype3 = () => {
     const [customWidgets, setCustomWidgets] = useState<WidgetEntry[]>(DEFAULT_WIDGETS);
     const [widgetOrder, setWidgetOrder] = useState<string[]>(DEFAULT_WIDGETS.map(w => w.id));
     const [editingWidget, setEditingWidget] = useState<{ sql: string; chartType: string; title: string; aiPrompt?: string; result?: any } | null>(null);
+    const [aiByggerOpen, setAiByggerOpen] = useState(false);
 
     const [activeFilters, setActiveFilters] = useState({
         pathOperator: defaultPathOperator,
@@ -339,6 +340,8 @@ const Prototype3 = () => {
                     onUrlResolved={handleUrlResolved}
                     onExport={handleExport}
                     onImport={() => importInputRef.current?.click()}
+                    aiByggerOpen={aiByggerOpen}
+                    onAiByggerOpenChange={setAiByggerOpen}
                     aiByggerPanel={
                         <AiByggerPanel
                             websiteId={effectiveWebsiteId}
@@ -349,8 +352,8 @@ const Prototype3 = () => {
                             editWidget={editingWidget}
                             onAddWidget={(sql, chartType, result, size, title, aiPrompt) => {
                                 const id = crypto.randomUUID();
-                                setCustomWidgets(prev => [...prev, { id, sql, chartType, result, size, title: title || '', aiPrompt: aiPrompt || '' }]);
-                                setWidgetOrder(prev => [...prev, id]);
+                                setCustomWidgets(prev => [{ id, sql, chartType, result, size, title: title || '', aiPrompt: aiPrompt || '' }, ...prev]);
+                                setWidgetOrder(prev => [id, ...prev]);
                             }}
                         />
                     }
@@ -388,6 +391,12 @@ const Prototype3 = () => {
                         onDelete={handleDeleteWidget}
                         onEdit={(w) => {
                             setEditingWidget({ sql: w.customWidget.sql, chartType: w.customWidget.chartType, title: w.customWidget.title, aiPrompt: w.customWidget.aiPrompt, result: w.customWidget.result });
+                            setAiByggerOpen(true);
+                        }}
+                        onDropExternal={(data) => {
+                            const id = crypto.randomUUID();
+                            setCustomWidgets(prev => [{ id, sql: data.sql, chartType: data.chartType, result: data.result, size: data.size, title: data.title || '', aiPrompt: data.aiPrompt || '' }, ...prev]);
+                            setWidgetOrder(prev => [id, ...prev]);
                         }}
                     />
                     {/* AI-bygger removed – now in accordion in FilterBar */}

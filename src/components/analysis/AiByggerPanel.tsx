@@ -839,7 +839,20 @@ ORDER BY term`;
                                 </div>
                             )}
                         </div>
-                        <div style={{ height: '80%', overflow: 'hidden' }}>
+                        <div
+                            style={{ height: '80%', overflow: 'hidden', cursor: onAddWidget ? 'grab' : undefined }}
+                            draggable={!!onAddWidget}
+                            onDragStart={onAddWidget ? (e) => {
+                                const widgetResult = p2Tab === 'stegvisning' ? journeyData
+                                    : p2Tab === 'kiforklaring' ? { text: currentExplanation ?? '' }
+                                    : p2Tab === 'regresjon' ? { rows: result?.data, r2: result?.data?.[0]?.r2, rmse: result?.data?.[0]?.rmse, n: result?.data?.[0]?.n, title: regressionTitle }
+                                    : result;
+                                const sizes = WIDGET_SIZES[p2Tab] ?? [{ cols: 1, rows: 1, name: 'Standard' }];
+                                const defaultSize = sizes.find(s => s.cols === 2 && s.rows === 1) ?? sizes[0];
+                                e.dataTransfer.setData('application/aibygger', JSON.stringify({ chartType: p2Tab, sql: query, result: widgetResult, title: aiPrompt, aiPrompt, size: defaultSize }));
+                                e.dataTransfer.effectAllowed = 'copy';
+                            } : undefined}
+                        >
                             <div style={{ width: '90%', height: '100%', overflow: 'auto', margin: '0 auto' }}>
                                 {p2Tab === 'stegvisning' ? (
                                     journeyLoading
@@ -861,7 +874,7 @@ ORDER BY term`;
                                 ) : error ? (
                                     <div className="flex items-center justify-center h-full text-red-500 text-sm">{error}</div>
                                 ) : result ? (
-                                    <PinnedWidget result={result} chartType={p2Tab} title={aiPrompt} />
+                                    <PinnedWidget result={result} chartType={p2Tab} title={aiPrompt} colSpan={p2Tab === 'piechart' ? 2 : 1} />
                                 ) : (
                                     <div className="flex items-center justify-center h-full text-gray-500 text-sm">Kjør spørringen for å se resultater</div>
                                 )}

@@ -64,7 +64,7 @@ export default function DashboardPieChart({ result, title, wide = false }: Props
     if (wide) {
         // 2×1: pie left, legend right
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minWidth: 0 }}>
+            <div className="widget-card" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minWidth: 0 }}>
                 <div className="widget-header">
                     <span className="widget-title">{title}</span>
                 </div>
@@ -87,7 +87,7 @@ export default function DashboardPieChart({ result, title, wide = false }: Props
 
     // 1×2: pie top, legend below
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minWidth: 0 }}>
+        <div className="widget-card" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minWidth: 0 }}>
             <div className="widget-header">
                 <span className="widget-title">{title}</span>
             </div>
