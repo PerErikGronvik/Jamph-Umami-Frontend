@@ -79,8 +79,18 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                 index === self.findIndex((w) => w.domain === website.domain)
             );
 
-            // Sort by domain
-            uniqueWebsites.sort((a: Website, b: Website) => a.domain.localeCompare(b.domain));
+            // Sort by domain, but feature www.nav.no first in prod environment.
+            uniqueWebsites.sort((a: Website, b: Website) => {
+                if (isProdEnvironment) {
+                    const aIsFeatured = normalizeDomain(a.domain) === "www.nav.no";
+                    const bIsFeatured = normalizeDomain(b.domain) === "www.nav.no";
+
+                    if (aIsFeatured && !bIsFeatured) return -1;
+                    if (!aIsFeatured && bIsFeatured) return 1;
+                }
+
+                return a.domain.localeCompare(b.domain, "nb");
+            });
 
             setFilteredData(uniqueWebsites);
             setHasLoadedData(true);
@@ -185,10 +195,10 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                     {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
                 </div>
                 {children}
-                <ReadMore size="small" style={{ marginTop: "24px" }} header="Hvilke nettsider / apper støttes?" onOpenChange={handleReadMoreToggle}>
+                <ReadMore size="small" style={{ marginTop: "24px" }} header="Hvilke nettsider støttes?" onOpenChange={handleReadMoreToggle}>
                     <div role="search" aria-label="Søk i Aksel" style={{ maxWidth: "460px", marginBottom: "16px" }}>
                         <Search
-                            label="Søk i Aksel"
+                            label="Hvilke nettsider støttes?"
                             variant="simple"
                             size="small"
                             value={akselSearchQuery}
