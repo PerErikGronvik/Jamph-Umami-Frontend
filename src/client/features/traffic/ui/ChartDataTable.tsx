@@ -176,7 +176,7 @@ const ChartDataTable = ({
                             onClick={handleDownloadCSV}
                             icon={<Download size={16} />}
                         >
-                            Last ned CSV
+                            Last ned
                         </Button>
                     </div>
                     {seriesQueryStats && (

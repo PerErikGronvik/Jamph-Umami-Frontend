@@ -146,7 +146,7 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
                             icon={<Download size={16} />}
                             disabled={data.length === 0}
                         >
-                            Last ned CSV
+                            Last ned
                         </Button>
                     </div>
                     {queryStats && (
