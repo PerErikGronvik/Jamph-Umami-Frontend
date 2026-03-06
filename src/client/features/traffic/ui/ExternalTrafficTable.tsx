@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Button, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
-import { Download } from 'lucide-react';
+import { useState } from 'react';
+import { ActionMenu, Button, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
+import { MoreVertical, Search } from 'lucide-react';
 import { formatMetricValue, formatCsvValue, downloadCsvFile } from '../utils/trafficUtils';
 
 type ExternalTrafficTableProps = {
@@ -13,6 +13,7 @@ type ExternalTrafficTableProps = {
 
 const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submittedMetricType }: ExternalTrafficTableProps) => {
     const [search, setSearch] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
     const [page, setPage] = useState(1);
     const rowsPerPage = 10;
 
@@ -20,12 +21,9 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
         row.name.toLowerCase().includes(search.toLowerCase())
     );
 
-    useEffect(() => {
-        setPage(1);
-    }, [search]);
-
-    const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+    const currentPage = Math.min(page, totalPages);
+    const paginatedData = filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
     const renderName = (name: string) => {
         if (name === 'Interne sider') return <div className="whitespace-nowrap">Interne sider</div>;
@@ -84,8 +82,39 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
 
     return (
         <VStack gap="space-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
                 <Heading level="3" size="small">{title}</Heading>
+                <div className="flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant={showSearch ? 'secondary' : 'tertiary'}
+                        size="xsmall"
+                        icon={<Search aria-hidden />}
+                        aria-label={`Søk i ${title}`}
+                        onClick={() => {
+                            setShowSearch((prev) => !prev);
+                            if (showSearch) setSearch('');
+                        }}
+                    />
+                    <ActionMenu>
+                        <ActionMenu.Trigger>
+                            <Button
+                                type="button"
+                                variant="tertiary"
+                                size="xsmall"
+                                icon={<MoreVertical aria-hidden />}
+                                aria-label={`Flere valg for ${title}`}
+                            />
+                        </ActionMenu.Trigger>
+                        <ActionMenu.Content align="end">
+                            <ActionMenu.Item onClick={handleDownloadCSV} disabled={!data.length}>
+                                Last ned
+                            </ActionMenu.Item>
+                        </ActionMenu.Content>
+                    </ActionMenu>
+                </div>
+            </div>
+            {showSearch && (
                 <div className="w-full sm:w-64 min-w-0">
                     <TextField
                         label="Søk"
@@ -96,7 +125,7 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
-            </div>
+            )}
             <div className="border rounded-lg overflow-x-auto">
                 <div className="min-w-max">
                     <Table size="small" className="table-auto min-w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2">
@@ -128,23 +157,11 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
                             )}
                         </Table.Body>
                     </Table>
-                    <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center min-w-full">
-                        <div className="flex gap-2">
-                            <Button
-                                size="small"
-                                variant="secondary"
-                                onClick={handleDownloadCSV}
-                                icon={<Download size={16} />}
-                            >
-                                Last ned
-                            </Button>
-                        </div>
-                    </div>
                 </div>
             </div>
             {totalPages > 1 && (
                 <Pagination
-                    page={page}
+                    page={currentPage}
                     onPageChange={setPage}
                     count={totalPages}
                     size="small"

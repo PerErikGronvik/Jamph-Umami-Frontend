@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort, InlineMessage } from '@navikt/ds-react';
-import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink, Download } from 'lucide-react';
+import { ActionMenu, Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort, InlineMessage } from '@navikt/ds-react';
+import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink, MoreVertical, Search } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
@@ -54,6 +54,7 @@ const UserProfiles = () => {
     const [page, setPage] = useState<number>(1);
     const [maxUsers, setMaxUsers] = useState<number>(DEFAULT_MAX_USERS);
     const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
+    const [showTableSearch, setShowTableSearch] = useState(false);
 
     // Details Modal State
     const [selectedSession, setSelectedSession] = useState<UserProfile | null>(null);
@@ -230,6 +231,34 @@ const UserProfiles = () => {
         }
     };
 
+    const downloadProfilesCsv = (filteredUsers: UserProfile[]) => {
+        const headers = ['Bruker ID', 'ID-type', 'Sesjoner', 'Distinct ID', 'Sist sett', 'Land', 'Enhet', 'Nettleser'];
+        const csvRows = [
+            headers.join(','),
+            ...filteredUsers.map((user) => [
+                `"${user.userId}"`,
+                `"${user.idType || ''}"`,
+                `"${(user.sessionIds || []).length}"`,
+                `"${user.distinctId || ''}"`,
+                `"${formatDate(user.lastSeen)}"`,
+                `"${translateCountry(user.country)}"`,
+                `"${translateDevice(user.device)}"`,
+                `"${user.browser || '-'}"`
+            ].join(','))
+        ];
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `brukerprofiler_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <ChartLayout
             title="Enkeltbrukere"
@@ -342,7 +371,7 @@ const UserProfiles = () => {
                 );
                 return (
                     <>
-                        <div className="flex justify-between items-end gap-4 mb-4">
+                        <div className="mb-2 flex items-center justify-between gap-2">
                             <div className="flex-1 min-w-0">
                                 <Heading level="2" size="medium">
                                     Viser {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'enkeltbrukere'}
@@ -364,7 +393,49 @@ const UserProfiles = () => {
                                             : 'Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.'}
                                 </BodyShort>
                             </div>
-                            <div className="w-full sm:w-64 flex-shrink-0">
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    type="button"
+                                    variant={showTableSearch ? 'secondary' : 'tertiary'}
+                                    size="xsmall"
+                                    icon={<Search aria-hidden />}
+                                    aria-label="Søk i brukertabell"
+                                    onClick={() => {
+                                        setShowTableSearch((prev) => !prev);
+                                        if (showTableSearch) setSearchQuery('');
+                                    }}
+                                />
+                                <ActionMenu>
+                                    <ActionMenu.Trigger>
+                                        <Button
+                                            type="button"
+                                            variant="tertiary"
+                                            size="xsmall"
+                                            icon={<MoreVertical aria-hidden />}
+                                            aria-label="Flere valg for brukertabell"
+                                        />
+                                    </ActionMenu.Trigger>
+                                    <ActionMenu.Content align="end">
+                                        <ActionMenu.Item
+                                            onClick={() => downloadProfilesCsv(filteredUsers)}
+                                            disabled={filteredUsers.length === 0}
+                                        >
+                                            Last ned CSV
+                                        </ActionMenu.Item>
+                                        {queryStats && (
+                                            <>
+                                                <ActionMenu.Divider />
+                                                <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                                                    {queryStats.totalBytesProcessedGB} GB prosessert
+                                                </div>
+                                            </>
+                                        )}
+                                    </ActionMenu.Content>
+                                </ActionMenu>
+                            </div>
+                        </div>
+                        {showTableSearch && (
+                            <div className="mb-4 w-full sm:w-64 min-w-0">
                                 <TextField
                                     label="Søk"
                                     hideLabel
@@ -374,7 +445,7 @@ const UserProfiles = () => {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
-                        </div>
+                        )}
 
                         <div className="border rounded-lg overflow-hidden">
                             <div className="overflow-x-auto">
@@ -427,49 +498,6 @@ const UserProfiles = () => {
                                         ))}
                                     </Table.Body>
                                 </Table>
-                            </div>
-                            <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="small"
-                                        variant="secondary"
-                                        onClick={() => {
-                                            const headers = ['Bruker ID', 'ID-type', 'Sesjoner', 'Distinct ID', 'Sist sett', 'Land', 'Enhet', 'Nettleser'];
-                                            const csvRows = [
-                                                headers.join(','),
-                                                ...filteredUsers.map((user) => [
-                                                    `"${user.userId}"`,
-                                                    `"${user.idType || ''}"`,
-                                                    `"${(user.sessionIds || []).length}"`,
-                                                    `"${user.distinctId || ''}"`,
-                                                    `"${formatDate(user.lastSeen)}"`,
-                                                    `"${translateCountry(user.country)}"`,
-                                                    `"${translateDevice(user.device)}"`,
-                                                    `"${user.browser || '-'}"`
-                                                ].join(','))
-                                            ];
-                                            const csvContent = csvRows.join('\n');
-                                            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                                            const link = document.createElement('a');
-                                            const url = URL.createObjectURL(blob);
-                                            link.setAttribute('href', url);
-                                            link.setAttribute('download', `brukerprofiler_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
-                                            link.style.visibility = 'hidden';
-                                            document.body.appendChild(link);
-                                            link.click();
-                                            document.body.removeChild(link);
-                                            URL.revokeObjectURL(url);
-                                        }}
-                                        icon={<Download size={16} />}
-                                    >
-                                        Last ned CSV
-                                    </Button>
-                                </div>
-                                {queryStats && (
-                                    <span className="text-sm text-[var(--ax-text-subtle)]">
-                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                                    </span>
-                                )}
                             </div>
                         </div>
 

@@ -1,5 +1,6 @@
-import { Table, Alert, Loader, Tabs, TextField, HelpText, Button, Link as DsLink } from '@navikt/ds-react';
-import { Download } from 'lucide-react';
+import { useState } from 'react';
+import { Table, Alert, Loader, Tabs, TextField, HelpText, Button, Link as DsLink, ActionMenu, Heading } from '@navikt/ds-react';
+import { MoreVertical, Search } from 'lucide-react';
 
 import ChartLayout from './ChartLayout.tsx';
 import WebsitePicker from './WebsitePicker.tsx';
@@ -20,45 +21,99 @@ const Spellings = () => {
         fetchSpellingData,
     } = useSpellings();
 
-    const renderTable = (items: SpellingIssue[], emptyMsg: string, filename: string) => {
-        if (items.length === 0) {
+    const [potentialSearch, setPotentialSearch] = useState('');
+    const [misspellingsSearch, setMisspellingsSearch] = useState('');
+    const [showPotentialSearch, setShowPotentialSearch] = useState(false);
+    const [showMisspellingsSearch, setShowMisspellingsSearch] = useState(false);
+
+    const renderTable = (
+        items: SpellingIssue[],
+        emptyMsg: string,
+        filename: string,
+        title: string,
+        search: string,
+        setSearch: (value: string) => void,
+        showSearch: boolean,
+        setShowSearch: (value: boolean) => void,
+    ) => {
+        const filteredItems = items.filter((item) => item.word.toLowerCase().includes(search.toLowerCase()));
+
+        if (filteredItems.length === 0) {
             return <Alert variant="success">{emptyMsg}</Alert>;
         }
         return (
-            <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-default)]">
-                <Table size="small" zebraStripes>
-                    <Table.Header>
-                        <Table.Row>
-                            <Table.HeaderCell>Ord</Table.HeaderCell>
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                        {items.map((item, idx) => (
-                            <Table.Row key={item.id || idx}>
-                                <Table.DataCell className="font-medium text-red-600">
-                                    {item.word}
-                                </Table.DataCell>
-                            </Table.Row>
-                        ))}
-                    </Table.Body>
-                </Table>
-                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                    <div className="flex gap-2">
+            <div className="space-y-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                    <Heading level="3" size="small">{title}</Heading>
+                    <div className="flex items-center gap-1">
                         <Button
-                            size="small"
-                            variant="secondary"
+                            type="button"
+                            variant={showSearch ? 'secondary' : 'tertiary'}
+                            size="xsmall"
+                            icon={<Search aria-hidden />}
+                            aria-label={`Søk i ${title.toLowerCase()}`}
                             onClick={() => {
-                                downloadCsv(
-                                    `${filename}_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`,
-                                    ['Ord'],
-                                    items.map((item) => [`"${item.word}"`]),
-                                );
+                                setShowSearch(!showSearch);
+                                if (showSearch) setSearch('');
                             }}
-                            icon={<Download size={16} />}
                         >
-                            Last ned CSV
                         </Button>
+                        <ActionMenu>
+                            <ActionMenu.Trigger>
+                                <Button
+                                    type="button"
+                                    variant="tertiary"
+                                    size="xsmall"
+                                    icon={<MoreVertical aria-hidden />}
+                                    aria-label={`Flere valg for ${title.toLowerCase()}`}
+                                />
+                            </ActionMenu.Trigger>
+                            <ActionMenu.Content align="end">
+                                <ActionMenu.Item
+                                    onClick={() => {
+                                        downloadCsv(
+                                            `${filename}_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`,
+                                            ['Ord'],
+                                            filteredItems.map((item) => [`"${item.word}"`]),
+                                        );
+                                    }}
+                                    disabled={filteredItems.length === 0}
+                                >
+                                    Last ned
+                                </ActionMenu.Item>
+                            </ActionMenu.Content>
+                        </ActionMenu>
                     </div>
+                </div>
+                {showSearch && (
+                    <div className="w-full sm:w-64 min-w-0">
+                        <TextField
+                            label="Søk"
+                            hideLabel
+                            placeholder="Søk..."
+                            size="small"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                )}
+                <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-default)]">
+                    <Table size="small" zebraStripes>
+                        <Table.Header>
+                            <Table.Row>
+                                <Table.HeaderCell>Ord</Table.HeaderCell>
+                            </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
+                            {filteredItems.map((item, idx) => (
+                                <Table.Row key={item.id || idx}>
+                                    <Table.DataCell className="font-medium text-red-600">
+                                        {item.word}
+                                    </Table.DataCell>
+                                </Table.Row>
+                            ))}
+                        </Table.Body>
+                    </Table>
                 </div>
             </div>
         );
@@ -255,10 +310,28 @@ const Spellings = () => {
                                 </Tabs.List>
 
                                 <Tabs.Panel value="potential" className="pt-4">
-                                    {renderTable(potentialMisspellings, "Ingen mulige stavefeil funnet.", "mulige_stavefeil")}
+                                    {renderTable(
+                                        potentialMisspellings,
+                                        potentialSearch ? `Ingen treff for "${potentialSearch}"` : 'Ingen mulige stavefeil funnet.',
+                                        'mulige_stavefeil',
+                                        'Mulige stavefeil',
+                                        potentialSearch,
+                                        setPotentialSearch,
+                                        showPotentialSearch,
+                                        setShowPotentialSearch,
+                                    )}
                                 </Tabs.Panel>
                                 <Tabs.Panel value="misspellings" className="pt-4">
-                                    {renderTable(misspellings, "Ingen bekreftede stavefeil funnet!", "bekreftede_stavefeil")}
+                                    {renderTable(
+                                        misspellings,
+                                        misspellingsSearch ? `Ingen treff for "${misspellingsSearch}"` : 'Ingen bekreftede stavefeil funnet!',
+                                        'bekreftede_stavefeil',
+                                        'Bekreftede stavefeil',
+                                        misspellingsSearch,
+                                        setMisspellingsSearch,
+                                        showMisspellingsSearch,
+                                        setShowMisspellingsSearch,
+                                    )}
                                 </Tabs.Panel>
                             </Tabs>
                         </>

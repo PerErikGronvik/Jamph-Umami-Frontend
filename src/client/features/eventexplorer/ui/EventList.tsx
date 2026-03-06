@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Heading, Button, Table, TextField } from '@navikt/ds-react';
-import { Download } from 'lucide-react';
+import { Heading, Button, Table, TextField, ActionMenu } from '@navikt/ds-react';
+import { MoreVertical, Search } from 'lucide-react';
 import type { QueryStats } from '../model/types.ts';
 
 interface EventListProps {
@@ -12,6 +12,7 @@ interface EventListProps {
 
 const EventList = ({ events, eventsQueryStats, websiteName, onSelectEvent }: EventListProps) => {
     const [eventSearch, setEventSearch] = useState<string>('');
+    const [showSearch, setShowSearch] = useState(false);
 
     const filteredEvents = events.filter(event =>
         event.name.toLowerCase().includes(eventSearch.toLowerCase())
@@ -40,10 +41,49 @@ const EventList = ({ events, eventsQueryStats, websiteName, onSelectEvent }: Eve
     };
 
     return (
-        <div>
-            <div className="flex justify-between items-end mb-4">
+        <div className="space-y-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
                 <Heading level="3" size="small">Egendefinerte hendelser</Heading>
-                <div className="w-64">
+                <div className="flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant={showSearch ? 'secondary' : 'tertiary'}
+                        size="xsmall"
+                        icon={<Search aria-hidden />}
+                        aria-label="Søk i hendelseslisten"
+                        onClick={() => {
+                            setShowSearch((prev) => !prev);
+                            if (showSearch) setEventSearch('');
+                        }}
+                    />
+                    <ActionMenu>
+                        <ActionMenu.Trigger>
+                            <Button
+                                type="button"
+                                variant="tertiary"
+                                size="xsmall"
+                                icon={<MoreVertical aria-hidden />}
+                                aria-label="Flere valg for hendelseslisten"
+                            />
+                        </ActionMenu.Trigger>
+                        <ActionMenu.Content align="end">
+                            <ActionMenu.Item onClick={handleDownloadCsv} disabled={filteredEvents.length === 0}>
+                                Last ned
+                            </ActionMenu.Item>
+                            {eventsQueryStats && (
+                                <>
+                                    <ActionMenu.Divider />
+                                    <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                                        {eventsQueryStats.totalBytesProcessedGB} GB prosessert
+                                    </div>
+                                </>
+                            )}
+                        </ActionMenu.Content>
+                    </ActionMenu>
+                </div>
+            </div>
+            {showSearch && (
+                <div className="w-full sm:w-64 min-w-0">
                     <TextField
                         label="Søk"
                         hideLabel
@@ -53,7 +93,7 @@ const EventList = ({ events, eventsQueryStats, websiteName, onSelectEvent }: Eve
                         onChange={(e) => setEventSearch(e.target.value)}
                     />
                 </div>
-            </div>
+            )}
             <div className="border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                     <Table size="small">
@@ -79,26 +119,9 @@ const EventList = ({ events, eventsQueryStats, websiteName, onSelectEvent }: Eve
                                         </Button>
                                     </Table.DataCell>
                                 </Table.Row>
-                            ))}
-                        </Table.Body>
+                        ))}
+                    </Table.Body>
                     </Table>
-                </div>
-                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                    <div className="flex gap-2">
-                        <Button
-                            size="small"
-                            variant="secondary"
-                            onClick={handleDownloadCsv}
-                            icon={<Download size={16} />}
-                        >
-                            Last ned CSV
-                        </Button>
-                    </div>
-                    {eventsQueryStats && (
-                        <span className="text-sm text-[var(--ax-text-subtle)]">
-                            Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
-                        </span>
-                    )}
                 </div>
             </div>
         </div>
@@ -106,4 +129,3 @@ const EventList = ({ events, eventsQueryStats, websiteName, onSelectEvent }: Eve
 };
 
 export default EventList;
-

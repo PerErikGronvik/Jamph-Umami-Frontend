@@ -211,7 +211,7 @@ const EventJourney = () => {
                                 onChange={(e) => setShowTableSection(e.target.checked)}
                                 size="small"
                             >
-                                Vis tabell
+                                Vis som tabell
                             </Switch>
                         </div>
                     </div>

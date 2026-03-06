@@ -225,6 +225,15 @@ const UserComposition = () => {
     };
 
     const prepareLineChartData = () => null;
+    const categoryTitleByKey: Record<string, string> = {
+        browser: 'Nettleser',
+        os: 'Operativsystem',
+        device: 'Enhet',
+        screen: 'Skjerm',
+        language: 'Språk',
+        country: 'Land',
+        custom: 'Egendefinert',
+    };
 
     return (
         <ChartLayout
@@ -449,6 +458,10 @@ const UserComposition = () => {
                                 hideHeading={true}
                                 hiddenTabs={['linechart', 'areachart', 'barchart', 'piechart']}
                                 hideTabList={true}
+                                compactTableActions={true}
+                                hideTableFooter={true}
+                                compactTableTitle={categoryTitleByKey[activeCategory] ?? 'Tabell'}
+                                showDownloadReadMore={false}
                             />
                         </div>
                     </Tabs>

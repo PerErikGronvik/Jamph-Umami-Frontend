@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton, Select, Label } from '@navikt/ds-react';
-import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
+import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton, Select, Label, ActionMenu, TextField } from '@navikt/ds-react';
+import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, MoreVertical, Search as SearchIcon } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps, IVerticalBarChartDataPoint} from '@fluentui/react-charting';
 import { LineChart, VerticalBarChart, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { translateValue } from '../../../../shared/lib/translations.ts';
@@ -32,6 +32,9 @@ interface ResultsPanelProps {
   showCost?: boolean;
   showDownloadReadMore?: boolean;
   hideTabList?: boolean;
+  compactTableActions?: boolean;
+  hideTableFooter?: boolean;
+  compactTableTitle?: string;
   // Optional props for AnalysisActionModal
   websiteId?: string;
   period?: string;
@@ -58,6 +61,9 @@ const ResultsPanel = ({
   showCost = false,
   showDownloadReadMore = true,
   hideTabList = false,
+  compactTableActions = false,
+  hideTableFooter = false,
+  compactTableTitle,
   websiteId,
   period,
 }: ResultsPanelProps) => {
@@ -80,6 +86,7 @@ const ResultsPanel = ({
   const [rowLimit] = useState<number>(5000); // Limit rows for performance
   const [showAllRows, setShowAllRows] = useState<boolean>(false);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+  const [showTableSearch, setShowTableSearch] = useState<boolean>(false);
 
   // Helper to check if a value is a clickable URL path
   const isClickablePath = (val: any): boolean => {
@@ -581,123 +588,182 @@ const ResultsPanel = ({
               {/* Table Tab */}
               <Tabs.Panel value="table" className="pt-4">
                 <div className="space-y-3">
-                  <div className="border rounded-lg overflow-hidden bg-[var(--ax-bg-default)]">
-                    {/* Search Input */}
-                    <div className="p-3 bg-[var(--ax-bg-neutral-soft)] border-b space-y-2">
-                      <Search
-                        label="Søk i tabellen"
-                        hideLabel={false}
-                        size="small"
-                        value={searchQuery}
-                        onChange={(value) => setSearchQuery(value)}
-                        onClear={handleClearSearch}
-                        variant={result.data.length > rowLimit ? "primary" : "simple"}
-                        onSearchClick={result.data.length > rowLimit ? handleSearch : undefined}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleSearch();
-                          }
-                        }}
-                        htmlSize={result.data.length > rowLimit ? 40 : undefined}
-                      />
-                      {/* Large dataset warning and controls */}
-                      {result.data.length > rowLimit && (
-                        <div className="space-y-2">
-                          {!showAllRows && !activeSearchQuery && (
-                            <Alert variant="warning" size="small">
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                <span className="text-sm">
-                                  Viser bare {rowLimit.toLocaleString('nb-NO')} av {result.data.length.toLocaleString('nb-NO')} rader for ytelse
-                                </span>
-                                <Button
-                                  size="xsmall"
-                                  variant="secondary"
-                                  onClick={() => setShowAllRows(true)}
-                                >
-                                  Vis alle rader
-                                </Button>
-                              </div>
-                            </Alert>
-                          )}
-                          {showAllRows && !activeSearchQuery && (
-                            <Alert variant="info" size="small">
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                <span className="text-sm">
-                                  Viser alle {result.data.length.toLocaleString('nb-NO')} rader (kan være tregt)
-                                </span>
-                                <Button
-                                  size="xsmall"
-                                  variant="secondary"
-                                  onClick={() => setShowAllRows(false)}
-                                >
-                                  Begrens til {rowLimit.toLocaleString('nb-NO')} rader
-                                </Button>
-                              </div>
-                            </Alert>
-                          )}
-                          {activeSearchQuery && processedTableData && (
-                            <Alert variant="info" size="small">
-                              <span className="text-sm">
-                                Fant {processedTableData.length.toLocaleString('nb-NO')} av {result.data.length.toLocaleString('nb-NO')} rader
-                              </span>
-                            </Alert>
-                          )}
+                  {compactTableActions && (
+                    <div className="space-y-2">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        {compactTableTitle ? (
+                          <Heading level="3" size="small">{compactTableTitle}</Heading>
+                        ) : <span />}
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant={showTableSearch ? 'secondary' : 'tertiary'}
+                            size="xsmall"
+                            icon={<SearchIcon aria-hidden />}
+                            aria-label="Søk i tabellen"
+                            onClick={() => {
+                              setShowTableSearch((prev) => !prev);
+                              if (showTableSearch) handleClearSearch();
+                            }}
+                          />
+                          <ActionMenu>
+                            <ActionMenu.Trigger>
+                              <Button
+                                type="button"
+                                variant="tertiary"
+                                size="xsmall"
+                                icon={<MoreVertical aria-hidden />}
+                                aria-label="Flere valg for tabell"
+                              />
+                            </ActionMenu.Trigger>
+                            <ActionMenu.Content align="end">
+                              <ActionMenu.Item onClick={downloadCSV}>
+                                Last ned CSV
+                              </ActionMenu.Item>
+                            </ActionMenu.Content>
+                          </ActionMenu>
+                        </div>
+                      </div>
+                      {showTableSearch && (
+                        <div className="w-full sm:w-64 min-w-0">
+                          <TextField
+                            label="Søk i tabellen"
+                            hideLabel
+                            size="small"
+                            value={searchQuery}
+                            placeholder="Søk..."
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSearch();
+                              }
+                            }}
+                          />
                         </div>
                       )}
                     </div>
+                  )}
+                  <div className="border rounded-lg overflow-hidden bg-[var(--ax-bg-default)]">
+                    {/* Search Input */}
+                    {!compactTableActions && (
+                      <div className="p-3 bg-[var(--ax-bg-neutral-soft)] border-b space-y-2">
+                        <Search
+                          label="Søk i tabellen"
+                          hideLabel={false}
+                          size="small"
+                          value={searchQuery}
+                          onChange={(value) => setSearchQuery(value)}
+                          onClear={handleClearSearch}
+                          variant={result.data.length > rowLimit ? "primary" : "simple"}
+                          onSearchClick={result.data.length > rowLimit ? handleSearch : undefined}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSearch();
+                            }
+                          }}
+                          htmlSize={result.data.length > rowLimit ? 40 : undefined}
+                        />
+                        {/* Large dataset warning and controls */}
+                        {result.data.length > rowLimit && (
+                          <div className="space-y-2">
+                            {!showAllRows && !activeSearchQuery && (
+                              <Alert variant="warning" size="small">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                  <span className="text-sm">
+                                    Viser bare {rowLimit.toLocaleString('nb-NO')} av {result.data.length.toLocaleString('nb-NO')} rader for ytelse
+                                  </span>
+                                  <Button
+                                    size="xsmall"
+                                    variant="secondary"
+                                    onClick={() => setShowAllRows(true)}
+                                  >
+                                    Vis alle rader
+                                  </Button>
+                                </div>
+                              </Alert>
+                            )}
+                            {showAllRows && !activeSearchQuery && (
+                              <Alert variant="info" size="small">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                  <span className="text-sm">
+                                    Viser alle {result.data.length.toLocaleString('nb-NO')} rader (kan være tregt)
+                                  </span>
+                                  <Button
+                                    size="xsmall"
+                                    variant="secondary"
+                                    onClick={() => setShowAllRows(false)}
+                                  >
+                                    Begrens til {rowLimit.toLocaleString('nb-NO')} rader
+                                  </Button>
+                                </div>
+                              </Alert>
+                            )}
+                            {activeSearchQuery && processedTableData && (
+                              <Alert variant="info" size="small">
+                                <span className="text-sm">
+                                  Fant {processedTableData.length.toLocaleString('nb-NO')} av {result.data.length.toLocaleString('nb-NO')} rader
+                                </span>
+                              </Alert>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                       {tableContent}
                     </div>
                     {/* Table Footer */}
-                    <div className="px-4 py-3 bg-[var(--ax-bg-neutral-soft)] text-sm text-[var(--ax-text-subtle)] border-t">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <Button
-                            size="small"
-                            variant="secondary"
-                            onClick={downloadCSV}
-                            icon={<Download size={16} />}
-                          >
-                            Last ned CSV
-                          </Button>
-                          <span>
-                            {(() => {
-                              const totalRows = result.data.length;
-                              const isLargeDataset = totalRows > rowLimit;
-                              const shouldLimitRows = isLargeDataset && !showAllRows && !activeSearchQuery;
+                    {!hideTableFooter && (
+                      <div className="px-4 py-3 bg-[var(--ax-bg-neutral-soft)] text-sm text-[var(--ax-text-subtle)] border-t">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-4">
+                            <Button
+                              size="small"
+                              variant="secondary"
+                              onClick={downloadCSV}
+                              icon={<Download size={16} />}
+                            >
+                              Last ned CSV
+                            </Button>
+                            <span>
+                              {(() => {
+                                const totalRows = result.data.length;
+                                const isLargeDataset = totalRows > rowLimit;
+                                const shouldLimitRows = isLargeDataset && !showAllRows && !activeSearchQuery;
 
-                              if (activeSearchQuery) {
-                                // Showing search results
-                                const filteredCount = result.data.filter((row: any) => {
-                                  const query = activeSearchQuery.toLowerCase();
-                                  return Object.values(row).some((value: any) => {
-                                    if (value === null || value === undefined) return false;
-                                    return String(value).toLowerCase().includes(query);
-                                  });
-                                }).length;
-                                return <>Viser {filteredCount.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
-                              } else if (shouldLimitRows) {
-                                // Showing limited rows
-                                return <>Viser {rowLimit.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
-                              } else {
-                                // Showing all rows
-                                return <>{totalRows.toLocaleString('nb-NO')} {totalRows === 1 ? 'rad' : 'rader'}</>;
-                              }
-                            })()}
-                          </span>
+                                if (activeSearchQuery) {
+                                  // Showing search results
+                                  const filteredCount = result.data.filter((row: any) => {
+                                    const query = activeSearchQuery.toLowerCase();
+                                    return Object.values(row).some((value: any) => {
+                                      if (value === null || value === undefined) return false;
+                                      return String(value).toLowerCase().includes(query);
+                                    });
+                                  }).length;
+                                  return <>Viser {filteredCount.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
+                                } else if (shouldLimitRows) {
+                                  // Showing limited rows
+                                  return <>Viser {rowLimit.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
+                                } else {
+                                  // Showing all rows
+                                  return <>{totalRows.toLocaleString('nb-NO')} {totalRows === 1 ? 'rad' : 'rader'}</>;
+                                }
+                              })()}
+                            </span>
+                          </div>
+                          {queryStats && (
+                            <span>
+                              Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                              {showCost && (() => {
+                                const gb = parseFloat(queryStats.totalBytesProcessedGB);
+                                const cost = parseFloat(queryStats.estimatedCostUSD) || (gb * 0.00625);
+                                return cost > 0 ? ` • Kostnad: $${cost.toFixed(2)}` : '';
+                              })()}
+                            </span>
+                          )}
                         </div>
-                        {queryStats && (
-                          <span>
-                            Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                            {showCost && (() => {
-                              const gb = parseFloat(queryStats.totalBytesProcessedGB);
-                              const cost = parseFloat(queryStats.estimatedCostUSD) || (gb * 0.00625);
-                              return cost > 0 ? ` • Kostnad: $${cost.toFixed(2)}` : '';
-                            })()}
-                          </span>
-                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </Tabs.Panel>

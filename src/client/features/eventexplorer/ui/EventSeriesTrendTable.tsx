@@ -1,5 +1,6 @@
-import { Button } from '@navikt/ds-react';
-import { Download } from 'lucide-react';
+import { useState } from 'react';
+import { ActionMenu, Button, Heading, TextField } from '@navikt/ds-react';
+import { MoreVertical, Search } from 'lucide-react';
 import type { SeriesPoint, QueryStats } from '../model/types.ts';
 
 interface EventSeriesTrendTableProps {
@@ -9,11 +10,18 @@ interface EventSeriesTrendTableProps {
 }
 
 const EventSeriesTrendTable = ({ seriesData, selectedEvent, queryStats }: EventSeriesTrendTableProps) => {
+    const [search, setSearch] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
+
+    const filteredSeriesData = seriesData.filter((item) =>
+        new Date(item.time).toLocaleDateString('nb-NO').includes(search)
+    );
+
     const handleDownloadCsv = () => {
         const headers = ['Dato', 'Antall'];
         const csvRows = [
             headers.join(','),
-            ...seriesData.map((item) => {
+            ...filteredSeriesData.map((item) => {
                 return [
                     new Date(item.time).toLocaleDateString('nb-NO'),
                     item.count
@@ -34,7 +42,60 @@ const EventSeriesTrendTable = ({ seriesData, selectedEvent, queryStats }: EventS
     };
 
     return (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="space-y-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+                <Heading level="3" size="small">Trend over tid</Heading>
+                <div className="flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant={showSearch ? 'secondary' : 'tertiary'}
+                        size="xsmall"
+                        icon={<Search aria-hidden />}
+                        aria-label="Søk i trendtabell"
+                        onClick={() => {
+                            setShowSearch((prev) => !prev);
+                            if (showSearch) setSearch('');
+                        }}
+                    />
+                    <ActionMenu>
+                        <ActionMenu.Trigger>
+                            <Button
+                                type="button"
+                                variant="tertiary"
+                                size="xsmall"
+                                icon={<MoreVertical aria-hidden />}
+                                aria-label="Flere valg for trendtabell"
+                            />
+                        </ActionMenu.Trigger>
+                        <ActionMenu.Content align="end">
+                            <ActionMenu.Item onClick={handleDownloadCsv} disabled={filteredSeriesData.length === 0}>
+                                Last ned
+                            </ActionMenu.Item>
+                            {queryStats && (
+                                <>
+                                    <ActionMenu.Divider />
+                                    <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                                        {queryStats.totalBytesProcessedGB} GB prosessert
+                                    </div>
+                                </>
+                            )}
+                        </ActionMenu.Content>
+                    </ActionMenu>
+                </div>
+            </div>
+            {showSearch && (
+                <div className="w-full sm:w-64 min-w-0">
+                    <TextField
+                        label="Søk"
+                        hideLabel
+                        placeholder="Søk etter dato..."
+                        size="small"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+            )}
+            <div className="border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
                     <thead className="bg-[var(--ax-bg-neutral-soft)]">
@@ -44,8 +105,8 @@ const EventSeriesTrendTable = ({ seriesData, selectedEvent, queryStats }: EventS
                         </tr>
                     </thead>
                     <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
-                        {seriesData.map((item, index) => (
-                            <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft]">
+                        {filteredSeriesData.map((item, index) => (
+                            <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
                                     {new Date(item.time).toLocaleDateString('nb-NO')}
                                 </td>
@@ -57,26 +118,9 @@ const EventSeriesTrendTable = ({ seriesData, selectedEvent, queryStats }: EventS
                     </tbody>
                 </table>
             </div>
-            <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                <div className="flex gap-2">
-                    <Button
-                        size="small"
-                        variant="secondary"
-                        onClick={handleDownloadCsv}
-                        icon={<Download size={16} />}
-                    >
-                        Last ned CSV
-                    </Button>
-                </div>
-                {queryStats && (
-                    <span className="text-sm text-[var(--ax-text-subtle)]">
-                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                    </span>
-                )}
             </div>
         </div>
     );
 };
 
 export default EventSeriesTrendTable;
-

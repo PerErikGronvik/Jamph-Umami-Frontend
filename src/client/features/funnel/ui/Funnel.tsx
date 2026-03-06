@@ -1,5 +1,5 @@
-import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal } from '@navikt/ds-react';
-import { Plus, Trash2, Download, Share2, Check, Code2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal, ActionMenu } from '@navikt/ds-react';
+import { Plus, Trash2, Share2, Check, Code2, ExternalLink, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
@@ -443,6 +443,44 @@ const Funnel = () => {
                                     </Tabs.Panel>
 
                                     <Tabs.Panel value="table" className="pt-4">
+                                        <div className="space-y-4">
+                                            <div className="mb-2 flex items-center justify-between gap-2">
+                                                <Heading level="3" size="small">Tabell</Heading>
+                                                <div className="flex items-center gap-2">
+                                                    <ActionMenu>
+                                                        <ActionMenu.Trigger>
+                                                            <Button
+                                                                type="button"
+                                                                variant="tertiary"
+                                                                size="xsmall"
+                                                                icon={<MoreVertical aria-hidden />}
+                                                                aria-label="Flere valg for tabell"
+                                                            />
+                                                        </ActionMenu.Trigger>
+                                                        <ActionMenu.Content align="end">
+                                                            <ActionMenu.Item onClick={() => downloadCSV(funnelData, selectedWebsite?.name)}>
+                                                                Last ned CSV
+                                                            </ActionMenu.Item>
+                                                            <ActionMenu.Item onClick={copyMetabaseSql}>
+                                                                {metabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
+                                                            </ActionMenu.Item>
+                                                            {funnelSql && (
+                                                                <ActionMenu.Item onClick={() => setModalSql(funnelSql)}>
+                                                                    Vis SQL
+                                                                </ActionMenu.Item>
+                                                            )}
+                                                            {funnelQueryStats && (
+                                                                <>
+                                                                    <ActionMenu.Divider />
+                                                                    <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                                                                        {funnelQueryStats.totalBytesProcessedGB} GB prosessert
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </ActionMenu.Content>
+                                                    </ActionMenu>
+                                                </div>
+                                            </div>
                                         <div className="border rounded-lg overflow-hidden">
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
@@ -528,39 +566,7 @@ const Funnel = () => {
                                                     </tbody>
                                                 </table>
                                             </div>
-                                            <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                                                <Button
-                                                    size="small"
-                                                    variant="secondary"
-                                                    onClick={() => downloadCSV(funnelData, selectedWebsite?.name)}
-                                                    icon={<Download size={16} />}
-                                                >
-                                                    Last ned CSV
-                                                </Button>
-                                                {funnelQueryStats && (
-                                                    <span className="text-sm text-[var(--ax-text-subtle)] mr-auto">
-                                                        Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
-                                                    </span>
-                                                )}
-                                                <Button
-                                                    size="small"
-                                                    variant="tertiary"
-                                                    onClick={copyMetabaseSql}
-                                                    icon={metabaseCopySuccess ? <Check size={16} /> : <Code2 size={16} />}
-                                                >
-                                                    {metabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
-                                                </Button>
-                                                {funnelSql && (
-                                                    <Button
-                                                        size="small"
-                                                        variant="tertiary"
-                                                        onClick={() => setModalSql(funnelSql)}
-                                                        icon={<Code2 size={16} />}
-                                                    >
-                                                        Vis SQL
-                                                    </Button>
-                                                )}
-                                            </div>
+                                        </div>
                                         </div>
 
                                         <AnalysisActionModal
@@ -575,9 +581,42 @@ const Funnel = () => {
                                     {/* Timing Data Tab */}
                                     <Tabs.Panel value="timing" className="pt-4">
                                         <>
-                                            <Heading level="3" size="small" className="mb-6">
-                                                Tid per steg og for hele trakten
-                                            </Heading>
+                                            <div className="mb-6 flex items-center justify-between gap-2">
+                                                <Heading level="3" size="small">
+                                                    Tid per steg og for hele trakten
+                                                </Heading>
+                                                {showTiming && (
+                                                    <ActionMenu>
+                                                        <ActionMenu.Trigger>
+                                                            <Button
+                                                                type="button"
+                                                                variant="tertiary"
+                                                                size="xsmall"
+                                                                icon={<MoreVertical aria-hidden />}
+                                                                aria-label="Flere valg for tidsbruk"
+                                                            />
+                                                        </ActionMenu.Trigger>
+                                                        <ActionMenu.Content align="end">
+                                                            <ActionMenu.Item onClick={copyTimingMetabaseSql}>
+                                                                {timingMetabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
+                                                            </ActionMenu.Item>
+                                                            {timingSql && (
+                                                                <ActionMenu.Item onClick={() => setModalSql(timingSql)}>
+                                                                    Vis SQL
+                                                                </ActionMenu.Item>
+                                                            )}
+                                                            {timingQueryStats && (
+                                                                <>
+                                                                    <ActionMenu.Divider />
+                                                                    <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                                                                        {timingQueryStats.totalBytesProcessedGB} GB prosessert
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </ActionMenu.Content>
+                                                    </ActionMenu>
+                                                )}
+                                            </div>
 
                                             {!showTiming && (
                                                 <div className="space-y-2">
@@ -682,34 +721,6 @@ const Funnel = () => {
                                                                         ))}
                                                                     </tbody>
                                                                 </table>
-                                                            </div>
-                                                            {/* Footer inside the table container to match styling */}
-                                                            <div className="p-3 bg-[var(--ax-bg-neutral-soft)] border-t flex justify-between items-center">
-                                                                <div>
-                                                                    {timingQueryStats && (
-                                                                        <span className="text-sm text-[var(--ax-text-subtle)]">
-                                                                            Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <Button
-                                                                    size="small"
-                                                                    variant="tertiary"
-                                                                    onClick={copyTimingMetabaseSql}
-                                                                    icon={timingMetabaseCopySuccess ? <Check size={16} /> : <Code2 size={16} />}
-                                                                >
-                                                                    {timingMetabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
-                                                                </Button>
-                                                                {timingSql && (
-                                                                    <Button
-                                                                        size="small"
-                                                                        variant="tertiary"
-                                                                        onClick={() => setModalSql(timingSql)}
-                                                                        icon={<Code2 size={16} />}
-                                                                    >
-                                                                        Vis SQL
-                                                                    </Button>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     </>

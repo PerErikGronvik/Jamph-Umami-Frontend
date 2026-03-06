@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Label, Loader, Select, Switch } from '@navikt/ds-react';
+import { ActionMenu, Button, Heading, Label, Loader, Select, Switch } from '@navikt/ds-react';
+import { MoreVertical } from 'lucide-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import TrafficStats from './TrafficStats.tsx';
 import type { Granularity, OversiktTabContentProps } from '../../model/types.ts';
@@ -41,6 +42,31 @@ const OversiktTabContent = ({
     TrafficTableComponent,
 }: OversiktTabContentProps) => {
     const [showTableSection, setShowTableSection] = useState(false);
+
+    const handleDownloadCsv = () => {
+        if (!processedSeriesData.length) return;
+
+        const headers = ['Tid', getMetricLabelWithCount(submittedMetricType)];
+        const csvRows = [
+            headers.join(','),
+            ...processedSeriesData.map((item) => [
+                new Date(item.time).toLocaleString('nb-NO'),
+                item.count,
+            ].join(',')),
+        ];
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `trafikkoversikt_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
 
     const {
         chartWrapperRef,
@@ -104,23 +130,8 @@ const OversiktTabContent = ({
             )}
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-                        <div className="flex flex-wrap items-center gap-4">
-                        <Switch
-                            checked={showAverage}
-                            onChange={(e) => onShowAverageChange(e.target.checked)}
-                            size="small"
-                        >
-                            Vis snitt
-                        </Switch>
-                        <Switch
-                            checked={comparePreviousPeriod}
-                            onChange={(e) => onComparePreviousPeriodChange(e.target.checked)}
-                            size="small"
-                        >
-                            Sammenlign forrige periode
-                        </Switch>
-                        </div>
+                    <div className="mb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <Heading level="3" size="small">Trafikk over tid</Heading>
                         <div className="flex items-center gap-2 sm:ml-auto">
                             <Label size="small" htmlFor="traffic-granularity">Intervall</Label>
                             <Select
@@ -136,6 +147,25 @@ const OversiktTabContent = ({
                                 <option value="month">Månedlig</option>
                                 <option value="hour">Time</option>
                             </Select>
+                            <ActionMenu>
+                                <ActionMenu.Trigger>
+                                    <Button
+                                        type="button"
+                                        variant="tertiary"
+                                        size="xsmall"
+                                        icon={<MoreVertical aria-hidden />}
+                                        aria-label="Flere valg for graf"
+                                    />
+                                </ActionMenu.Trigger>
+                                <ActionMenu.Content align="end">
+                                    <ActionMenu.Item onClick={handleDownloadCsv} disabled={!processedSeriesData.length}>
+                                        Last ned
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={() => onShowAverageChange(!showAverage)}>
+                                        {showAverage ? 'Skjul gjennomsnitt' : 'Vis gjennomsnitt'}
+                                    </ActionMenu.Item>
+                                </ActionMenu.Content>
+                            </ActionMenu>
                         </div>
                     </div>
                     <div style={{ width: '100%', height: '340px' }}>
@@ -188,13 +218,20 @@ const OversiktTabContent = ({
                             </div>
                         )}
                     </div>
-                    <div className="flex justify-end mt-1">
+                    <div className="flex flex-wrap justify-end items-center gap-4 mt-1">
+                        <Switch
+                            checked={comparePreviousPeriod}
+                            onChange={(e) => onComparePreviousPeriodChange(e.target.checked)}
+                            size="small"
+                        >
+                            Sammenlign med forrige periode
+                        </Switch>
                         <Switch
                             checked={showTableSection}
                             onChange={(e) => setShowTableSection(e.target.checked)}
                             size="small"
                         >
-                            Vis graf som tabell
+                            Vis som tabell
                         </Switch>
                     </div>
                 </div>

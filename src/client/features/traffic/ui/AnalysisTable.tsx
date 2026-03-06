@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Button, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
-import { Download } from 'lucide-react';
+import { useState } from 'react';
+import { ActionMenu, Button, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
+import { MoreVertical, Search } from 'lucide-react';
 import type { Website } from '../../../shared/types/chart.ts';
 import type { MarketingRow, QueryStats } from '../model/types';
 import { downloadCsvFile } from '../utils/trafficUtils';
@@ -16,6 +16,7 @@ type AnalysisTableProps = {
 
 const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, metricType }: AnalysisTableProps) => {
     const [search, setSearch] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
     const [page, setPage] = useState(1);
     const rowsPerPage = 20;
 
@@ -23,12 +24,9 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
         row.name.toLowerCase().includes(search.toLowerCase())
     );
 
-    useEffect(() => {
-        setPage(1);
-    }, [search]);
-
-    const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+    const currentPage = Math.min(page, totalPages);
+    const paginatedData = filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
     const formatValue = (count: number) => {
         if (metricType === 'proportion') {
@@ -98,9 +96,48 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
 
     return (
         <VStack gap="space-4">
-            <div className="flex justify-between items-end">
+            <div className="mb-2 flex items-center justify-between gap-2">
                 <Heading level="3" size="small">{title}</Heading>
-                <div className="w-64">
+                <div className="flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant={showSearch ? 'secondary' : 'tertiary'}
+                        size="xsmall"
+                        icon={<Search aria-hidden />}
+                        aria-label={`Søk i ${title}`}
+                        onClick={() => {
+                            setShowSearch((prev) => !prev);
+                            if (showSearch) setSearch('');
+                        }}
+                    />
+                    <ActionMenu>
+                        <ActionMenu.Trigger>
+                            <Button
+                                type="button"
+                                variant="tertiary"
+                                size="xsmall"
+                                icon={<MoreVertical aria-hidden />}
+                                aria-label={`Flere valg for ${title}`}
+                            />
+                        </ActionMenu.Trigger>
+                        <ActionMenu.Content align="end">
+                            <ActionMenu.Item onClick={handleDownloadCSV} disabled={data.length === 0}>
+                                Last ned
+                            </ActionMenu.Item>
+                            {queryStats && (
+                                <>
+                                    <ActionMenu.Divider />
+                                    <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                                        {queryStats.totalBytesProcessedGB} GB prosessert
+                                    </div>
+                                </>
+                            )}
+                        </ActionMenu.Content>
+                    </ActionMenu>
+                </div>
+            </div>
+            {showSearch && (
+                <div className="w-full sm:w-64 min-w-0">
                     <TextField
                         label="Søk"
                         hideLabel
@@ -110,7 +147,7 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
-            </div>
+            )}
             <div className="border rounded-lg overflow-x-auto">
                 <Table size="small">
                     <Table.Header>
@@ -137,28 +174,10 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
                         )}
                     </Table.Body>
                 </Table>
-                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                    <div className="flex gap-2">
-                        <Button
-                            size="small"
-                            variant="secondary"
-                            onClick={handleDownloadCSV}
-                            icon={<Download size={16} />}
-                            disabled={data.length === 0}
-                        >
-                            Last ned
-                        </Button>
-                    </div>
-                    {queryStats && (
-                        <span className="text-sm text-[var(--ax-text-subtle)]">
-                            Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                        </span>
-                    )}
-                </div>
             </div>
             {totalPages > 1 && (
                 <Pagination
-                    page={page}
+                    page={currentPage}
                     onPageChange={setPage}
                     count={totalPages}
                     size="small"
@@ -169,4 +188,3 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
 };
 
 export default AnalysisTable;
-

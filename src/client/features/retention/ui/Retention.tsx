@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button, Alert, Loader, Switch, Heading, BodyShort } from '@navikt/ds-react';
+import { ActionMenu, Button, Alert, Loader, Switch, Heading, BodyShort } from '@navikt/ds-react';
 import { ResponsiveContainer, LineChart } from '@fluentui/react-charting';
-import { Download, Share2, Check } from 'lucide-react';
+import { Download, Share2, Check, MoreVertical } from 'lucide-react';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
@@ -153,6 +153,33 @@ const Retention = () => {
                     {retentionStats && <RetentionStatsCards stats={retentionStats} />}
 
                     <div className="pt-4">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                            <Heading level="3" size="small">Gjenbesøk over tid</Heading>
+                            <ActionMenu>
+                                <ActionMenu.Trigger>
+                                    <Button
+                                        type="button"
+                                        variant="tertiary"
+                                        size="xsmall"
+                                        icon={<MoreVertical aria-hidden />}
+                                        aria-label="Flere valg for gjenbesøksgraf"
+                                    />
+                                </ActionMenu.Trigger>
+                                <ActionMenu.Content align="end">
+                                    <ActionMenu.Item onClick={downloadCSV}>
+                                        Last ned CSV
+                                    </ActionMenu.Item>
+                                    {queryStats && (
+                                        <>
+                                            <ActionMenu.Divider />
+                                            <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                                                {queryStats.totalBytesProcessedGB} GB prosessert
+                                            </div>
+                                        </>
+                                    )}
+                                </ActionMenu.Content>
+                            </ActionMenu>
+                        </div>
                         <div style={{ width: '100%', height: '500px' }}>
                             {chartData && (
                                 <ResponsiveContainer>
@@ -170,18 +197,13 @@ const Retention = () => {
                                 </ResponsiveContainer>
                             )}
                         </div>
-                        {queryStats && (
-                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
-                                Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                            </div>
-                        )}
                         <div className="mt-4 flex justify-end">
                             <Switch
                                 checked={showTableSection}
                                 onChange={(e) => setShowTableSection(e.target.checked)}
                                 size="small"
                             >
-                                Vis tabell
+                                Vis som tabell
                             </Switch>
                         </div>
                     </div>

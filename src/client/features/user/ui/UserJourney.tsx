@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActionMenu,
   Alert,
   Button,
+  Heading,
   Loader,
   ReadMore,
   Select,
   Switch,
   TextField,
 } from "@navikt/ds-react";
-import { Download, Minimize2, ExternalLink } from "lucide-react";
+import { Minimize2, ExternalLink, MoreVertical, Search } from "lucide-react";
 import ChartLayout from "../../analysis/ui/ChartLayout.tsx";
 import WebsitePicker from "../../analysis/ui/WebsitePicker.tsx";
 import PeriodPicker from "../../analysis/ui/PeriodPicker.tsx";
@@ -75,8 +77,10 @@ const UserJourney = () => {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showTableSection, setShowTableSection] = useState<boolean>(false);
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
-  const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
   const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
+  const [tableSearch, setTableSearch] = useState<string>("");
+  const [showTableSearch, setShowTableSearch] = useState<boolean>(false);
+  const hasAutoSubmittedRef = useRef<boolean>(false);
 
   const hasUnappliedFilterChanges = lastAppliedFilterKey
     ? buildAppliedFilterKey(
@@ -104,11 +108,11 @@ const UserJourney = () => {
       searchParams.has("steps") ||
       searchParams.has("limit") ||
       searchParams.has("direction");
-    if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
-      setHasAutoSubmitted(true);
+    if (selectedWebsite && hasConfigParams && !hasAutoSubmittedRef.current && !loading) {
+      hasAutoSubmittedRef.current = true;
       void fetchData(startUrl, steps);
     }
-  }, [selectedWebsite, searchParams, hasAutoSubmitted, loading, fetchData, startUrl, steps]);
+  }, [selectedWebsite, searchParams, loading, fetchData, startUrl, steps]);
 
   const handleCopyShareLink = async () => {
     const success = await copyShareLink();
@@ -123,7 +127,7 @@ const UserJourney = () => {
   };
 
   const handleDownloadExcel = () => {
-    downloadJourneyExcel(rawData, selectedWebsite?.name || "data", journeyDirection);
+    void downloadJourneyExcel(rawData, selectedWebsite?.name || "data", journeyDirection);
   };
 
 
@@ -132,6 +136,15 @@ const UserJourney = () => {
     setSteps(newSteps);
     void fetchData(startUrl, newSteps, true);
   };
+
+  const filteredTableLinks = rawData
+    ? rawData.links.filter((link: JourneyLink) => {
+        const sourceNode = rawData.nodes[link.source];
+        const targetNode = rawData.nodes[link.target];
+        const haystack = `${sourceNode?.name ?? ""} ${targetNode?.name ?? ""}`.toLowerCase();
+        return haystack.includes(tableSearch.toLowerCase());
+      })
+    : [];
 
   return (
     <ChartLayout
@@ -318,13 +331,70 @@ const UserJourney = () => {
                 onChange={(e) => setShowTableSection(e.target.checked)}
                 size="small"
               >
-                Vis tabell
+                Vis som tabell
               </Switch>
             </div>
           </div>
 
           {showTableSection && (
             <div className="pt-4">
+              <div className="space-y-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <Heading level="3" size="small">Tabell</Heading>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant={showTableSearch ? "secondary" : "tertiary"}
+                      size="xsmall"
+                      icon={<Search aria-hidden />}
+                      aria-label="Søk i tabell"
+                      onClick={() => {
+                        setShowTableSearch((prev) => !prev);
+                        if (showTableSearch) setTableSearch("");
+                      }}
+                    />
+                    <ActionMenu>
+                      <ActionMenu.Trigger>
+                        <Button
+                          type="button"
+                          variant="tertiary"
+                          size="xsmall"
+                          icon={<MoreVertical aria-hidden />}
+                          aria-label="Flere valg for tabell"
+                        />
+                      </ActionMenu.Trigger>
+                      <ActionMenu.Content align="end">
+                        <ActionMenu.Item onClick={handleDownloadCSV}>
+                          Last ned CSV
+                        </ActionMenu.Item>
+                        <ActionMenu.Item onClick={handleDownloadExcel}>
+                          Last ned Excel
+                        </ActionMenu.Item>
+                        <ActionMenu.Divider />
+                        <div className="px-3 py-2 text-xs text-[var(--ax-text-subtle)]">
+                          {rawData &&
+                            `${filteredTableLinks.length} forbindelser mellom ${rawData.nodes.length} sider`}
+                          {queryStats && (
+                            <span> • {queryStats.totalBytesProcessedGB} GB prosessert</span>
+                          )}
+                        </div>
+                      </ActionMenu.Content>
+                    </ActionMenu>
+                  </div>
+                </div>
+                {showTableSearch && (
+                  <div className="w-full sm:w-64 min-w-0">
+                    <TextField
+                      label="Søk"
+                      hideLabel
+                      placeholder="Søk..."
+                      size="small"
+                      value={tableSearch}
+                      onChange={(e) => setTableSearch(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
               <div className="border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
                   <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
@@ -346,7 +416,7 @@ const UserJourney = () => {
                     </thead>
                     <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                       {rawData &&
-                        rawData.links.map((link: JourneyLink, idx: number) => {
+                        filteredTableLinks.map((link: JourneyLink, idx: number) => {
                           const sourceNode = rawData.nodes.find(
                             (n) => rawData.nodes.indexOf(n) === link.source
                           );
@@ -412,33 +482,6 @@ const UserJourney = () => {
                         })}
                     </tbody>
                   </table>
-                </div>
-                <div className="px-4 py-2 bg-[var(--ax-bg-neutral-soft)] text-sm text-[var(--ax-text-subtle)] border-t flex justify-between items-center">
-                  <span>
-                    {rawData &&
-                      `${rawData.links.length} forbindelser mellom ${rawData.nodes.length} sider`}
-                  </span>
-                  {queryStats && (
-                    <span>Data prosessert: {queryStats.totalBytesProcessedGB} GB</span>
-                  )}
-                </div>
-                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-b">
-                  <Button
-                    size="small"
-                    variant="secondary"
-                    onClick={handleDownloadCSV}
-                    icon={<Download size={16} />}
-                  >
-                    Last ned CSV
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="secondary"
-                    onClick={handleDownloadExcel}
-                    icon={<Download size={16} />}
-                  >
-                    Last ned Excel
-                  </Button>
                 </div>
               </div>
             </div>
