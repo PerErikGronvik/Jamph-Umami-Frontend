@@ -1011,8 +1011,8 @@ ORDER BY term`;
                         <Button variant="secondary" size="small" icon={<ChevronLeft size={16} />} onClick={() => { shouldAutoExecuteRef.current = true; setStep(2); }}>Til resultater</Button>
                         <Button size="small" variant="secondary" onClick={formatSQL}>{formatSuccess ? '✓ Formatert' : 'Formater'}</Button>
                         <Button size="small" variant="secondary" onClick={validateSQL}>Valider</Button>
-                        <Button size="small" variant="secondary" loading={estimating} onClick={estimateCost}>Estimer kostnad</Button>
-                        <Button size="small" variant="secondary">Forklar SQL</Button>
+                        <Button size="small" variant="secondary" loading={estimating} onClick={estimateCost}>Kostnad</Button>
+                        <Button size="small" variant="secondary">Forklar</Button>
                         <Button
                             size="small"
                             variant="secondary"

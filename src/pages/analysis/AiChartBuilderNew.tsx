@@ -23,8 +23,8 @@ const ALL_EXAMPLES = getPrototype4Examples(WEBSITE_ID, '/', 'aksel.nav.no', "AND
 
 // First 3 used as chat history (load mock data directly)
 const HISTORY = ALL_EXAMPLES.slice(0, 3);
-// Next 3 used as example prompts (send to AI)
-const EXAMPLES = ALL_EXAMPLES.slice(3, 6);
+// Next 3 used as example prompts — "beveger" moved to last
+const EXAMPLES = [ALL_EXAMPLES[4], ALL_EXAMPLES[5], ALL_EXAMPLES[3]];
 
 const TABS = [
     { value: 'linechart', label: 'Linjediagram' },
@@ -42,8 +42,9 @@ export default function AiChartBuilderNew() {
     const [examplesOpen, setExamplesOpen] = useState(false);
     const [displayResult, setDisplayResult] = useState<any>(null);
     const [displaySql, setDisplaySql] = useState('');
+    const [displayTitle, setDisplayTitle] = useState('');
     const [activeTab, setActiveTab] = useState('table');
-    const [showSql, setShowSql] = useState(true);
+    const [showSql, setShowSql] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const prevCountRef = useRef(1);
     const shouldScrollRef = useRef(false);
@@ -65,6 +66,7 @@ export default function AiChartBuilderNew() {
         const result = { data: mockRows };
         setDisplayResult(result);
         setDisplaySql(ex.sql);
+        setDisplayTitle(ex.title);
         setActiveTab(tab);
         setMessages([
             { id: 'welcome', role: 'bot', text: 'Hva kan jeg hjelpe deg med i dag?' },
@@ -120,6 +122,7 @@ export default function AiChartBuilderNew() {
             ));
             setDisplayResult(data);
             setDisplaySql(sql);
+            setDisplayTitle(text);
             setActiveTab('table');
         } catch (e: any) {
             setMessages(prev => prev.map(m =>
@@ -134,7 +137,7 @@ export default function AiChartBuilderNew() {
 
     function renderChart() {
         if (!displayResult) return null;
-        return <PinnedWidget result={displayResult} chartType={activeTab} title="" />;
+        return <PinnedWidget result={displayResult} chartType={activeTab} title={displayTitle} />;
     }
 
     return (
@@ -171,8 +174,8 @@ export default function AiChartBuilderNew() {
                                     style={{
                                         display: 'block', width: '100%', textAlign: 'left',
                                         padding: '5px 10px', marginBottom: 3,
-                                        background: '#f0f4ff', border: 'none',
-                                        borderRadius: 4, cursor: 'pointer', fontSize: 12, color: '#0067C5',
+                                        background: '#fff', border: '1px solid #dde1e7',
+                                        borderRadius: 4, cursor: 'pointer', fontSize: 12, color: '#333',
                                     }}>
                                     - {h.userMessage.length > 50 ? h.userMessage.slice(0, 50) + '...' : h.userMessage}
                                 </button>
