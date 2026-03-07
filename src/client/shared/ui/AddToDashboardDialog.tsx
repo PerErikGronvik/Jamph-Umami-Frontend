@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Modal, Select, TextField } from '@navikt/ds-react';
 import type { DashboardDto, GraphCategoryDto, ProjectDto } from '../types/backend.ts';
+import type { Website } from '../types/website.ts';
 import {
     fetchProjects,
     fetchDashboards,
     fetchCategories,
     saveChartToBackend,
 } from '../../features/chartbuilder/api/chartStorageApi.ts';
+import { fetchWebsites } from '../api/websiteApi.ts';
 
 const getHostPrefix = (): string => {
     if (typeof window === 'undefined') return 'server';
@@ -16,6 +18,7 @@ const getHostPrefix = (): string => {
 const LAST_PROJECT_KEY = `add_to_dashboard_last_project_id_${getHostPrefix()}`;
 const LAST_DASHBOARD_KEY = `add_to_dashboard_last_dashboard_id_${getHostPrefix()}`;
 const LAST_CATEGORY_KEY = `add_to_dashboard_last_category_id_${getHostPrefix()}`;
+const LAST_WEBSITE_KEY = `add_to_dashboard_last_website_id_${getHostPrefix()}`;
 
 const parseStoredId = (value: string | null): number | null => {
     if (!value) return null;
@@ -26,6 +29,7 @@ const parseStoredId = (value: string | null): number | null => {
 const getStoredProjectId = (): number | null => (typeof window === 'undefined' ? null : parseStoredId(window.localStorage.getItem(LAST_PROJECT_KEY)));
 const getStoredDashboardId = (): number | null => (typeof window === 'undefined' ? null : parseStoredId(window.localStorage.getItem(LAST_DASHBOARD_KEY)));
 const getStoredCategoryId = (): number | null => (typeof window === 'undefined' ? null : parseStoredId(window.localStorage.getItem(LAST_CATEGORY_KEY)));
+const getStoredWebsiteId = (): string => (typeof window === 'undefined' ? '' : (window.localStorage.getItem(LAST_WEBSITE_KEY) ?? ''));
 
 const saveStoredProjectId = (value: number) => {
     if (typeof window === 'undefined') return;
@@ -42,12 +46,19 @@ const saveStoredCategoryId = (value: number) => {
     window.localStorage.setItem(LAST_CATEGORY_KEY, String(value));
 };
 
+const saveStoredWebsiteId = (value: string) => {
+    if (typeof window === 'undefined') return;
+    if (value) window.localStorage.setItem(LAST_WEBSITE_KEY, value);
+    else window.localStorage.removeItem(LAST_WEBSITE_KEY);
+};
+
 type AddToDashboardDialogProps = {
     open: boolean;
     onClose: () => void;
     graphName: string;
     sqlText: string;
     graphType?: 'TABLE' | 'LINE' | 'BAR' | 'PIE';
+    sourceWebsiteId?: string;
 };
 
 const AddToDashboardDialog = ({
@@ -56,19 +67,23 @@ const AddToDashboardDialog = ({
     graphName,
     sqlText,
     graphType = 'TABLE',
+    sourceWebsiteId,
 }: AddToDashboardDialogProps) => {
     const [projects, setProjects] = useState<ProjectDto[]>([]);
     const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
     const [categories, setCategories] = useState<GraphCategoryDto[]>([]);
+    const [websites, setWebsites] = useState<Website[]>([]);
 
     const [projectId, setProjectId] = useState<number>(0);
     const [dashboardId, setDashboardId] = useState<number>(0);
     const [categoryId, setCategoryId] = useState<number>(0);
     const [chartName, setChartName] = useState(graphName);
+    const [websiteId, setWebsiteId] = useState<string>('');
 
     const [loadingProjects, setLoadingProjects] = useState(false);
     const [loadingDashboards, setLoadingDashboards] = useState(false);
     const [loadingCategories, setLoadingCategories] = useState(false);
+    const [loadingWebsites, setLoadingWebsites] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +91,40 @@ const AddToDashboardDialog = ({
         if (!open) return;
         setChartName(graphName);
         setError(null);
-    }, [open, graphName]);
+        const rememberedWebsiteId = getStoredWebsiteId();
+        setWebsiteId(sourceWebsiteId || rememberedWebsiteId || '');
+    }, [open, graphName, sourceWebsiteId]);
+
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+
+        const run = async () => {
+            setLoadingWebsites(true);
+            try {
+                const items = await fetchWebsites();
+                if (cancelled) return;
+                setWebsites(items);
+                const rememberedWebsiteId = sourceWebsiteId || getStoredWebsiteId();
+                if (rememberedWebsiteId && items.some((item) => item.id === rememberedWebsiteId)) {
+                    setWebsiteId(rememberedWebsiteId);
+                } else {
+                    setWebsiteId('');
+                }
+            } catch {
+                if (cancelled) return;
+                setWebsites([]);
+                setWebsiteId('');
+            } finally {
+                if (!cancelled) setLoadingWebsites(false);
+            }
+        };
+
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [open, sourceWebsiteId]);
 
     useEffect(() => {
         if (!open) return;
@@ -218,18 +266,22 @@ const AddToDashboardDialog = ({
         setSaving(true);
         setError(null);
         try {
+            const sqlToSave = websiteId
+                ? sqlText.replace(/\{\{\s*website_id\s*\}\}/g, websiteId)
+                : sqlText;
             await saveChartToBackend({
                 projectName: project.name,
                 dashboardName: dashboard.name,
                 graphName: chartName.trim(),
                 queryName: chartName.trim(),
                 graphType,
-                sqlText,
+                sqlText: sqlToSave,
                 categoryId: categoryId || undefined,
             });
             saveStoredProjectId(projectId);
             saveStoredDashboardId(dashboardId);
             if (categoryId) saveStoredCategoryId(categoryId);
+            saveStoredWebsiteId(websiteId);
             onClose();
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Kunne ikke lagre graf');
@@ -314,6 +366,26 @@ const AddToDashboardDialog = ({
                         size="small"
                         disabled={saving}
                     />
+
+                    <Select
+                        label="Nettside for graf"
+                        description="Velg nettside for fast resultat, eller bruk dashboard-filter."
+                        value={websiteId}
+                        onChange={(event) => {
+                            const nextWebsiteId = event.target.value;
+                            setWebsiteId(nextWebsiteId);
+                            saveStoredWebsiteId(nextWebsiteId);
+                        }}
+                        size="small"
+                        disabled={loadingWebsites || saving}
+                    >
+                        <option value="">Bruk dashboard-filter</option>
+                        {websites.map((website) => (
+                            <option key={website.id} value={website.id}>
+                                {website.name}
+                            </option>
+                        ))}
+                    </Select>
                 </div>
             </Modal.Body>
             <Modal.Footer>

@@ -9,10 +9,11 @@ interface EventListProps {
     events: { name: string; count: number }[];
     eventsQueryStats: QueryStats | null;
     websiteName?: string;
+    selectedWebsiteId?: string;
     onSelectEvent: (name: string) => void;
 }
 
-const EventList = ({ events, eventsQueryStats, websiteName, onSelectEvent }: EventListProps) => {
+const EventList = ({ events, eventsQueryStats, websiteName, selectedWebsiteId, onSelectEvent }: EventListProps) => {
     const [eventSearch, setEventSearch] = useState<string>('');
     const [showSearch, setShowSearch] = useState(false);
     const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
@@ -147,6 +148,7 @@ const EventList = ({ events, eventsQueryStats, websiteName, onSelectEvent }: Eve
                 graphName="Egendefinerte hendelser"
                 sqlText={getEventListSqlTemplate()}
                 graphType="TABLE"
+                sourceWebsiteId={selectedWebsiteId}
             />
         </div>
     );

@@ -213,6 +213,7 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
             graphName={title}
             sqlText={addToDashboardSql}
             graphType="TABLE"
+            sourceWebsiteId={selectedWebsite?.id}
         />
         </>
     );

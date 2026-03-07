@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
 import { ArrowLeftIcon } from '@navikt/aksel-icons';
@@ -88,7 +88,7 @@ const Oversikt = () => {
         tempMetricType, setTempMetricType,
         comboInputValue,
         activeFilters,
-        charts, filterCapabilities, supportsStandardFilters, hasChanges,
+        charts, hasChanges,
         isLoading, error,
         handleUpdate,
         handleUrlToggleSelected, handleComboChange,
@@ -201,6 +201,20 @@ const Oversikt = () => {
             queryName: selectedVariant.queryName,
         };
     };
+
+    const visibleFilterCapabilities = useMemo(() => {
+        return charts.reduce((acc, chart) => {
+            const activeChart = getChartWithSelectedVariant(chart);
+            const sql = activeChart.sql ?? '';
+            if (sql.includes('{{website_id}}')) acc.website = true;
+            if (sql.includes('{{url_sti}}')) acc.url = true;
+            if (sql.includes('{{created_at}}')) acc.date = true;
+            return acc;
+        }, { website: false, url: false, date: false });
+    }, [charts, selectedVariantByGraphId]);
+
+    const supportsVisibleStandardFilters =
+        visibleFilterCapabilities.website || visibleFilterCapabilities.url || visibleFilterCapabilities.date;
 
     useLayoutEffect(() => {
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1131,9 +1145,9 @@ const Oversikt = () => {
 
     const filters = (
         <>
-            {supportsStandardFilters && (
+            {supportsVisibleStandardFilters && (
                 <>
-                    {filterCapabilities.website && (
+                    {visibleFilterCapabilities.website && (
                         <div className="w-full md:w-[18rem]">
                             <DashboardWebsitePicker
                                 selectedWebsite={selectedWebsite}
@@ -1145,7 +1159,7 @@ const Oversikt = () => {
                         </div>
                     )}
 
-                    {filterCapabilities.url && (
+                    {visibleFilterCapabilities.url && (
                         <div className="w-full md:w-[20rem]">
                             <div className="flex items-center gap-2 mb-1">
                                 <Label size="small" htmlFor="oversikt-url-filter">URL-sti</Label>
@@ -1175,7 +1189,7 @@ const Oversikt = () => {
                         </div>
                     )}
 
-                    {filterCapabilities.date && (
+                    {visibleFilterCapabilities.date && (
                         <div className="w-full sm:w-auto min-w-[180px]">
                             <Select
                                 label="Datoperiode"
@@ -1195,7 +1209,7 @@ const Oversikt = () => {
                         </div>
                     )}
 
-                    {filterCapabilities.website && (
+                    {visibleFilterCapabilities.website && (
                         <div className="w-full sm:w-auto min-w-[150px]">
                             <Select
                                 label="Visning"
@@ -1262,7 +1276,7 @@ const Oversikt = () => {
                     </ActionMenu>
                 </div>
             ) : undefined}
-            filters={supportsStandardFilters ? filters : undefined}
+            filters={supportsVisibleStandardFilters ? filters : undefined}
         >
             {error && <Alert variant="error">{error}</Alert>}
             <p className="sr-only" aria-live="polite" aria-atomic="true">
@@ -1283,7 +1297,7 @@ const Oversikt = () => {
                 </div>
             )}
 
-            {!isLoading && filterCapabilities.website && selectedDashboard && !activeWebsiteId && (
+            {!isLoading && visibleFilterCapabilities.website && selectedDashboard && !activeWebsiteId && (
                 <div className="w-fit">
                     <Alert variant="info" size="small">
                         Velg nettside eller app for å vise grafdata.
@@ -1291,7 +1305,7 @@ const Oversikt = () => {
                 </div>
             )}
 
-            {!isLoading && selectedDashboard && (!filterCapabilities.website || activeWebsiteId) && (
+            {!isLoading && selectedDashboard && (!visibleFilterCapabilities.website || activeWebsiteId) && (
                 <>
                     {isEditPanelOpen && (
                         <section className="mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">

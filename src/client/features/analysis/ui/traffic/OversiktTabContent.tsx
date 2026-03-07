@@ -275,6 +275,7 @@ const OversiktTabContent = ({
                 graphName="Trafikk over tid"
                 sqlText={getTrafficSeriesSqlTemplate()}
                 graphType="LINE"
+                sourceWebsiteId={selectedWebsite?.id}
             />
         </>
     );

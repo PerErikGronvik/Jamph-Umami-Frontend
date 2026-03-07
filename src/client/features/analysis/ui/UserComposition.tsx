@@ -489,6 +489,7 @@ const UserComposition = () => {
                             graphName={addToDashboardGraphName}
                             sqlText={addToDashboardSqlTemplate}
                             graphType="TABLE"
+                            sourceWebsiteId={selectedWebsite?.id}
                         />
                     )}
                 </>

@@ -127,6 +127,7 @@ const EventExplorer = () => {
                     events={events}
                     eventsQueryStats={eventsQueryStats}
                     websiteName={selectedWebsite?.name}
+                    selectedWebsiteId={selectedWebsite?.id}
                     onSelectEvent={setSelectedEvent}
                 />
             )}
@@ -174,4 +175,3 @@ const EventExplorer = () => {
 };
 
 export default EventExplorer;
-

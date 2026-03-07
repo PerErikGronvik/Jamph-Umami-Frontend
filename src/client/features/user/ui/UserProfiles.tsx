@@ -537,6 +537,7 @@ const UserProfiles = () => {
                 graphName="Enkeltbrukere"
                 sqlText={getUserProfilesSqlTemplate()}
                 graphType="TABLE"
+                sourceWebsiteId={selectedWebsite?.id}
             />
 
             <Modal

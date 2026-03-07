@@ -279,6 +279,7 @@ const Retention = () => {
                         graphName="Gjenbesøk over tid"
                         sqlText={getRetentionSqlTemplate()}
                         graphType="LINE"
+                        sourceWebsiteId={selectedWebsite?.id}
                     />
                 </>
             )}

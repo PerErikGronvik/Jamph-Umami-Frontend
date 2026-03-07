@@ -248,6 +248,7 @@ const CombinedEntrancesTable = ({
             graphName={title}
             sqlText={addToDashboardSql}
             graphType="TABLE"
+            sourceWebsiteId={selectedWebsite?.id}
         />
         </>
     );

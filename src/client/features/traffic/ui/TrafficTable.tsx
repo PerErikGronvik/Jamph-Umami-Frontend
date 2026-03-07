@@ -281,6 +281,7 @@ const TrafficTable = ({
             graphName={title}
             sqlText={addToDashboardSql}
             graphType="TABLE"
+            sourceWebsiteId={selectedWebsite?.id}
         />
         </>
     );
