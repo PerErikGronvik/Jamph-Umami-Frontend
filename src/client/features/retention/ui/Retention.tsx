@@ -8,6 +8,7 @@ import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
 import UrlPathFilter from '../../analysis/ui/UrlPathFilter.tsx';
 import CookieMixNotice from '../../analysis/ui/CookieMixNotice.tsx';
 import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
+import TransferToMetabaseDialog from '../../../shared/ui/TransferToMetabaseDialog.tsx';
 import { openSqlEditorWithContext } from '../../../shared/lib/openSqlEditor.ts';
 import RetentionStatsCards from './RetentionStatsCards.tsx';
 import { useRetention } from '../hooks/useRetention';
@@ -48,6 +49,7 @@ const Retention = () => {
     } = useRetention();
     const [showTableSection, setShowTableSection] = useState(false);
     const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
 
     return (
         <ChartLayout
@@ -172,14 +174,17 @@ const Retention = () => {
                                     </ActionMenu.Trigger>
                                 </Tooltip>
                                 <ActionMenu.Content align="end">
-                                    <ActionMenu.Item onClick={downloadCSV}>
-                                        Last ned CSV
-                                    </ActionMenu.Item>
                                     <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)}>
                                         Legg til i dashboard
                                     </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                                        Overfør til Metabase
+                                    </ActionMenu.Item>
                                     <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: getRetentionSqlTemplate(), websiteId: selectedWebsite?.id })}>
                                         Åpne i SQL-editor
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={downloadCSV}>
+                                        Last ned CSV
                                     </ActionMenu.Item>
                                     {queryStats && (
                                         <>
@@ -283,6 +288,12 @@ const Retention = () => {
                         graphName="Gjenbesøk over tid"
                         sqlText={getRetentionSqlTemplate()}
                         graphType="LINE"
+                        sourceWebsiteId={selectedWebsite?.id}
+                    />
+                    <TransferToMetabaseDialog
+                        open={showTransferToMetabaseDialog}
+                        onClose={() => setShowTransferToMetabaseDialog(false)}
+                        sqlText={getRetentionSqlTemplate()}
                         sourceWebsiteId={selectedWebsite?.id}
                     />
                 </>

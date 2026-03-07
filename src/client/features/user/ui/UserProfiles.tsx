@@ -10,6 +10,7 @@ import AnalysisActionModal from '../../analysis/ui/AnalysisActionModal.tsx';
 import UrlPathFilter from '../../analysis/ui/UrlPathFilter.tsx';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
 import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
+import TransferToMetabaseDialog from '../../../shared/ui/TransferToMetabaseDialog.tsx';
 import { openSqlEditorWithContext } from '../../../shared/lib/openSqlEditor.ts';
 import type { Website } from '../../../shared/types/chart.ts';
 import { translateCountry } from '../../../shared/lib/translations.ts';
@@ -60,6 +61,7 @@ const UserProfiles = () => {
     const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
     const [showTableSearch, setShowTableSearch] = useState(false);
     const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
     const tableSearchInputRef = useRef<HTMLInputElement>(null);
 
     // Details Modal State
@@ -428,17 +430,20 @@ const UserProfiles = () => {
                                         </ActionMenu.Trigger>
                                     </Tooltip>
                                     <ActionMenu.Content align="end">
+                                        <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)}>
+                                            Legg til i dashboard
+                                        </ActionMenu.Item>
+                                        <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                                            Overfør til Metabase
+                                        </ActionMenu.Item>
+                                        <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: getUserProfilesSqlTemplate(), websiteId: selectedWebsite?.id })}>
+                                            Åpne i SQL-editor
+                                        </ActionMenu.Item>
                                         <ActionMenu.Item
                                             onClick={() => downloadProfilesCsv(filteredUsers)}
                                             disabled={filteredUsers.length === 0}
                                         >
                                             Last ned CSV
-                                        </ActionMenu.Item>
-                                        <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)}>
-                                            Legg til i dashboard
-                                        </ActionMenu.Item>
-                                        <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: getUserProfilesSqlTemplate(), websiteId: selectedWebsite?.id })}>
-                                            Åpne i SQL-editor
                                         </ActionMenu.Item>
                                         {queryStats && (
                                             <>
@@ -541,6 +546,12 @@ const UserProfiles = () => {
                 graphName="Enkeltbrukere"
                 sqlText={getUserProfilesSqlTemplate()}
                 graphType="TABLE"
+                sourceWebsiteId={selectedWebsite?.id}
+            />
+            <TransferToMetabaseDialog
+                open={showTransferToMetabaseDialog}
+                onClose={() => setShowTransferToMetabaseDialog(false)}
+                sqlText={getUserProfilesSqlTemplate()}
                 sourceWebsiteId={selectedWebsite?.id}
             />
 

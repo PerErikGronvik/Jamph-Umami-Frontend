@@ -6,6 +6,7 @@ import TrafficStats from './TrafficStats.tsx';
 import type { Granularity, OversiktTabContentProps } from '../../model/types.ts';
 import { useOversiktDayDividers } from '../../hooks/useOversiktDayDividers.ts';
 import AddToDashboardDialog from '../../../../shared/ui/AddToDashboardDialog.tsx';
+import TransferToMetabaseDialog from '../../../../shared/ui/TransferToMetabaseDialog.tsx';
 import { getTrafficSeriesSqlTemplate } from '../../../traffic/utils/trafficDashboardSqlTemplates.ts';
 import { openSqlEditorWithContext } from '../../../../shared/lib/openSqlEditor.ts';
 
@@ -46,6 +47,7 @@ const OversiktTabContent = ({
 }: OversiktTabContentProps) => {
     const [showTableSection, setShowTableSection] = useState(false);
     const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
 
     const handleDownloadCsv = () => {
         if (!processedSeriesData.length) return;
@@ -164,17 +166,20 @@ const OversiktTabContent = ({
                                     </ActionMenu.Trigger>
                                 </Tooltip>
                                 <ActionMenu.Content align="end">
-                                    <ActionMenu.Item onClick={handleDownloadCsv} disabled={!processedSeriesData.length}>
-                                        Last ned
-                                    </ActionMenu.Item>
                                     <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)}>
                                         Legg til i dashboard
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                                        Overfør til Metabase
                                     </ActionMenu.Item>
                                     <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: getTrafficSeriesSqlTemplate(), websiteId: selectedWebsite?.id })}>
                                         Åpne i SQL-editor
                                     </ActionMenu.Item>
                                     <ActionMenu.Item onClick={() => onShowAverageChange(!showAverage)}>
                                         {showAverage ? 'Skjul gjennomsnitt' : 'Vis gjennomsnitt'}
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={handleDownloadCsv} disabled={!processedSeriesData.length}>
+                                        Last ned
                                     </ActionMenu.Item>
                                 </ActionMenu.Content>
                             </ActionMenu>
@@ -279,6 +284,12 @@ const OversiktTabContent = ({
                 graphName="Trafikk over tid"
                 sqlText={getTrafficSeriesSqlTemplate()}
                 graphType="LINE"
+                sourceWebsiteId={selectedWebsite?.id}
+            />
+            <TransferToMetabaseDialog
+                open={showTransferToMetabaseDialog}
+                onClose={() => setShowTransferToMetabaseDialog(false)}
+                sqlText={getTrafficSeriesSqlTemplate()}
                 sourceWebsiteId={selectedWebsite?.id}
             />
         </>

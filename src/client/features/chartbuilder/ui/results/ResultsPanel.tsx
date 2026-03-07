@@ -11,6 +11,7 @@ import SqlViewer from './SqlViewer.tsx';
 import ShareResultsModal from './ShareResultsModal.tsx';
 import AnalysisActionModal from '../../../analysis/ui/AnalysisActionModal.tsx';
 import { encode } from '@toon-format/toon';
+import TransferToMetabaseDialog from '../../../../shared/ui/TransferToMetabaseDialog.tsx';
 
 interface ResultsPanelProps {
   result: any;
@@ -90,6 +91,7 @@ const ResultsPanel = ({
   const [showAllRows, setShowAllRows] = useState<boolean>(false);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [showTableSearch, setShowTableSearch] = useState<boolean>(false);
+  const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState<boolean>(false);
   const tableSearchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -630,12 +632,14 @@ const ResultsPanel = ({
                               </ActionMenu.Trigger>
                             </Tooltip>
                             <ActionMenu.Content align="end">
-                              <ActionMenu.Item onClick={downloadCSV}>
-                                Last ned CSV
-                              </ActionMenu.Item>
                               {onAddToDashboard && (
                                 <ActionMenu.Item onClick={onAddToDashboard}>
                                   Legg til i dashboard
+                                </ActionMenu.Item>
+                              )}
+                              {sql && (
+                                <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                                  Overfør til Metabase
                                 </ActionMenu.Item>
                               )}
                               {sql && (
@@ -643,6 +647,9 @@ const ResultsPanel = ({
                                   Åpne i SQL-editor
                                 </ActionMenu.Item>
                               )}
+                              <ActionMenu.Item onClick={downloadCSV}>
+                                Last ned CSV
+                              </ActionMenu.Item>
                             </ActionMenu.Content>
                           </ActionMenu>
                         </div>
@@ -1292,11 +1299,19 @@ const ResultsPanel = ({
       {/* Share Modal */}
       {
         sql && (
-          <ShareResultsModal
-            sql={sql}
-            open={showShareModal}
-            onClose={() => setShowShareModal(false)}
-          />
+          <>
+            <ShareResultsModal
+              sql={sql}
+              open={showShareModal}
+              onClose={() => setShowShareModal(false)}
+            />
+            <TransferToMetabaseDialog
+              open={showTransferToMetabaseDialog}
+              onClose={() => setShowTransferToMetabaseDialog(false)}
+              sqlText={sql}
+              sourceWebsiteId={websiteId}
+            />
+          </>
         )
       }
 

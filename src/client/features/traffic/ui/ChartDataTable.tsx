@@ -4,6 +4,7 @@ import { MoreVertical, Search } from 'lucide-react';
 import type { SeriesPoint, QueryStats, Granularity, DateRange } from '../model/types';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
 import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
+import TransferToMetabaseDialog from '../../../shared/ui/TransferToMetabaseDialog.tsx';
 import { openSqlEditorWithContext } from '../../../shared/lib/openSqlEditor.ts';
 import { formatMetricValue, formatMetricDelta as formatMetricDeltaUtil, downloadCsvFile } from '../utils/trafficUtils';
 import { getTrafficSeriesSqlTemplate } from '../utils/trafficDashboardSqlTemplates.ts';
@@ -34,6 +35,7 @@ const ChartDataTable = (props: ChartDataTableProps) => {
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [page, setPage] = useState(1);
     const rowsPerPage = 10;
@@ -143,13 +145,16 @@ const ChartDataTable = (props: ChartDataTableProps) => {
                             </ActionMenu.Trigger>
                         </Tooltip>
                         <ActionMenu.Content align="end">
-                            <ActionMenu.Item onClick={handleDownloadCSV} disabled={!data.length}>Last ned CSV</ActionMenu.Item>
                             <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)} disabled={!filteredData.length}>
                                 Legg til i dashboard
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                                Overfør til Metabase
                             </ActionMenu.Item>
                             <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: addToDashboardSql })}>
                                 Åpne i SQL-editor
                             </ActionMenu.Item>
+                            <ActionMenu.Item onClick={handleDownloadCSV} disabled={!data.length}>Last ned CSV</ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
                     </>
@@ -238,6 +243,11 @@ const ChartDataTable = (props: ChartDataTableProps) => {
             graphName="Oversikt"
             sqlText={addToDashboardSql}
             graphType="TABLE"
+        />
+        <TransferToMetabaseDialog
+            open={showTransferToMetabaseDialog}
+            onClose={() => setShowTransferToMetabaseDialog(false)}
+            sqlText={addToDashboardSql}
         />
         </>
     );

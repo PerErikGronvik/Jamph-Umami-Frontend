@@ -3,6 +3,7 @@ import { Heading, Button, Table, TextField, ActionMenu, Tooltip } from '@navikt/
 import { MoreVertical, Search } from 'lucide-react';
 import type { QueryStats } from '../model/types.ts';
 import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
+import TransferToMetabaseDialog from '../../../shared/ui/TransferToMetabaseDialog.tsx';
 import { getEventListSqlTemplate } from '../utils/eventExplorerDashboardSql.ts';
 import { openSqlEditorWithContext } from '../../../shared/lib/openSqlEditor.ts';
 
@@ -18,6 +19,7 @@ const EventList = ({ events, eventsQueryStats, websiteName, selectedWebsiteId, o
     const [eventSearch, setEventSearch] = useState<string>('');
     const [showSearch, setShowSearch] = useState(false);
     const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const filteredEvents = events.filter(event =>
@@ -82,14 +84,17 @@ const EventList = ({ events, eventsQueryStats, websiteName, selectedWebsiteId, o
                             </ActionMenu.Trigger>
                         </Tooltip>
                         <ActionMenu.Content align="end">
-                            <ActionMenu.Item onClick={handleDownloadCsv} disabled={filteredEvents.length === 0}>
-                                Last ned
-                            </ActionMenu.Item>
                             <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)}>
                                 Legg til i dashboard
                             </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                                Overfør til Metabase
+                            </ActionMenu.Item>
                             <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: getEventListSqlTemplate(), websiteId: selectedWebsiteId })}>
                                 Åpne i SQL-editor
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={handleDownloadCsv} disabled={filteredEvents.length === 0}>
+                                Last ned
                             </ActionMenu.Item>
                             {eventsQueryStats && (
                                 <>
@@ -152,6 +157,12 @@ const EventList = ({ events, eventsQueryStats, websiteName, selectedWebsiteId, o
                 graphName="Egendefinerte hendelser"
                 sqlText={getEventListSqlTemplate()}
                 graphType="TABLE"
+                sourceWebsiteId={selectedWebsiteId}
+            />
+            <TransferToMetabaseDialog
+                open={showTransferToMetabaseDialog}
+                onClose={() => setShowTransferToMetabaseDialog(false)}
+                sqlText={getEventListSqlTemplate()}
                 sourceWebsiteId={selectedWebsiteId}
             />
         </div>

@@ -3,6 +3,7 @@ import { ActionMenu, Button, Heading, TextField, Tooltip } from '@navikt/ds-reac
 import { MoreVertical, Search } from 'lucide-react';
 import type { SeriesPoint, QueryStats } from '../model/types.ts';
 import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
+import TransferToMetabaseDialog from '../../../shared/ui/TransferToMetabaseDialog.tsx';
 import { getEventSeriesSqlTemplate } from '../utils/eventExplorerDashboardSql.ts';
 import { openSqlEditorWithContext } from '../../../shared/lib/openSqlEditor.ts';
 
@@ -16,6 +17,7 @@ const EventSeriesTrendTable = ({ seriesData, selectedEvent, queryStats }: EventS
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const filteredSeriesData = seriesData.filter((item) =>
@@ -82,14 +84,17 @@ const EventSeriesTrendTable = ({ seriesData, selectedEvent, queryStats }: EventS
                             </ActionMenu.Trigger>
                         </Tooltip>
                         <ActionMenu.Content align="end">
-                            <ActionMenu.Item onClick={handleDownloadCsv} disabled={filteredSeriesData.length === 0}>
-                                Last ned
-                            </ActionMenu.Item>
                             <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)}>
                                 Legg til i dashboard
                             </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                                Overfør til Metabase
+                            </ActionMenu.Item>
                             <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: getEventSeriesSqlTemplate(selectedEvent) })}>
                                 Åpne i SQL-editor
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={handleDownloadCsv} disabled={filteredSeriesData.length === 0}>
+                                Last ned
                             </ActionMenu.Item>
                             {queryStats && (
                                 <>
@@ -146,6 +151,11 @@ const EventSeriesTrendTable = ({ seriesData, selectedEvent, queryStats }: EventS
                 graphName={`Trend over tid: ${selectedEvent}`}
                 sqlText={getEventSeriesSqlTemplate(selectedEvent)}
                 graphType="LINE"
+            />
+            <TransferToMetabaseDialog
+                open={showTransferToMetabaseDialog}
+                onClose={() => setShowTransferToMetabaseDialog(false)}
+                sqlText={getEventSeriesSqlTemplate(selectedEvent)}
             />
         </div>
     );
