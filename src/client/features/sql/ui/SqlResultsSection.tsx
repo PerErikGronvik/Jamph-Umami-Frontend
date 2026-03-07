@@ -2,9 +2,11 @@ import { ResultsPanel } from '../../chartbuilder';
 import { Button, Heading, Link } from '@navikt/ds-react';
 import { ReadMore } from '@navikt/ds-react';
 import { Copy } from 'lucide-react';
+import { useState } from 'react';
 import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { truncateJSON } from '../utils/formatters';
 import type { QueryResult, QueryStats } from '../model/types';
+import TransferToMetabaseDialog from '../../../shared/ui/TransferToMetabaseDialog.tsx';
 
 interface SqlResultsSectionProps {
     result: QueryResult | null;
@@ -39,6 +41,9 @@ export default function SqlResultsSection({
     prepareBarChartData,
     preparePieChartData,
 }: SqlResultsSectionProps) {
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
+    const sqlForMetabase = lastProcessedSql || query;
+
     return (
         <>
             <ResultsPanel
@@ -80,6 +85,14 @@ export default function SqlResultsSection({
                         size="small"
                         variant="secondary"
                         type="button"
+                        onClick={() => setShowTransferToMetabaseDialog(true)}
+                    >
+                        Overfør til Metabase
+                    </Button>
+                    <Button
+                        size="small"
+                        variant="secondary"
+                        type="button"
                         onClick={onCopyMetabase}
                         icon={<Copy size={16} />}
                     >
@@ -97,6 +110,13 @@ export default function SqlResultsSection({
                     </div>
                 </div>
             </div>
+
+            <TransferToMetabaseDialog
+                open={showTransferToMetabaseDialog}
+                onClose={() => setShowTransferToMetabaseDialog(false)}
+                sqlText={sqlForMetabase}
+                sourceWebsiteId={websiteId}
+            />
         </>
     );
 }

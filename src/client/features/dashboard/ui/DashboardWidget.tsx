@@ -10,6 +10,7 @@ import DashboardWidgetPieChart from './widget/DashboardWidgetPieChart.tsx';
 import DashboardWidgetTable from './widget/DashboardWidgetTable.tsx';
 import DashboardWidgetSiteimprove from './widget/DashboardWidgetSiteimprove.tsx';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
+import TransferToMetabaseDialog from '../../../shared/ui/TransferToMetabaseDialog.tsx';
 import { processDashboardSql } from '../utils/queryUtils.ts';
 import {
     parseDashboardResponse,
@@ -79,6 +80,7 @@ export const DashboardWidget = ({
     const [hasFetchedIndividually, setHasFetchedIndividually] = useState(false);
     // State for AnalysisActionModal (for links in table)
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+    const [showTransferToMetabaseDialog, setShowTransferToMetabaseDialog] = useState(false);
     const [copyLinkFeedback, setCopyLinkFeedback] = useState(false);
     const showShareAction = false; // Temporary: hide "Del grafen" in inline action menu
 
@@ -310,6 +312,11 @@ export const DashboardWidget = ({
                     </ActionMenu.Item>
                 )}
                 {(replaceExploreActionWithSqlEditor || (data && data.length > 0)) && <ActionMenu.Divider />}
+                {data && data.length > 0 && (
+                    <ActionMenu.Item onClick={() => setShowTransferToMetabaseDialog(true)}>
+                        Overfør til Metabase
+                    </ActionMenu.Item>
+                )}
                 {replaceExploreActionWithSqlEditor && (
                     <ActionMenu.Item onClick={handleOpenInSqlEditor}>
                         Åpne i SQL-editor
@@ -389,6 +396,15 @@ export const DashboardWidget = ({
                 period={filters.dateRange}
                 domain={selectedWebsite?.domain}
             />
+
+            {chart.sql && (
+                <TransferToMetabaseDialog
+                    open={showTransferToMetabaseDialog}
+                    onClose={() => setShowTransferToMetabaseDialog(false)}
+                    sqlText={chart.sql}
+                    sourceWebsiteId={websiteId}
+                />
+            )}
         </>
     );
 };
