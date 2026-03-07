@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { hasSiteimproveSupport } from '../../../shared/hooks/useSiteimproveSupport.ts';
+import { hasMarketingSupport, hasSiteimproveSupport } from '../../../shared/hooks/useSiteimproveSupport.ts';
 import { chartGroups } from '../model/chartGroups.tsx';
 import { SHARED_PARAMS } from '../model/types.ts';
 
 export const useChartNavigation = (
     websiteDomain?: string,
+    websiteName?: string,
+    websiteId?: string,
     hideAnalysisSelector = false,
 ) => {
     const isNavOpen = !hideAnalysisSelector;
@@ -13,14 +15,28 @@ export const useChartNavigation = (
     const [searchParams] = useSearchParams();
 
     const domain = websiteDomain || searchParams.get('domain');
-    const showSiteimproveSection = useMemo(() => hasSiteimproveSupport(domain), [domain]);
+    const resolvedWebsiteId = websiteId || searchParams.get('websiteId');
+    const showSiteimproveSection = useMemo(
+        () => hasSiteimproveSupport(domain, resolvedWebsiteId),
+        [domain, resolvedWebsiteId]
+    );
+    const showMarketingSection = useMemo(
+        () => hasMarketingSupport(domain, websiteName, resolvedWebsiteId),
+        [domain, websiteName, resolvedWebsiteId]
+    );
 
     const filteredChartGroups = useMemo(() => {
-        if (!showSiteimproveSection) {
-            return chartGroups.filter(group => group.title !== "Innholdskvalitet");
-        }
-        return chartGroups;
-    }, [showSiteimproveSection]);
+        const groupsWithoutSiteimprove = showSiteimproveSection
+            ? chartGroups
+            : chartGroups.filter(group => group.title !== 'Innholdskvalitet');
+
+        return groupsWithoutSiteimprove
+            .map(group => ({
+                ...group,
+                ids: group.ids.filter(id => id !== 'markedsanalyse' || showMarketingSection),
+            }))
+            .filter(group => group.ids.length > 0);
+    }, [showSiteimproveSection, showMarketingSection]);
 
     const getTargetUrl = useCallback((href: string) => {
         const currentParams = new URLSearchParams(window.location.search);
@@ -56,4 +72,3 @@ export const useChartNavigation = (
         handleNavigation,
     };
 };
-

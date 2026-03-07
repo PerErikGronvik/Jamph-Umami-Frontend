@@ -4,6 +4,7 @@ import teamsData from '../../../data/teamsData.json';
 interface TeamData {
     teamName: string;
     teamDomain: string;
+    websiteID?: string;
     teamSiteimproveSite: number | false;
     supportsMarketing?: boolean;
     usesCookies?: boolean;
@@ -21,6 +22,19 @@ function normalizeDomain(domain: string): string {
         .toLowerCase();
 }
 
+function normalizeWebsiteId(websiteId: string): string {
+    return websiteId.trim().toLowerCase();
+}
+
+function findTeamByWebsiteId(websiteId: string | null | undefined): TeamData | undefined {
+    if (!websiteId) return undefined;
+    const normalizedWebsiteId = normalizeWebsiteId(websiteId);
+
+    return (teamsData as TeamData[]).find(t =>
+        t.websiteID && normalizeWebsiteId(t.websiteID) === normalizedWebsiteId
+    );
+}
+
 /**
  * Find a team by domain (exact match only)
  */
@@ -35,13 +49,17 @@ function findTeamByDomain(domain: string | null | undefined): TeamData | undefin
     });
 }
 
+function findTeam(domain: string | null | undefined, websiteId?: string | null): TeamData | undefined {
+    return findTeamByWebsiteId(websiteId) ?? findTeamByDomain(domain);
+}
+
 /**
  * Check if a domain supports Siteimprove based on teamsData.json
  * @param domain - The domain to check (e.g., "nav.no" or "https://www.nav.no")
  * @returns boolean - true if Siteimprove is supported, false otherwise
  */
-export function hasSiteimproveSupport(domain: string | null | undefined): boolean {
-    const team = findTeamByDomain(domain);
+export function hasSiteimproveSupport(domain: string | null | undefined, websiteId?: string | null): boolean {
+    const team = findTeam(domain, websiteId);
     return team ? team.teamSiteimproveSite !== false : false;
 }
 
@@ -84,14 +102,18 @@ function isDevWebsiteName(name: string | null | undefined): boolean {
  * @param websiteName - Optional website name for additional dev environment checking
  * @returns boolean - true if Marketing Analysis is supported (default: true unless explicitly set to false or is dev environment)
  */
-export function hasMarketingSupport(domain: string | null | undefined, websiteName?: string | null): boolean {
+export function hasMarketingSupport(
+    domain: string | null | undefined,
+    websiteName?: string | null,
+    websiteId?: string | null
+): boolean {
     // Dev environments don't support marketing analysis
     if (isDevEnvironment(domain)) return false;
 
     // Also check website name for dev patterns
     if (isDevWebsiteName(websiteName)) return false;
 
-    const team = findTeamByDomain(domain);
+    const team = findTeam(domain, websiteId);
     // Only show if explicitly set to true in teamsData.json
     return team ? team.supportsMarketing === true : false;
 }
@@ -101,8 +123,8 @@ export function hasMarketingSupport(domain: string | null | undefined, websiteNa
  * @param domain - The domain to check
  * @returns boolean - true if Siteimprove is supported
  */
-export function useSiteimproveSupport(domain: string | null | undefined): boolean {
-    return useMemo(() => hasSiteimproveSupport(domain), [domain]);
+export function useSiteimproveSupport(domain: string | null | undefined, websiteId?: string | null): boolean {
+    return useMemo(() => hasSiteimproveSupport(domain, websiteId), [domain, websiteId]);
 }
 
 /**
@@ -110,8 +132,8 @@ export function useSiteimproveSupport(domain: string | null | undefined): boolea
  * @param domain - The domain to check
  * @returns boolean - true if cookies are used (default: false)
  */
-export function hasCookieSupport(domain: string | null | undefined): boolean {
-    const team = findTeamByDomain(domain);
+export function hasCookieSupport(domain: string | null | undefined, websiteId?: string | null): boolean {
+    const team = findTeam(domain, websiteId);
     return team ? team.usesCookies === true : false;
 }
 
@@ -119,8 +141,8 @@ export function hasCookieSupport(domain: string | null | undefined): boolean {
  * Get the date when cookies-based distinct_id counting started for a domain.
  * Returns null if not configured.
  */
-export function getCookieStartDate(domain: string | null | undefined): Date | null {
-    const team = findTeamByDomain(domain);
+export function getCookieStartDate(domain: string | null | undefined, websiteId?: string | null): Date | null {
+    const team = findTeam(domain, websiteId);
     if (!team?.cookiesEnabledFrom) return null;
     const parsed = new Date(`${team.cookiesEnabledFrom}T00:00:00`);
     return isNaN(parsed.getTime()) ? null : parsed;
@@ -131,8 +153,8 @@ export function getCookieStartDate(domain: string | null | undefined): Date | nu
  * @param domain - The domain to check
  * @returns boolean - true if cookies are used
  */
-export function useCookieSupport(domain: string | null | undefined): boolean {
-    return useMemo(() => hasCookieSupport(domain), [domain]);
+export function useCookieSupport(domain: string | null | undefined, websiteId?: string | null): boolean {
+    return useMemo(() => hasCookieSupport(domain, websiteId), [domain, websiteId]);
 }
 
 /**
@@ -140,8 +162,8 @@ export function useCookieSupport(domain: string | null | undefined): boolean {
  * @param domain - The domain to check
  * @returns Date | null - start date of distinct_id usage
  */
-export function useCookieStartDate(domain: string | null | undefined): Date | null {
-    return useMemo(() => getCookieStartDate(domain), [domain]);
+export function useCookieStartDate(domain: string | null | undefined, websiteId?: string | null): Date | null {
+    return useMemo(() => getCookieStartDate(domain, websiteId), [domain, websiteId]);
 }
 
 /**
@@ -150,8 +172,12 @@ export function useCookieStartDate(domain: string | null | undefined): Date | nu
  * @param websiteName - Optional website name for dev environment detection
  * @returns boolean - true if Marketing Analysis is supported
  */
-export function useMarketingSupport(domain: string | null | undefined, websiteName?: string | null): boolean {
-    return useMemo(() => hasMarketingSupport(domain, websiteName), [domain, websiteName]);
+export function useMarketingSupport(
+    domain: string | null | undefined,
+    websiteName?: string | null,
+    websiteId?: string | null
+): boolean {
+    return useMemo(() => hasMarketingSupport(domain, websiteName, websiteId), [domain, websiteName, websiteId]);
 }
 
 export default useSiteimproveSupport;

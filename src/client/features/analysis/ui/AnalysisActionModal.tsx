@@ -19,8 +19,8 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     const [resolvedWebsiteName, setResolvedWebsiteName] = useState<string | undefined>(undefined);
     const domain = propDomain ?? resolvedDomain ?? 'nav.no';
     const websiteName = propWebsiteName ?? resolvedWebsiteName;
-    const hasSiteimprove = useSiteimproveSupport(domain);
-    const hasMarketing = useMarketingSupport(domain, websiteName);
+    const hasSiteimprove = useSiteimproveSupport(domain, websiteId);
+    const hasMarketing = useMarketingSupport(domain, websiteName, websiteId);
 
     useEffect(() => {
         const shouldResolveDomain = !propDomain;

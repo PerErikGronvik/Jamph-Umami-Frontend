@@ -11,7 +11,7 @@ export const chartGroups: ChartGroup[] = [
     {
         title: "Trafikk",
         icon: <BarChart2 size={18} />,
-        ids: ['trafikkanalyse', 'brukerreiser', 'trakt']
+        ids: ['trafikkanalyse', 'markedsanalyse', 'brukerreiser', 'trakt']
     },
     {
         title: "Hendelser",
@@ -53,4 +53,3 @@ export const chartGroupsOriginal: ChartGroupSimple[] = [
         ids: ['odelagte-lenker', 'stavekontroll']
     }
 ];
-

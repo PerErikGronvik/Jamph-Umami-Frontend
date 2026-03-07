@@ -52,6 +52,7 @@ const MarketingAnalysis = () => {
                 title="Kampanjer"
                 description="Se trafikk fra kampanjer og lenker med sporing (UTM)."
                 currentPage="markedsanalyse"
+                websiteId={selectedWebsite?.id}
                 websiteDomain={selectedWebsite?.domain}
                 websiteName={selectedWebsite?.name}
                 sidebarContent={
@@ -73,6 +74,7 @@ const MarketingAnalysis = () => {
             title="Kampanjer"
             description="Se trafikk fra kampanjer og lenker med sporing (UTM)."
             currentPage="markedsanalyse"
+            websiteId={selectedWebsite?.id}
             websiteDomain={selectedWebsite?.domain}
             websiteName={selectedWebsite?.name}
             sidebarContent={

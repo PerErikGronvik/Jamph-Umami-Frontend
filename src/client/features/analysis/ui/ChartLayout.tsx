@@ -17,6 +17,7 @@ interface ChartLayoutProps {
     hideSidebar?: boolean; // Now hides the top filter bar
     hideAnalysisSelector?: boolean;
     sidebarContent?: React.ReactNode;
+    websiteId?: string;     // Website id for precise feature support checks
     websiteDomain?: string; // Domain for feature support checks
     websiteName?: string;   // Website name for dev environment detection
 }
@@ -95,9 +96,11 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     hideSidebar = false,
     hideAnalysisSelector = false,
     sidebarContent,
-    websiteDomain
+    websiteId,
+    websiteDomain,
+    websiteName
 }) => {
-    const { filteredChartGroups, handleNavigation } = useChartNavigation(websiteDomain, hideAnalysisSelector);
+    const { filteredChartGroups, handleNavigation } = useChartNavigation(websiteDomain, websiteName, websiteId, hideAnalysisSelector);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     return (

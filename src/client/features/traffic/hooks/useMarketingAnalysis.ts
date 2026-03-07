@@ -31,10 +31,10 @@ export const useMarketingAnalysis = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-    const usesCookies = useCookieSupport(selectedWebsite?.domain);
-    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain);
+    const usesCookies = useCookieSupport(selectedWebsite?.domain, selectedWebsite?.id);
+    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain, selectedWebsite?.id);
 
-    const hasMarketing = useMarketingSupport(selectedWebsite?.domain, selectedWebsite?.name);
+    const hasMarketing = useMarketingSupport(selectedWebsite?.domain, selectedWebsite?.name, selectedWebsite?.id);
 
     const currentDateRange = useMemo(() => getDateRangeFromPeriod(period, customStartDate, customEndDate), [period, customStartDate, customEndDate]);
     const cookieBadge = useMemo(() => {
@@ -224,4 +224,3 @@ export const useMarketingAnalysis = () => {
         getVisitorLabelWithBadge,
     };
 };
-
