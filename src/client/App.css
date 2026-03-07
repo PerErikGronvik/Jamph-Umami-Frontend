@@ -105,6 +105,10 @@
   font-weight: 600 !important;
 }
 
+.dark .sidebar-toggle-btn {
+  border-color: var(--ax-border-neutral-strong);
+}
+
 /* Home page bottom grid responsive */
 .bottom-grid {
   grid-template-columns: repeat(3, 1fr) !important;

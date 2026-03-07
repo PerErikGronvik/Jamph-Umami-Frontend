@@ -167,7 +167,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                             {isSidebarOpen && (
                                 <button
                                     onClick={() => setIsSidebarOpen(false)}
-                                    className="hidden md:flex absolute top-3 left-[250px] -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-neutral-strong)] transition-colors z-10"
+                                    className="sidebar-toggle-btn hidden md:flex absolute top-3 left-[250px] -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-neutral-strong)] transition-colors z-10"
                                     title="Minimer meny"
                                     aria-label="Minimer meny"
                                 >
@@ -177,7 +177,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                             {!isSidebarOpen && (
                                 <button
                                     onClick={() => setIsSidebarOpen(true)}
-                                    className="hidden md:flex absolute top-3 left-0 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-neutral-strong)] transition-colors z-10"
+                                    className="sidebar-toggle-btn hidden md:flex absolute top-3 left-0 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-neutral-strong)] transition-colors z-10"
                                     title="Vis meny"
                                     aria-label="Vis meny"
                                 >
