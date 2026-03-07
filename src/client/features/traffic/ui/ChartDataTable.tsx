@@ -3,7 +3,9 @@ import { ActionMenu, Button, Table, Pagination, VStack, TextField, Tooltip } fro
 import { MoreVertical, Search } from 'lucide-react';
 import type { SeriesPoint, QueryStats, Granularity, DateRange } from '../model/types';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
+import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
 import { formatMetricValue, formatMetricDelta as formatMetricDeltaUtil, downloadCsvFile } from '../utils/trafficUtils';
+import { getTrafficSeriesSqlTemplate } from '../utils/trafficDashboardSqlTemplates.ts';
 
 type ChartDataTableProps = {
     data: SeriesPoint[];
@@ -30,6 +32,7 @@ const ChartDataTable = (props: ChartDataTableProps) => {
     } = props;
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
+    const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [page, setPage] = useState(1);
     const rowsPerPage = 10;
@@ -103,7 +106,10 @@ const ChartDataTable = (props: ChartDataTableProps) => {
         downloadCsvFile(csvContent, `oversikt_${new Date().toISOString().slice(0, 10)}.csv`);
     };
 
+    const addToDashboardSql = getTrafficSeriesSqlTemplate();
+
     return (
+        <>
         <VStack gap="space-4">
             <TableSectionHeader
                 title="Oversikt"
@@ -138,6 +144,9 @@ const ChartDataTable = (props: ChartDataTableProps) => {
                         <ActionMenu.Content align="end">
                             <ActionMenu.Item onClick={handleDownloadCSV} disabled={!data.length}>
                                 Last ned
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)} disabled={!filteredData.length}>
+                                Legg til i dashboard
                             </ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
@@ -221,6 +230,14 @@ const ChartDataTable = (props: ChartDataTableProps) => {
                 />
             )}
         </VStack>
+        <AddToDashboardDialog
+            open={showAddToDashboardDialog}
+            onClose={() => setShowAddToDashboardDialog(false)}
+            graphName="Oversikt"
+            sqlText={addToDashboardSql}
+            graphType="TABLE"
+        />
+        </>
     );
 };
 

@@ -3,7 +3,9 @@ import { ActionMenu, Button, Table, Pagination, VStack, Select, TextField, Toolt
 import { ExternalLink, Filter, MoreVertical, Search } from 'lucide-react';
 import type { Website } from '../../../shared/types/chart.ts';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
+import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
 import { formatMetricValue, formatCsvValue, downloadCsvFile } from '../utils/trafficUtils';
+import { getCombinedEntrancesSqlTemplate } from '../utils/trafficDashboardSqlTemplates.ts';
 
 type CombinedEntrancesTableProps = {
     title: string;
@@ -25,6 +27,7 @@ const CombinedEntrancesTable = ({
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
+    const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const filterSelectRef = useRef<HTMLSelectElement>(null);
     const [typeFilter, setTypeFilter] = useState<'all' | 'external' | 'internal'>('all');
@@ -82,7 +85,10 @@ const CombinedEntrancesTable = ({
         downloadCsvFile(csvContent, `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
     };
 
+    const addToDashboardSql = getCombinedEntrancesSqlTemplate();
+
     return (
+        <>
         <VStack gap="space-4">
             <TableSectionHeader
                 title={title}
@@ -128,6 +134,9 @@ const CombinedEntrancesTable = ({
                         <ActionMenu.Content align="end">
                             <ActionMenu.Item onClick={handleDownloadCSV} disabled={!data.length}>
                                 Last ned
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)} disabled={!filteredData.length}>
+                                Legg til i dashboard
                             </ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
@@ -233,6 +242,14 @@ const CombinedEntrancesTable = ({
                 />
             )}
         </VStack>
+        <AddToDashboardDialog
+            open={showAddToDashboardDialog}
+            onClose={() => setShowAddToDashboardDialog(false)}
+            graphName={title}
+            sqlText={addToDashboardSql}
+            graphType="TABLE"
+        />
+        </>
     );
 };
 

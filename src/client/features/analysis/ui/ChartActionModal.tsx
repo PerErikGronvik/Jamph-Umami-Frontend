@@ -17,6 +17,8 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     onEditChart,
     onDeleteChart,
     onCopyChart,
+    copyActionLabel = 'Legg til i dashboard',
+    addToDashboardHref = '/grafbygger',
     onMoveChart,
     hideUsageActions = false,
 }) => {
@@ -127,7 +129,21 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                                 >
                                     <span className="inline-flex items-center gap-2">
                                         <span className={iconSlotClass}><Copy aria-hidden size={16} /></span>
-                                        <span>Kopier graf</span>
+                                        <span>{copyActionLabel}</span>
+                                    </span>
+                                </Button>
+                            )}
+                            {!onCopyChart && (
+                                <Button
+                                    as="a"
+                                    href={addToDashboardHref}
+                                    variant="secondary"
+                                    onClick={onClose}
+                                    className={actionButtonClass}
+                                >
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className={iconSlotClass}><Copy aria-hidden size={16} /></span>
+                                        <span>Legg til i dashboard</span>
                                     </span>
                                 </Button>
                             )}

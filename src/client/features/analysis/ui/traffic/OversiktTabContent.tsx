@@ -5,6 +5,8 @@ import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import TrafficStats from './TrafficStats.tsx';
 import type { Granularity, OversiktTabContentProps } from '../../model/types.ts';
 import { useOversiktDayDividers } from '../../hooks/useOversiktDayDividers.ts';
+import AddToDashboardDialog from '../../../../shared/ui/AddToDashboardDialog.tsx';
+import { getTrafficSeriesSqlTemplate } from '../../../traffic/utils/trafficDashboardSqlTemplates.ts';
 
 const OversiktTabContent = ({
     hasAttemptedFetch,
@@ -42,6 +44,7 @@ const OversiktTabContent = ({
     TrafficTableComponent,
 }: OversiktTabContentProps) => {
     const [showTableSection, setShowTableSection] = useState(false);
+    const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
 
     const handleDownloadCsv = () => {
         if (!processedSeriesData.length) return;
@@ -163,6 +166,9 @@ const OversiktTabContent = ({
                                     <ActionMenu.Item onClick={handleDownloadCsv} disabled={!processedSeriesData.length}>
                                         Last ned
                                     </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)}>
+                                        Legg til i dashboard
+                                    </ActionMenu.Item>
                                     <ActionMenu.Item onClick={() => onShowAverageChange(!showAverage)}>
                                         {showAverage ? 'Skjul gjennomsnitt' : 'Vis gjennomsnitt'}
                                     </ActionMenu.Item>
@@ -263,6 +269,13 @@ const OversiktTabContent = ({
                     </div>
                 )}
             </div>
+            <AddToDashboardDialog
+                open={showAddToDashboardDialog}
+                onClose={() => setShowAddToDashboardDialog(false)}
+                graphName="Trafikk over tid"
+                sqlText={getTrafficSeriesSqlTemplate()}
+                graphType="LINE"
+            />
         </>
     );
 };

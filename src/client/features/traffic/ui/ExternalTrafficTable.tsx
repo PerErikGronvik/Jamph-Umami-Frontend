@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { ActionMenu, Button, Table, Pagination, VStack, HelpText, TextField, Tooltip } from '@navikt/ds-react';
 import { MoreVertical, Search } from 'lucide-react';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
+import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
 import { formatMetricValue, formatCsvValue, downloadCsvFile } from '../utils/trafficUtils';
+import { getExternalSourcesSqlTemplate } from '../utils/trafficDashboardSqlTemplates.ts';
 
 type ExternalTrafficTableProps = {
     title: string;
@@ -15,6 +17,7 @@ type ExternalTrafficTableProps = {
 const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submittedMetricType }: ExternalTrafficTableProps) => {
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
+    const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [page, setPage] = useState(1);
     const rowsPerPage = 10;
@@ -86,7 +89,10 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
         downloadCsvFile(csvContent, `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
     };
 
+    const addToDashboardSql = getExternalSourcesSqlTemplate();
+
     return (
+        <>
         <VStack gap="space-4">
             <TableSectionHeader
                 title={title}
@@ -121,6 +127,9 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
                         <ActionMenu.Content align="end">
                             <ActionMenu.Item onClick={handleDownloadCSV} disabled={!data.length}>
                                 Last ned
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)} disabled={!filteredData.length}>
+                                Legg til i dashboard
                             </ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
@@ -182,6 +191,14 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
                 />
             )}
         </VStack>
+        <AddToDashboardDialog
+            open={showAddToDashboardDialog}
+            onClose={() => setShowAddToDashboardDialog(false)}
+            graphName={title}
+            sqlText={addToDashboardSql}
+            graphType="TABLE"
+        />
+        </>
     );
 };
 

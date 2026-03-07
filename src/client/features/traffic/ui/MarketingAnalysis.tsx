@@ -7,6 +7,7 @@ import UrlPathFilter from '../../analysis/ui/UrlPathFilter.tsx';
 import CookieMixNotice from '../../analysis/ui/CookieMixNotice.tsx';
 import { useMarketingAnalysis } from '../hooks/useMarketingAnalysis';
 import { getMarketingMetricLabel } from '../utils/trafficUtils';
+import { getMarketingSqlTemplate } from '../utils/trafficDashboardSqlTemplates.ts';
 import AnalysisTable from './AnalysisTable';
 
 const MarketingAnalysis = () => {
@@ -171,6 +172,7 @@ const MarketingAnalysis = () => {
                                 metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
+                                addToDashboardSqlTemplate={getMarketingSqlTemplate('source', 'Kilde')}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="medium" className="pt-4">
@@ -181,6 +183,7 @@ const MarketingAnalysis = () => {
                                 metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
+                                addToDashboardSqlTemplate={getMarketingSqlTemplate('medium', 'Medium')}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="campaign" className="pt-4">
@@ -191,6 +194,7 @@ const MarketingAnalysis = () => {
                                 metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
+                                addToDashboardSqlTemplate={getMarketingSqlTemplate('campaign', 'Kampanje')}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="content" className="pt-4">
@@ -201,6 +205,7 @@ const MarketingAnalysis = () => {
                                 metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
+                                addToDashboardSqlTemplate={getMarketingSqlTemplate('content', 'Innhold')}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="term" className="pt-4">
@@ -211,6 +216,7 @@ const MarketingAnalysis = () => {
                                 metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
+                                addToDashboardSqlTemplate={getMarketingSqlTemplate('term', 'Nøkkelord')}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="referrer" className="pt-4">
@@ -221,6 +227,7 @@ const MarketingAnalysis = () => {
                                 metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
+                                addToDashboardSqlTemplate={getMarketingSqlTemplate('referrer', 'Henvisningsdomene')}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="query" className="pt-4">
@@ -231,6 +238,7 @@ const MarketingAnalysis = () => {
                                 metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
+                                addToDashboardSqlTemplate={getMarketingSqlTemplate('query', 'URL_parametere')}
                             />
                         </Tabs.Panel>
                     </Tabs>

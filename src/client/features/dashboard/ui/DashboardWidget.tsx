@@ -329,6 +329,7 @@ export const DashboardWidget = ({
                 onEditChart={onEditChart ? () => onEditChart(chart.id) : undefined}
                 onDeleteChart={onDeleteChart ? () => onDeleteChart(chart.id) : undefined}
                 onCopyChart={onCopyChart ? () => onCopyChart(chart.id, websiteId) : undefined}
+                copyActionLabel={onCopyChart ? 'Kopier graf' : undefined}
                 onMoveChart={onMoveChart ? () => onMoveChart(chart.id) : undefined}
             />
         </>

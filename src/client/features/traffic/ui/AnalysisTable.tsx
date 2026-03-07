@@ -4,6 +4,7 @@ import { MoreVertical, Search } from 'lucide-react';
 import type { Website } from '../../../shared/types/chart.ts';
 import type { MarketingRow, QueryStats } from '../model/types';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
+import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
 import { downloadCsvFile } from '../utils/trafficUtils';
 
 type AnalysisTableProps = {
@@ -13,11 +14,13 @@ type AnalysisTableProps = {
     queryStats: QueryStats | null;
     selectedWebsite: Website | null;
     metricType: string;
+    addToDashboardSqlTemplate: string;
 };
 
-const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, metricType }: AnalysisTableProps) => {
+const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, metricType, addToDashboardSqlTemplate }: AnalysisTableProps) => {
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
+    const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [page, setPage] = useState(1);
     const rowsPerPage = 20;
@@ -100,7 +103,10 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
         return <div className="truncate">{name}</div>;
     };
 
+    const addToDashboardSql = addToDashboardSqlTemplate;
+
     return (
+        <>
         <VStack gap="space-4">
             <TableSectionHeader
                 title={title}
@@ -135,6 +141,9 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
                         <ActionMenu.Content align="end">
                             <ActionMenu.Item onClick={handleDownloadCSV} disabled={data.length === 0}>
                                 Last ned
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)} disabled={!filteredData.length}>
+                                Legg til i dashboard
                             </ActionMenu.Item>
                             {queryStats && (
                                 <>
@@ -198,6 +207,14 @@ const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, 
                 />
             )}
         </VStack>
+        <AddToDashboardDialog
+            open={showAddToDashboardDialog}
+            onClose={() => setShowAddToDashboardDialog(false)}
+            graphName={title}
+            sqlText={addToDashboardSql}
+            graphType="TABLE"
+        />
+        </>
     );
 };
 

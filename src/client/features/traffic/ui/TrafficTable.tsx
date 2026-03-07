@@ -3,7 +3,9 @@ import { ActionMenu, Button, Table, Pagination, VStack, HelpText, TextField, Too
 import { ExternalLink, MoreVertical, Search } from 'lucide-react';
 import type { Website } from '../../../shared/types/chart.ts';
 import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
+import AddToDashboardDialog from '../../../shared/ui/AddToDashboardDialog.tsx';
 import { formatMetricValue, formatMetricDelta as formatMetricDeltaUtil, downloadCsvFile } from '../utils/trafficUtils';
+import { getExitsSqlTemplate, getIncludedPagesSqlTemplate } from '../utils/trafficDashboardSqlTemplates.ts';
 
 type TrafficTableProps = {
     title: string;
@@ -26,6 +28,7 @@ const TrafficTable = ({
 }: TrafficTableProps) => {
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
+    const [showAddToDashboardDialog, setShowAddToDashboardDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [page, setPage] = useState(1);
     const rowsPerPage = 10;
@@ -116,7 +119,12 @@ const TrafficTable = ({
         downloadCsvFile(csvContent, `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
     };
 
+    const addToDashboardSql = title.toLowerCase().includes('utgang')
+        ? getExitsSqlTemplate()
+        : getIncludedPagesSqlTemplate();
+
     return (
+        <>
         <VStack gap="space-4">
             <TableSectionHeader
                 title={title}
@@ -151,6 +159,9 @@ const TrafficTable = ({
                         <ActionMenu.Content align="end">
                             <ActionMenu.Item onClick={handleDownloadCSV} disabled={!data.length}>
                                 Last ned
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={() => setShowAddToDashboardDialog(true)} disabled={!filteredData.length}>
+                                Legg til i dashboard
                             </ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
@@ -264,6 +275,14 @@ const TrafficTable = ({
                 />
             )}
         </VStack>
+        <AddToDashboardDialog
+            open={showAddToDashboardDialog}
+            onClose={() => setShowAddToDashboardDialog(false)}
+            graphName={title}
+            sqlText={addToDashboardSql}
+            graphType="TABLE"
+        />
+        </>
     );
 };
 

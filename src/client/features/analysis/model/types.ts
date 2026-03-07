@@ -205,6 +205,8 @@ export interface ChartActionModalProps {
     onEditChart?: () => void;
     onDeleteChart?: () => void;
     onCopyChart?: () => void;
+    copyActionLabel?: string;
+    addToDashboardHref?: string;
     onMoveChart?: () => void;
     hideUsageActions?: boolean;
 }
