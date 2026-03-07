@@ -10,6 +10,7 @@ import DashboardWidgetBarChart from './widget/DashboardWidgetBarChart.tsx';
 import DashboardWidgetPieChart from './widget/DashboardWidgetPieChart.tsx';
 import DashboardWidgetTable from './widget/DashboardWidgetTable.tsx';
 import DashboardWidgetSiteimprove from './widget/DashboardWidgetSiteimprove.tsx';
+import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
 import { processDashboardSql } from '../utils/queryUtils.ts';
 import {
     parseDashboardResponse,
@@ -237,42 +238,71 @@ export const DashboardWidget = ({
         return null;
     })() : null;
 
+    const chartActions = chart.sql ? (
+        <Tooltip content="Flere valg" placement="top">
+            <Button
+                variant="tertiary"
+                size="small"
+                onClick={() => setIsActionModalOpen(true)}
+                title={`Flere valg for ${chart.title}`}
+                aria-label={`Flere valg for ${chart.title}`}
+                icon={<MoreVertical aria-hidden="true" />}
+            />
+        </Tooltip>
+    ) : null;
+
     return (
         <>
             <div className={`h-full bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
                 <div className="flex flex-col mb-4">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                            {titlePrefix}
-                            <h2 className="text-xl font-semibold text-[var(--ax-text-default)] truncate">
-                                {chart.title}
-                            </h2>
-                        </div>
-                        {chart.sql && (
-                            <Tooltip content="Flere valg" placement="top">
-                                <Button
-                                    variant="tertiary"
-                                    size="small"
-                                    onClick={() => setIsActionModalOpen(true)}
-                                    title={`Flere valg for ${chart.title}`}
-                                    aria-label={`Flere valg for ${chart.title}`}
-                                    icon={<MoreVertical aria-hidden="true" />}
-                                />
-                            </Tooltip>
-                        )}
-                    </div>
-                    {titleBelow && (
-                        <div className="mt-2">
-                            {titleBelow}
-                        </div>
-                    )}
-                    {tableTotalValue !== null && (
-                        <p className="text-lg text-[var(--ax-text-default)] mt-1">
-                            {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : filters.metricType === 'visits' ? 'økter totalt' : 'besøk totalt'}
-                        </p>
-                    )}
-                    {chart.description && (
-                        <p className="text-[var(--ax-text-subtle)] text-sm mt-1">{chart.description}</p>
+                    {chart.type === 'table' ? (
+                        <TableSectionHeader
+                            title={(
+                                <span className="inline-flex items-center gap-2 min-w-0">
+                                    {titlePrefix}
+                                    <span className="truncate">{chart.title}</span>
+                                </span>
+                            )}
+                            headingLevel="2"
+                            headingSize="medium"
+                            meta={tableTotalValue !== null ? (
+                                <p className="text-lg text-[var(--ax-text-default)] mt-1">
+                                    {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : filters.metricType === 'visits' ? 'økter totalt' : 'besøk totalt'}
+                                </p>
+                            ) : undefined}
+                            description={chart.description}
+                            actions={chartActions}
+                            controls={titleBelow ? (
+                                <div className="mt-2">
+                                    {titleBelow}
+                                </div>
+                            ) : undefined}
+                        />
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    {titlePrefix}
+                                    <h2 className="text-xl font-semibold text-[var(--ax-text-default)] truncate">
+                                        {chart.title}
+                                    </h2>
+                                </div>
+                                {chartActions}
+                            </div>
+                            {titleBelow && (
+                                <div className="mt-2">
+                                    {titleBelow}
+                                </div>
+                            )}
+                            {tableTotalValue !== null && (
+                                <p className="text-lg text-[var(--ax-text-default)] mt-1">
+                                    {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : filters.metricType === 'visits' ? 'økter totalt' : 'besøk totalt'}
+                                </p>
+                            )}
+                            {chart.description && (
+                                <p className="text-[var(--ax-text-subtle)] text-sm mt-1">{chart.description}</p>
+                            )}
+                        </>
                     )}
                 </div>
                 {renderContent()}
