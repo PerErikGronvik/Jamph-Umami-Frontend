@@ -40,6 +40,7 @@ export interface CrawlData {
 export type SiteimproveListResponse<T> = { items?: T[] };
 
 export type TeamData = {
+    websiteID?: string;
     teamDomain?: string;
     teamSiteimproveSite?: string | number | boolean;
     [key: string]: unknown;

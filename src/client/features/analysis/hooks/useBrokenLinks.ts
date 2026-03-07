@@ -17,7 +17,7 @@ export const useBrokenLinks = (selectedWebsite: Website | null) => {
     useEffect(() => {
         if (!selectedWebsite) return;
 
-        const resolvedSiteimproveId = getSiteimproveId(selectedWebsite.domain);
+        const resolvedSiteimproveId = getSiteimproveId(selectedWebsite.domain, selectedWebsite.id);
         if (!resolvedSiteimproveId) {
             setError('Denne nettsiden er ikke koblet til Siteimprove eller mangler konfigurasjon.');
             setLoading(false);
@@ -109,4 +109,3 @@ export const useBrokenLinkPages = (linkId: number, siteimproveId: string, siteim
 
     return { pages, loading, error, retry: fetch };
 };
-

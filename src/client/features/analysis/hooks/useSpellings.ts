@@ -29,7 +29,7 @@ export const useSpellings = () => {
     useEffect(() => {
         if (!selectedWebsite) return;
 
-        const sid = getSiteimproveId(selectedWebsite.domain);
+        const sid = getSiteimproveId(selectedWebsite.domain, selectedWebsite.id);
         if (!sid) {
             setError('Denne nettsiden er ikke koblet til Siteimprove eller mangler konfigurasjon.');
             setSiteimproveId(null);
@@ -119,4 +119,3 @@ export const useSpellings = () => {
         fetchSpellingData,
     };
 };
-

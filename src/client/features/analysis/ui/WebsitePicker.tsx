@@ -327,6 +327,7 @@ const WebsitePicker = ({
     }
 
     setIsInitialLoading(true);
+    let didLoadFromCache = false;
 
     // Try to load websites from cache first
     const cachedWebsites = getFromLocalStorage<Website[]>(WEBSITES_CACHE_KEY);
@@ -334,28 +335,26 @@ const WebsitePicker = ({
     if (cachedWebsites && cachedWebsites.length > 0) {
       console.log('Using cached websites list');
       setWebsites(cachedWebsites);
-      websitesLoaded.current = true;
-      setIsInitialLoading(false);
-      return;
+      didLoadFromCache = true;
     }
 
-    // If no cache, fetch from API
+    // Fetch from API to ensure cache is fresh and complete
     const baseUrl = '';
 
     fetch(`${baseUrl}/api/bigquery/websites`)
       .then(response => response.json() as Promise<WebsiteApiResponse>)
       .then((response) => {
         const websitesData = response.data || [];
-        const uniqueWebsites = websitesData.filter((website: Website, index: number, self: Website[]) =>
-          index === self.findIndex((w) => w.name === website.name)
-        );
-        setWebsites(uniqueWebsites);
-        saveToLocalStorage(WEBSITES_CACHE_KEY, uniqueWebsites);
+        setWebsites(websitesData);
+        saveToLocalStorage(WEBSITES_CACHE_KEY, websitesData);
         websitesLoaded.current = true;
         setIsInitialLoading(false);
       })
       .catch(error => {
         console.error("Error fetching websites:", error);
+        if (didLoadFromCache) {
+          websitesLoaded.current = true;
+        }
         setIsInitialLoading(false);
       });
   }, []);
@@ -508,10 +507,11 @@ const WebsitePicker = ({
   const devToggleOptionValue = '__toggle_dev_sites__';
   const toggleDevSitesLabel = showDevSites ? 'Skjul dev sider' : 'Vis dev sider';
   const getDisplayName = (website: Website) => {
-    const cleanedName = website.name.replace(/\s*-\s*prod$/i, '').trim();
-    if (!cleanedName) return cleanedName;
-    return cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
+    const name = website.name.trim();
+    if (!name) return name;
+    return name.charAt(0).toUpperCase() + name.slice(1);
   };
+  const getBaseName = (name: string) => name.replace(/\s*-\s*prod$/i, '').trim().toLowerCase();
 
   const visibleWebsites = sortedWebsites.filter(website => {
     if (!isProdHost) return true;
@@ -519,17 +519,31 @@ const WebsitePicker = ({
     return !isDevWebsite(website);
   });
 
-  const uniqueVisibleWebsites = visibleWebsites.filter((website, index, self) => {
-    const displayName = getDisplayName(website).toLowerCase().trim();
-    return index === self.findIndex(w => getDisplayName(w).toLowerCase().trim() === displayName);
-  });
+  const displayLabelCounts = visibleWebsites.reduce((acc, website) => {
+    const label = getDisplayName(website);
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   const comboboxOptions = [
-    ...uniqueVisibleWebsites.map(website => ({
-      label: getDisplayName(website),
-      value: getDisplayName(website),
-      website: website
-    })),
+    ...visibleWebsites.map(website => {
+      const displayName = getDisplayName(website);
+      const isProdVariant = /\s*-\s*prod$/i.test(displayName);
+      const hasProdSibling = visibleWebsites.some((other) => {
+        if (other.id === website.id) return false;
+        return getBaseName(other.name) === getBaseName(website.name) && /\s*-\s*prod$/i.test(other.name);
+      });
+      const oldLabel = !isProdVariant && hasProdSibling ? `${displayName} (gammel)` : displayName;
+      const finalLabel = displayLabelCounts[displayName] > 1
+        ? `${oldLabel} (${website.domain})`
+        : oldLabel;
+
+      return {
+        label: finalLabel,
+        value: finalLabel,
+        website: website
+      };
+    }),
     ...(isProdHost ? [{ label: toggleDevSitesLabel, value: devToggleOptionValue }] : [])
   ];
 
@@ -546,7 +560,11 @@ const WebsitePicker = ({
           size="small"
           label={customLabel || "Nettside"}
           options={comboboxOptions}
-          selectedOptions={selectedWebsite ? [getDisplayName(selectedWebsite)] : []}
+          selectedOptions={(() => {
+            if (!selectedWebsite) return [];
+            const selectedOption = comboboxOptions.find((opt) => 'website' in opt && opt.website.id === selectedWebsite.id);
+            return selectedOption ? [selectedOption.value] : [];
+          })()}
           onToggleSelected={(option: string, isSelected: boolean) => {
             if (option === devToggleOptionValue) {
               if (isSelected) {
@@ -556,7 +574,8 @@ const WebsitePicker = ({
             }
 
             if (isSelected) {
-              const website = websites.find(w => getDisplayName(w) === option);
+              const selectedOption = comboboxOptions.find((opt) => opt.value === option && 'website' in opt);
+              const website = selectedOption && 'website' in selectedOption ? selectedOption.website : undefined;
               if (website) {
                 handleWebsiteChange(website);
               }

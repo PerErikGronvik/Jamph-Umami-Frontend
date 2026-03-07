@@ -173,6 +173,7 @@ const BrokenLinks = () => {
             title="Ødelagte lenker"
             description="Oversikt over ødelagte lenker fra Siteimprove."
             currentPage="odelagte-lenker"
+            websiteId={selectedWebsite?.id}
             websiteDomain={selectedWebsite?.domain}
             websiteName={selectedWebsite?.name}
             sidebarContent={

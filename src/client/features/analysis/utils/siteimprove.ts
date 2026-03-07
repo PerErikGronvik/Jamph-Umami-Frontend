@@ -1,8 +1,25 @@
 import type { TeamData } from '../model/types.ts';
 import teamsData from '../../../../data/teamsData.json';
 
-export const getSiteimproveId = (domain: string): string | number | undefined => {
+const normalizeWebsiteId = (websiteId: string): string => websiteId.trim().toLowerCase();
+
+export const getSiteimproveId = (domain: string, websiteId?: string): string | number | undefined => {
     let team: TeamData | undefined;
+
+    if (websiteId) {
+        const normalizedWebsiteId = normalizeWebsiteId(websiteId);
+        team = (teamsData as TeamData[]).find((t) =>
+            typeof t.websiteID === 'string' && normalizeWebsiteId(t.websiteID) === normalizedWebsiteId
+        );
+    }
+
+    if (team) {
+        const matchedId = team.teamSiteimproveSite;
+        if (typeof matchedId === 'string' || typeof matchedId === 'number') {
+            return matchedId;
+        }
+    }
+
     let siteDomain = domain;
     if (!siteDomain.startsWith('http')) {
         siteDomain = `https://${siteDomain}`;
@@ -48,4 +65,3 @@ export const downloadCsv = (filename: string, headers: string[], rows: string[][
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 };
-
