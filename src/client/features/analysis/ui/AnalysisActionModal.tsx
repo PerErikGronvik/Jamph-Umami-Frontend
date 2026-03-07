@@ -102,6 +102,8 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
         }
     };
 
+    const actionButtonClass = '!w-full !justify-start';
+
     return (
         <Modal open={open} onClose={onClose} header={{ heading: 'Hva vil du gjøre med lenken?' }} width="medium">
             <Modal.Body>
@@ -140,17 +142,17 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                             <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
                                 Trafikk
                             </div>
-                            <Button variant="secondary" onClick={() => openAnalysis('/trafikkanalyse', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/trafikkanalyse', 'urlPath')} icon={<BarChart2 aria-hidden />} className={actionButtonClass}>
                                 Trafikkoversikt
                             </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className={actionButtonClass}>
                                 Navigasjonsflyt
                             </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/trakt', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/trakt', 'urlPath')} icon={<BarChart2 aria-hidden />} className={actionButtonClass}>
                                 Trakt
                             </Button>
                             {hasMarketing && (
-                                <Button variant="secondary" onClick={() => openAnalysis('/markedsanalyse', 'urlPath')} icon={<TrendingUp aria-hidden />} className="justify-start">
+                                <Button variant="secondary" onClick={() => openAnalysis('/markedsanalyse', 'urlPath')} icon={<TrendingUp aria-hidden />} className={actionButtonClass}>
                                     Kampanjer
                                 </Button>
                             )}
@@ -160,10 +162,10 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                             <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
                                 Hendelser
                             </div>
-                            <Button variant="secondary" onClick={() => openAnalysis('/utforsk-hendelser', 'pagePath')} icon={<Search aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/utforsk-hendelser', 'pagePath')} icon={<Search aria-hidden />} className={actionButtonClass}>
                                 Egendefinerte hendelser
                             </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className={actionButtonClass}>
                                 Hendelsesforløp
                             </Button>
                         </div>
@@ -172,13 +174,13 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                             <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
                                 Brukere
                             </div>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className={actionButtonClass}>
                                 Brukerdetaljer
                             </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukerprofiler', 'pagePath')} icon={<UserSearch aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukerprofiler', 'pagePath')} icon={<UserSearch aria-hidden />} className={actionButtonClass}>
                                 Enkeltbrukere
                             </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukerlojalitet', 'urlPath')} icon={<Repeat aria-hidden />} className="justify-start">
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukerlojalitet', 'urlPath')} icon={<Repeat aria-hidden />} className={actionButtonClass}>
                                 Gjenbesøk
                             </Button>
                         </div>
@@ -188,10 +190,10 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                 <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
                                     Innholdskvalitet
                                 </div>
-                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/odelagte-lenker', 'urlPath')} icon={<Unlink aria-hidden />} className="justify-start">
+                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/odelagte-lenker', 'urlPath')} icon={<Unlink aria-hidden />} className={actionButtonClass}>
                                     Ødelagte lenker
                                 </Button>
-                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/stavekontroll', 'urlPath')} icon={<SpellCheck aria-hidden />} className="justify-start">
+                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/stavekontroll', 'urlPath')} icon={<SpellCheck aria-hidden />} className={actionButtonClass}>
                                     Stavekontroll
                                 </Button>
                             </div>

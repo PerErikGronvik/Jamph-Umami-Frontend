@@ -209,6 +209,7 @@ export interface ChartActionModalProps {
     addToDashboardHref?: string;
     onMoveChart?: () => void;
     hideUsageActions?: boolean;
+    replaceExploreActionWithSqlEditor?: boolean;
 }
 
 // ===== ChartLayout types =====

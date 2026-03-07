@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { ZoomPlusIcon, DownloadIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
-import { Copy, Pencil, Trash2 } from 'lucide-react';
+import { Code2, Copy, Pencil, Trash2 } from 'lucide-react';
 import type { ChartActionModalProps } from '../model/types.ts';
-import { generateShareUrl, downloadChartCsv } from '../utils/chartActions.ts';
+import { buildEditorUrl, generateShareUrl, downloadChartCsv } from '../utils/chartActions.ts';
 
 const ChartActionModal: React.FC<ChartActionModalProps> = ({
     open,
@@ -21,6 +21,7 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     addToDashboardHref = '/grafbygger',
     onMoveChart,
     hideUsageActions = false,
+    replaceExploreActionWithSqlEditor = false,
 }) => {
     const [copyFeedback, setCopyFeedback] = useState(false);
 
@@ -44,6 +45,11 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     const handleDownloadCsv = () => {
         if (!data || data.length === 0) return;
         downloadChartCsv(data, chart.title);
+        onClose();
+    };
+
+    const handleOpenInSqlEditor = () => {
+        window.location.href = buildEditorUrl(chart, websiteId, filters, domain);
         onClose();
     };
 
@@ -82,16 +88,18 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                         {!hideUsageActions && (
                             <div className="flex flex-col gap-2">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ax-text-subtle)]">Bruk og del</p>
-                                <Button
-                                    variant="secondary"
-                                    onClick={handleOpenInNewTab}
-                                    className={actionButtonClass}
-                                >
-                                    <span className="inline-flex items-center gap-2">
-                                        <span className={iconSlotClass}><ZoomPlusIcon aria-hidden /></span>
-                                        <span>Utforsk grafen</span>
-                                    </span>
-                                </Button>
+                                {!replaceExploreActionWithSqlEditor && (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleOpenInNewTab}
+                                        className={actionButtonClass}
+                                    >
+                                        <span className="inline-flex items-center gap-2">
+                                            <span className={iconSlotClass}><ZoomPlusIcon aria-hidden /></span>
+                                            <span>Utforsk grafen</span>
+                                        </span>
+                                    </Button>
+                                )}
                                 <Button
                                     variant="secondary"
                                     onClick={handleCopyLink}
@@ -104,6 +112,18 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                                         <span>{copyFeedback ? 'Lenke kopiert!' : 'Del grafen'}</span>
                                     </span>
                                 </Button>
+                                {replaceExploreActionWithSqlEditor && (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleOpenInSqlEditor}
+                                        className={actionButtonClass}
+                                    >
+                                        <span className="inline-flex items-center gap-2">
+                                            <span className={iconSlotClass}><Code2 aria-hidden size={16} /></span>
+                                            <span>Åpne i SQL-editor</span>
+                                        </span>
+                                    </Button>
+                                )}
                                 {data && data.length > 0 && (
                                     <Button
                                         variant="secondary"

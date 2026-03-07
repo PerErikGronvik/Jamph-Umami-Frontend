@@ -48,6 +48,7 @@ interface DashboardWidgetProps {
     onDeleteChart?: (chartId?: string) => void;
     onCopyChart?: (chartId?: string, sourceWebsiteId?: string) => void;
     onMoveChart?: (chartId?: string) => void;
+    replaceExploreActionWithSqlEditor?: boolean;
     titlePrefix?: ReactNode;
     titleBelow?: ReactNode;
 }
@@ -66,6 +67,7 @@ export const DashboardWidget = ({
     onDeleteChart,
     onCopyChart,
     onMoveChart,
+    replaceExploreActionWithSqlEditor = false,
     titlePrefix,
     titleBelow,
 }: DashboardWidgetProps) => {
@@ -331,6 +333,7 @@ export const DashboardWidget = ({
                 onCopyChart={onCopyChart ? () => onCopyChart(chart.id, websiteId) : undefined}
                 copyActionLabel={onCopyChart ? 'Kopier graf' : undefined}
                 onMoveChart={onMoveChart ? () => onMoveChart(chart.id) : undefined}
+                replaceExploreActionWithSqlEditor={replaceExploreActionWithSqlEditor}
             />
         </>
     );

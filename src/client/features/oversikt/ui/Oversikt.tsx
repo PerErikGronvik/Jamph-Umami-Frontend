@@ -1486,6 +1486,7 @@ const Oversikt = () => {
                                         onDeleteChart={openDeleteDialog}
                                         onCopyChart={openCopyDialog}
                                         onMoveChart={categories.length > 1 ? openMoveDialog : undefined}
+                                        replaceExploreActionWithSqlEditor
                                         titleBelow={(chart.variants?.length ?? 0) > 1 ? (
                                             <Tabs
                                                 size="small"
