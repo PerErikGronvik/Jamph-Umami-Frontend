@@ -175,11 +175,12 @@ const OversiktTabContent = ({
                                     <ActionMenu.Item onClick={() => openSqlEditorWithContext({ sql: getTrafficSeriesSqlTemplate(), websiteId: selectedWebsite?.id })}>
                                         Åpne i SQL-editor
                                     </ActionMenu.Item>
-                                    <ActionMenu.Item onClick={() => onShowAverageChange(!showAverage)}>
-                                        {showAverage ? 'Skjul gjennomsnitt' : 'Vis gjennomsnitt'}
-                                    </ActionMenu.Item>
                                     <ActionMenu.Item onClick={handleDownloadCsv} disabled={!processedSeriesData.length}>
                                         Last ned
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Divider />
+                                    <ActionMenu.Item onClick={() => onShowAverageChange(!showAverage)}>
+                                        {showAverage ? 'Skjul gjennomsnitt' : 'Vis gjennomsnitt'}
                                     </ActionMenu.Item>
                                 </ActionMenu.Content>
                             </ActionMenu>
