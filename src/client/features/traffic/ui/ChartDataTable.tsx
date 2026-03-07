@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActionMenu, Button, Table, Heading, Pagination, VStack, TextField, Tooltip } from '@navikt/ds-react';
+import { ActionMenu, Button, Table, Pagination, VStack, TextField, Tooltip } from '@navikt/ds-react';
 import { MoreVertical, Search } from 'lucide-react';
 import type { SeriesPoint, QueryStats, Granularity, DateRange } from '../model/types';
+import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
 import { formatMetricValue, formatMetricDelta as formatMetricDeltaUtil, downloadCsvFile } from '../utils/trafficUtils';
 
 type ChartDataTableProps = {
@@ -104,9 +105,10 @@ const ChartDataTable = (props: ChartDataTableProps) => {
 
     return (
         <VStack gap="space-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-                <Heading level="3" size="small">Oversikt</Heading>
-                <div className="flex items-center gap-1">
+            <TableSectionHeader
+                title="Oversikt"
+                actions={(
+                    <>
                     <Tooltip content="Søk" placement="top">
                         <Button
                             type="button"
@@ -139,21 +141,22 @@ const ChartDataTable = (props: ChartDataTableProps) => {
                             </ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
-                </div>
-            </div>
-            {showSearch && (
-                <div className="w-full sm:w-64 min-w-0">
-                    <TextField
-                        label={submittedGranularity === 'hour' ? 'Søk etter tidspunkt' : 'Søk etter dato'}
-                        hideLabel
-                        placeholder={submittedGranularity === 'hour' ? 'Søk etter tid...' : 'Søk etter dato...'}
-                        size="small"
-                        value={search}
-                        ref={searchInputRef}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-            )}
+                    </>
+                )}
+                controls={showSearch ? (
+                    <div className="w-full sm:w-64 min-w-0">
+                        <TextField
+                            label={submittedGranularity === 'hour' ? 'Søk etter tidspunkt' : 'Søk etter dato'}
+                            hideLabel
+                            placeholder={submittedGranularity === 'hour' ? 'Søk etter tid...' : 'Søk etter dato...'}
+                            size="small"
+                            value={search}
+                            ref={searchInputRef}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                ) : undefined}
+            />
             <div className="border rounded-lg overflow-x-auto">
                 <Table size="small" className="table-fixed w-full">
                     <Table.Header>

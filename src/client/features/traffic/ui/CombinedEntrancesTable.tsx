@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActionMenu, Button, Table, Heading, Pagination, VStack, Select, TextField, Tooltip } from '@navikt/ds-react';
+import { ActionMenu, Button, Table, Pagination, VStack, Select, TextField, Tooltip } from '@navikt/ds-react';
 import { ExternalLink, Filter, MoreVertical, Search } from 'lucide-react';
 import type { Website } from '../../../shared/types/chart.ts';
+import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
 import { formatMetricValue, formatCsvValue, downloadCsvFile } from '../utils/trafficUtils';
 
 type CombinedEntrancesTableProps = {
@@ -83,9 +84,10 @@ const CombinedEntrancesTable = ({
 
     return (
         <VStack gap="space-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-                <Heading level="3" size="small">{title}</Heading>
-                <div className="flex items-center gap-1">
+            <TableSectionHeader
+                title={title}
+                actions={(
+                    <>
                     <Tooltip content="Filter" placement="top">
                         <Button
                             type="button"
@@ -129,44 +131,47 @@ const CombinedEntrancesTable = ({
                             </ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
-                </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
-                {showFilter && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-                        <span className="text-sm text-[var(--ax-text-default)] whitespace-nowrap">
-                            Type trafikkilde
-                        </span>
-                        <div className="w-full sm:w-32">
-                            <Select
-                                label="Trafikktype"
-                                hideLabel
-                                size="small"
-                                value={typeFilter}
-                                ref={filterSelectRef}
-                                onChange={(e) => setTypeFilter(e.target.value as 'all' | 'external' | 'internal')}
-                            >
-                                <option value="all">Alle</option>
-                                <option value="external">Eksterne</option>
-                                <option value="internal">Interne</option>
-                            </Select>
-                        </div>
+                    </>
+                )}
+                controls={(
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
+                        {showFilter && (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                                <span className="text-sm text-[var(--ax-text-default)] whitespace-nowrap">
+                                    Type trafikkilde
+                                </span>
+                                <div className="w-full sm:w-32">
+                                    <Select
+                                        label="Trafikktype"
+                                        hideLabel
+                                        size="small"
+                                        value={typeFilter}
+                                        ref={filterSelectRef}
+                                        onChange={(e) => setTypeFilter(e.target.value as 'all' | 'external' | 'internal')}
+                                    >
+                                        <option value="all">Alle</option>
+                                        <option value="external">Eksterne</option>
+                                        <option value="internal">Interne</option>
+                                    </Select>
+                                </div>
+                            </div>
+                        )}
+                        {showSearch && (
+                            <div className="w-full sm:w-64 min-w-0">
+                                <TextField
+                                    label="Søk"
+                                    hideLabel
+                                    placeholder="Søk..."
+                                    size="small"
+                                    value={search}
+                                    ref={searchInputRef}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
-                {showSearch && (
-                    <div className="w-full sm:w-64 min-w-0">
-                        <TextField
-                            label="Søk"
-                            hideLabel
-                            placeholder="Søk..."
-                            size="small"
-                            value={search}
-                            ref={searchInputRef}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                )}
-            </div>
+            />
             <div className="border rounded-lg overflow-x-auto">
                 <div className="min-w-max">
                     <Table size="small" className="table-auto min-w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2">

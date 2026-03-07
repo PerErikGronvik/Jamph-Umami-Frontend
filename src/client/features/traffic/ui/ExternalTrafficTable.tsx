@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActionMenu, Button, Table, Heading, Pagination, VStack, HelpText, TextField, Tooltip } from '@navikt/ds-react';
+import { ActionMenu, Button, Table, Pagination, VStack, HelpText, TextField, Tooltip } from '@navikt/ds-react';
 import { MoreVertical, Search } from 'lucide-react';
+import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
 import { formatMetricValue, formatCsvValue, downloadCsvFile } from '../utils/trafficUtils';
 
 type ExternalTrafficTableProps = {
@@ -87,9 +88,10 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
 
     return (
         <VStack gap="space-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-                <Heading level="3" size="small">{title}</Heading>
-                <div className="flex items-center gap-1">
+            <TableSectionHeader
+                title={title}
+                actions={(
+                    <>
                     <Tooltip content="Søk" placement="top">
                         <Button
                             type="button"
@@ -122,21 +124,22 @@ const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain, submitt
                             </ActionMenu.Item>
                         </ActionMenu.Content>
                     </ActionMenu>
-                </div>
-            </div>
-            {showSearch && (
-                <div className="w-full sm:w-64 min-w-0">
-                    <TextField
-                        label="Søk"
-                        hideLabel
-                        placeholder="Søk..."
-                        size="small"
-                        value={search}
-                        ref={searchInputRef}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-            )}
+                    </>
+                )}
+                controls={showSearch ? (
+                    <div className="w-full sm:w-64 min-w-0">
+                        <TextField
+                            label="Søk"
+                            hideLabel
+                            placeholder="Søk..."
+                            size="small"
+                            value={search}
+                            ref={searchInputRef}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                ) : undefined}
+            />
             <div className="border rounded-lg overflow-x-auto">
                 <div className="min-w-max">
                     <Table size="small" className="table-auto min-w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ActionMenu, Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort, InlineMessage, Tooltip } from '@navikt/ds-react';
+import { ActionMenu, Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, InlineMessage, Tooltip } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink, MoreVertical, Search } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
@@ -8,6 +8,7 @@ import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
 import AnalysisActionModal from '../../analysis/ui/AnalysisActionModal.tsx';
 import UrlPathFilter from '../../analysis/ui/UrlPathFilter.tsx';
+import TableSectionHeader from '../../../shared/ui/TableSectionHeader.tsx';
 import type { Website } from '../../../shared/types/chart.ts';
 import { translateCountry } from '../../../shared/lib/translations.ts';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams, getCookieBadge } from '../../../shared/lib/utils.ts';
@@ -376,29 +377,26 @@ const UserProfiles = () => {
                 );
                 return (
                     <>
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                                <Heading level="2" size="medium">
-                                    Viser {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'enkeltbrukere'}
-                                </Heading>
-                                {isAtMaxUsersLimit && (
-                                    <div className="mt-3 max-w-[72ch] pb-4">
-                                        <InlineMessage status="warning">
-                                            {normalizedMaxUsers === DEFAULT_MAX_USERS
-                                                ? `Begrenset til maks ${formatNumber(DEFAULT_MAX_USERS)} brukere. Øk "Maks brukere" ved behov.`
-                                                : `Begrenset til maks ${formatNumber(normalizedMaxUsers)} brukere. Flere ved behov.`}
-                                        </InlineMessage>
-                                    </div>
-                                )}
-                                <BodyShort className="mt-2 text-[var(--ax-text-subtle)] max-w-[72ch]">
-                                    {isCookieRange
-                                        ? 'Cookies er aktivert. Brukere identifiseres med cookie‑ID på tvers av økter innen perioden.'
-                                        : isMixRange
-                                            ? 'Perioden krysser overgang til cookies. Listen inneholder både cookie‑ID og sesjons‑ID.'
-                                            : 'Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.'}
-                                </BodyShort>
-                            </div>
-                            <div className="flex items-center gap-1">
+                        <TableSectionHeader
+                            title={`Viser ${formatNumber(totalUsers)} ${totalUsers === 1 ? 'bruker' : 'enkeltbrukere'}`}
+                            headingLevel="2"
+                            headingSize="medium"
+                            meta={isAtMaxUsersLimit ? (
+                                <div className="mt-3 max-w-[72ch] pb-4">
+                                    <InlineMessage status="warning">
+                                        {normalizedMaxUsers === DEFAULT_MAX_USERS
+                                            ? `Begrenset til maks ${formatNumber(DEFAULT_MAX_USERS)} brukere. Øk "Maks brukere" ved behov.`
+                                            : `Begrenset til maks ${formatNumber(normalizedMaxUsers)} brukere. Flere ved behov.`}
+                                    </InlineMessage>
+                                </div>
+                            ) : undefined}
+                            description={isCookieRange
+                                ? 'Cookies er aktivert. Brukere identifiseres med cookie‑ID på tvers av økter innen perioden.'
+                                : isMixRange
+                                    ? 'Perioden krysser overgang til cookies. Listen inneholder både cookie‑ID og sesjons‑ID.'
+                                    : 'Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.'}
+                            actions={(
+                                <>
                                 <Tooltip content="Søk" placement="top">
                                     <Button
                                         type="button"
@@ -442,21 +440,22 @@ const UserProfiles = () => {
                                         )}
                                     </ActionMenu.Content>
                                 </ActionMenu>
-                            </div>
-                        </div>
-                        {showTableSearch && (
-                            <div className="mb-4 w-full sm:w-64 min-w-0">
-                                <TextField
-                                    label="Søk"
-                                    hideLabel
-                                    placeholder="Søk..."
-                                    size="small"
-                                    value={searchQuery}
-                                    ref={tableSearchInputRef}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        )}
+                                </>
+                            )}
+                            controls={showTableSearch ? (
+                                <div className="mb-4 w-full sm:w-64 min-w-0">
+                                    <TextField
+                                        label="Søk"
+                                        hideLabel
+                                        placeholder="Søk..."
+                                        size="small"
+                                        value={searchQuery}
+                                        ref={tableSearchInputRef}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            ) : undefined}
+                        />
 
                         <div className="border rounded-lg overflow-hidden">
                             <div className="overflow-x-auto">
