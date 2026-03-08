@@ -15,7 +15,14 @@ export const useBrokenLinks = (selectedWebsite: Website | null) => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!selectedWebsite) return;
+        if (!selectedWebsite) {
+            setError(null);
+            setSiteimproveId(null);
+            return;
+        }
+
+        // Clear stale warnings immediately when switching website.
+        setError(null);
 
         const resolvedSiteimproveId = getSiteimproveId(selectedWebsite.domain, selectedWebsite.id);
         if (!resolvedSiteimproveId) {

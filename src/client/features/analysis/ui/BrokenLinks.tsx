@@ -155,8 +155,13 @@ const BrokenLinks = () => {
     const displayedPages = filteredPages.filter((page) => getUrlPath(page.url).toLowerCase().includes(pagesSearch.toLowerCase()));
     const displayedLinks = brokenLinks.filter((link) => link.url.toLowerCase().includes(linksSearch.toLowerCase()));
     const hasUrlFilter = urlPath.trim().length > 0;
-    const pagesCount = hasUrlFilter ? filteredPages.length : pagesWithBrokenLinks.length;
-    const brokenLinksCount = hasUrlFilter
+    const isFrontpageFilter = urlPath.trim() === '/';
+    const hasUrlDetailView = hasUrlFilter && !isFrontpageFilter;
+    const hasSingleFilteredPage = hasUrlDetailView && filteredPages.length === 1;
+    const singleFilteredPage = hasSingleFilteredPage ? filteredPages[0] : null;
+    const showPagesQuickStat = !hasSingleFilteredPage;
+    const pagesCount = hasUrlDetailView ? filteredPages.length : pagesWithBrokenLinks.length;
+    const brokenLinksCount = hasUrlDetailView
         ? filteredPages.reduce((sum, page) => sum + page.broken_links, 0)
         : brokenLinks.length;
 
@@ -205,15 +210,9 @@ const BrokenLinks = () => {
                 </>
             }
         >
-            {error && (
+            {!loading && error && (
                 <Alert variant="info" className="mb-4">
                     {error}
-                </Alert>
-            )}
-
-            {!selectedWebsite && !loading && (
-                <Alert variant="info">
-                    Velg en nettside for å se status på lenker.
                 </Alert>
             )}
 
@@ -225,13 +224,15 @@ const BrokenLinks = () => {
 
             {!loading && !error && selectedWebsite && (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall sider med ødelagte lenker</div>
-                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                {pagesCount.toLocaleString('nb-NO')}
+                    <div className={`grid grid-cols-1 ${showPagesQuickStat ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4 mb-6`}>
+                        {showPagesQuickStat && (
+                            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall sider med ødelagte lenker</div>
+                                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                    {pagesCount.toLocaleString('nb-NO')}
+                                </div>
                             </div>
-                        </div>
+                        )}
                         <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall ødelagte lenker</div>
                             <div className="text-2xl font-bold text-[var(--ax-text-default)]">
@@ -268,14 +269,21 @@ const BrokenLinks = () => {
                         </div>
                     </div>
 
-                    <Tabs value={activeTab} onChange={setActiveTab}>
-                        <Tabs.List>
-                            <Tabs.Tab value="pages" label="Sider med ødelagte lenker" />
-                            <Tabs.Tab value="links" label="Alle ødelagte lenker" />
-                        </Tabs.List>
-
-                        <Tabs.Panel value="pages" className="pt-4">
-                            {displayedPages.length === 0 ? (
+                    {hasUrlDetailView ? (
+                        <div className="pt-4">
+                            {hasSingleFilteredPage && singleFilteredPage ? (
+                                <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg overflow-hidden bg-[var(--ax-bg-default)] p-4">
+                                    {siteimproveId ? (
+                                        <PageBrokenLinksContent
+                                            pageId={singleFilteredPage.id}
+                                            siteimproveId={siteimproveId}
+                                            siteimproveBaseUrl={siteimproveBaseUrl}
+                                        />
+                                    ) : (
+                                        <Alert variant="info" className="mt-4">Kunne ikke hente lenker uten Siteimprove-ID.</Alert>
+                                    )}
+                                </div>
+                            ) : displayedPages.length === 0 ? (
                                 <Alert variant="success">
                                     {urlPath
                                         ? (pagesSearch ? `Fant ingen treff for "${pagesSearch}" innen "${urlPath}"` : `Fant ingen ødelagte lenker for "${urlPath}"`)
@@ -391,117 +399,240 @@ const BrokenLinks = () => {
                                 </div>
                                 </div>
                             )}
-                        </Tabs.Panel>
+                        </div>
+                    ) : (
+                        <Tabs value={activeTab} onChange={setActiveTab}>
+                            <Tabs.List>
+                                <Tabs.Tab value="pages" label="Sider med ødelagte lenker" />
+                                <Tabs.Tab value="links" label="Alle ødelagte lenker" />
+                            </Tabs.List>
 
-                        <Tabs.Panel value="links" className="pt-4">
-                            {displayedLinks.length === 0 ? (
-                                <Alert variant="success">
-                                    {linksSearch ? `Fant ingen treff for "${linksSearch}"` : 'Fant ingen ødelagte lenker! 🎉'}
-                                </Alert>
-                            ) : (
-                                <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg overflow-hidden bg-[var(--ax-bg-default)]">
-                                    <div className="p-4 pb-2">
-                                        <div className="mb-2 flex items-center justify-between gap-2">
-                                            <Heading level="3" size="small">Alle ødelagte lenker</Heading>
-                                            <div className="flex items-center gap-1">
-                                                <Tooltip content="Søk" placement="top">
-                                                    <Button
-                                                        type="button"
-                                                        variant={showLinksSearch ? 'secondary' : 'tertiary'}
-                                                        size="xsmall"
-                                                        icon={<Search aria-hidden />}
-                                                        aria-label="Søk i alle ødelagte lenker"
-                                                        aria-pressed={showLinksSearch}
-                                                        onClick={() => {
-                                                            setShowLinksSearch((prev) => !prev);
-                                                            if (showLinksSearch) setLinksSearch('');
-                                                        }}
-                                                    />
-                                                </Tooltip>
-                                                <ActionMenu>
-                                                    <Tooltip content="Flere valg" placement="top">
-                                                        <ActionMenu.Trigger>
-                                                            <Button
-                                                                type="button"
-                                                                variant="tertiary"
-                                                                size="xsmall"
-                                                                icon={<MoreVertical aria-hidden />}
-                                                                aria-label="Flere valg for alle ødelagte lenker"
-                                                            />
-                                                        </ActionMenu.Trigger>
-                                                    </Tooltip>
-                                                    <ActionMenu.Content align="end">
-                                                        <ActionMenu.Item
+                            <Tabs.Panel value="pages" className="pt-4">
+                                {displayedPages.length === 0 ? (
+                                    <Alert variant="success">
+                                        {pagesSearch ? `Fant ingen treff for "${pagesSearch}"` : 'Fant ingen sider med ødelagte lenker!'}
+                                    </Alert>
+                                ) : (
+                                    <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg overflow-hidden bg-[var(--ax-bg-default)]">
+                                        <div className="p-4 pb-2">
+                                            <div className="mb-2 flex items-center justify-between gap-2">
+                                                <Heading level="3" size="small">Sider med ødelagte lenker</Heading>
+                                                <div className="flex items-center gap-1">
+                                                    <Tooltip content="Søk" placement="top">
+                                                        <Button
+                                                            type="button"
+                                                            variant={showPagesSearch ? 'secondary' : 'tertiary'}
+                                                            size="xsmall"
+                                                            icon={<Search aria-hidden />}
+                                                            aria-label="Søk i sider med ødelagte lenker"
+                                                            aria-pressed={showPagesSearch}
                                                             onClick={() => {
-                                                                downloadCsv(
-                                                                    `odelagte_lenker_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`,
-                                                                    ['URL', 'Tilfeller'],
-                                                                    displayedLinks.map((bl) => [`"${bl.url}"`, String(bl.pages)])
-                                                                );
+                                                                setShowPagesSearch((prev) => !prev);
+                                                                if (showPagesSearch) setPagesSearch('');
                                                             }}
-                                                            disabled={displayedLinks.length === 0}
-                                                        >
-                                                            Last ned
-                                                        </ActionMenu.Item>
-                                                    </ActionMenu.Content>
-                                                </ActionMenu>
+                                                        />
+                                                    </Tooltip>
+                                                    <ActionMenu>
+                                                        <Tooltip content="Flere valg" placement="top">
+                                                            <ActionMenu.Trigger>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="tertiary"
+                                                                    size="xsmall"
+                                                                    icon={<MoreVertical aria-hidden />}
+                                                                    aria-label="Flere valg for sider med ødelagte lenker"
+                                                                />
+                                                            </ActionMenu.Trigger>
+                                                        </Tooltip>
+                                                        <ActionMenu.Content align="end">
+                                                            <ActionMenu.Item
+                                                                onClick={() => {
+                                                                    downloadCsv(
+                                                                        `sider_med_odelagte_lenker_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`,
+                                                                        ['URL', 'Ødelagte lenker'],
+                                                                        displayedPages.map((page) => [`"${getUrlPath(page.url)}"`, String(page.broken_links)])
+                                                                    );
+                                                                }}
+                                                                disabled={displayedPages.length === 0}
+                                                            >
+                                                                Last ned
+                                                            </ActionMenu.Item>
+                                                        </ActionMenu.Content>
+                                                    </ActionMenu>
+                                                </div>
                                             </div>
+                                            {showPagesSearch && (
+                                                <div className="w-full sm:w-64 min-w-0">
+                                                    <TextField
+                                                        label="Søk"
+                                                        hideLabel
+                                                        placeholder="Søk..."
+                                                        size="small"
+                                                        value={pagesSearch}
+                                                        ref={pagesSearchInputRef}
+                                                        onChange={(e) => setPagesSearch(e.target.value)}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
-                                        {showLinksSearch && (
-                                            <div className="w-full sm:w-64 min-w-0">
-                                                <TextField
-                                                    label="Søk"
-                                                    hideLabel
-                                                    placeholder="Søk..."
-                                                    size="small"
-                                                    value={linksSearch}
-                                                    ref={linksSearchInputRef}
-                                                    onChange={(e) => setLinksSearch(e.target.value)}
-                                                />
-                                            </div>
-                                        )}
+                                    <div className="overflow-x-auto px-4 pb-4">
+                                        <Table size="small" zebraStripes>
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    <Table.HeaderCell />
+                                                    <Table.HeaderCell>URL</Table.HeaderCell>
+                                                    <Table.HeaderCell>Ødelagte</Table.HeaderCell>
+                                                </Table.Row>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {displayedPages.map((page, index) => (
+                                                    <Table.ExpandableRow
+                                                        key={page.id || index}
+                                                        content={
+                                                            siteimproveId ? (
+                                                                <PageBrokenLinksContent
+                                                                    pageId={page.id}
+                                                                    siteimproveId={siteimproveId}
+                                                                    siteimproveBaseUrl={siteimproveBaseUrl}
+                                                                />
+                                                            ) : null
+                                                        }
+                                                        togglePlacement="left"
+                                                    >
+                                                        <Table.HeaderCell scope="row">
+                                                            <DsLink
+                                                                href="#"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setActionModalUrl(getUrlPath(page.url));
+                                                                }}
+                                                                className="break-all flex items-center gap-1"
+                                                            >
+                                                                {getUrlPath(page.url)} <ExternalLink size={14} />
+                                                            </DsLink>
+                                                        </Table.HeaderCell>
+                                                        <Table.DataCell>
+                                                            {page.broken_links}
+                                                        </Table.DataCell>
+                                                    </Table.ExpandableRow>
+                                                ))}
+                                            </Table.Body>
+                                        </Table>
                                     </div>
-                                <div className="overflow-x-auto px-4 pb-4">
-                                    <Table size="small" zebraStripes>
-                                        <Table.Header>
-                                            <Table.Row>
-                                                <Table.HeaderCell />
-                                                <Table.HeaderCell>URL</Table.HeaderCell>
-                                                <Table.HeaderCell>Tilfeller</Table.HeaderCell>
-                                            </Table.Row>
-                                        </Table.Header>
-                                        <Table.Body>
-                                            {displayedLinks.map((link, index) => (
-                                                <Table.ExpandableRow
-                                                    key={link.id || index}
-                                                    content={
-                                                        siteimproveId ? (
-                                                            <BrokenLinkPagesContent
-                                                                linkId={link.id}
-                                                                siteimproveId={siteimproveId}
-                                                                siteimproveBaseUrl={siteimproveBaseUrl}
-                                                            />
-                                                        ) : null
-                                                    }
-                                                    togglePlacement="left"
-                                                >
-                                                    <Table.HeaderCell scope="row">
-                                                        <DsLink href={link.url} target="_blank" className="break-all flex items-center gap-1">
-                                                            {link.url} <ExternalLink size={14} />
-                                                        </DsLink>
-                                                    </Table.HeaderCell>
-                                                    <Table.DataCell>
-                                                        {link.pages}
-                                                    </Table.DataCell>
-                                                </Table.ExpandableRow>
-                                            ))}
-                                        </Table.Body>
-                                    </Table>
-                                </div>
-                                </div>
-                            )}
-                        </Tabs.Panel>
-                    </Tabs>
+                                    </div>
+                                )}
+                            </Tabs.Panel>
+
+                            <Tabs.Panel value="links" className="pt-4">
+                                {displayedLinks.length === 0 ? (
+                                    <Alert variant="success">
+                                        {linksSearch ? `Fant ingen treff for "${linksSearch}"` : 'Fant ingen ødelagte lenker! 🎉'}
+                                    </Alert>
+                                ) : (
+                                    <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg overflow-hidden bg-[var(--ax-bg-default)]">
+                                        <div className="p-4 pb-2">
+                                            <div className="mb-2 flex items-center justify-between gap-2">
+                                                <Heading level="3" size="small">Alle ødelagte lenker</Heading>
+                                                <div className="flex items-center gap-1">
+                                                    <Tooltip content="Søk" placement="top">
+                                                        <Button
+                                                            type="button"
+                                                            variant={showLinksSearch ? 'secondary' : 'tertiary'}
+                                                            size="xsmall"
+                                                            icon={<Search aria-hidden />}
+                                                            aria-label="Søk i alle ødelagte lenker"
+                                                            aria-pressed={showLinksSearch}
+                                                            onClick={() => {
+                                                                setShowLinksSearch((prev) => !prev);
+                                                                if (showLinksSearch) setLinksSearch('');
+                                                            }}
+                                                        />
+                                                    </Tooltip>
+                                                    <ActionMenu>
+                                                        <Tooltip content="Flere valg" placement="top">
+                                                            <ActionMenu.Trigger>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="tertiary"
+                                                                    size="xsmall"
+                                                                    icon={<MoreVertical aria-hidden />}
+                                                                    aria-label="Flere valg for alle ødelagte lenker"
+                                                                />
+                                                            </ActionMenu.Trigger>
+                                                        </Tooltip>
+                                                        <ActionMenu.Content align="end">
+                                                            <ActionMenu.Item
+                                                                onClick={() => {
+                                                                    downloadCsv(
+                                                                        `odelagte_lenker_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`,
+                                                                        ['URL', 'Tilfeller'],
+                                                                        displayedLinks.map((bl) => [`"${bl.url}"`, String(bl.pages)])
+                                                                    );
+                                                                }}
+                                                                disabled={displayedLinks.length === 0}
+                                                            >
+                                                                Last ned
+                                                            </ActionMenu.Item>
+                                                        </ActionMenu.Content>
+                                                    </ActionMenu>
+                                                </div>
+                                            </div>
+                                            {showLinksSearch && (
+                                                <div className="w-full sm:w-64 min-w-0">
+                                                    <TextField
+                                                        label="Søk"
+                                                        hideLabel
+                                                        placeholder="Søk..."
+                                                        size="small"
+                                                        value={linksSearch}
+                                                        ref={linksSearchInputRef}
+                                                        onChange={(e) => setLinksSearch(e.target.value)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    <div className="overflow-x-auto px-4 pb-4">
+                                        <Table size="small" zebraStripes>
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    <Table.HeaderCell />
+                                                    <Table.HeaderCell>URL</Table.HeaderCell>
+                                                    <Table.HeaderCell>Tilfeller</Table.HeaderCell>
+                                                </Table.Row>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {displayedLinks.map((link, index) => (
+                                                    <Table.ExpandableRow
+                                                        key={link.id || index}
+                                                        content={
+                                                            siteimproveId ? (
+                                                                <BrokenLinkPagesContent
+                                                                    linkId={link.id}
+                                                                    siteimproveId={siteimproveId}
+                                                                    siteimproveBaseUrl={siteimproveBaseUrl}
+                                                                />
+                                                            ) : null
+                                                        }
+                                                        togglePlacement="left"
+                                                    >
+                                                        <Table.HeaderCell scope="row">
+                                                            <DsLink href={link.url} target="_blank" className="break-all flex items-center gap-1">
+                                                                {link.url} <ExternalLink size={14} />
+                                                            </DsLink>
+                                                        </Table.HeaderCell>
+                                                        <Table.DataCell>
+                                                            {link.pages}
+                                                        </Table.DataCell>
+                                                    </Table.ExpandableRow>
+                                                ))}
+                                            </Table.Body>
+                                        </Table>
+                                    </div>
+                                    </div>
+                                )}
+                            </Tabs.Panel>
+                        </Tabs>
+                    )}
 
                     {siteimproveId && (
                         <div className="mt-6 flex justify-end">

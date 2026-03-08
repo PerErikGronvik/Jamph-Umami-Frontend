@@ -175,15 +175,9 @@ const Spellings = () => {
                 </>
             }
         >
-            {error && (
+            {!loading && error && (
                 <Alert variant="info" className="mb-4">
                     {error}
-                </Alert>
-            )}
-
-            {!selectedWebsite && !loading && (
-                <Alert variant="info">
-                    Velg en nettside for å se stavekontroll.
                 </Alert>
             )}
 

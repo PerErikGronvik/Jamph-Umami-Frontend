@@ -27,7 +27,14 @@ export const useSpellings = () => {
 
     // Resolve siteimproveId when website changes
     useEffect(() => {
-        if (!selectedWebsite) return;
+        if (!selectedWebsite) {
+            setError(null);
+            setSiteimproveId(null);
+            return;
+        }
+
+        // Clear stale warnings immediately when switching website.
+        setError(null);
 
         const sid = getSiteimproveId(selectedWebsite.domain, selectedWebsite.id);
         if (!sid) {
