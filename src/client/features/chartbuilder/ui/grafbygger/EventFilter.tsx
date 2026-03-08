@@ -11,22 +11,6 @@ const EVENT_TYPES = [
   { label: 'Egendefinerte hendelser', value: '2' }
 ];
 
-// Filter suggestions to make common filters easier to apply
-const FILTER_SUGGESTIONS = [
-  {
-    id: 'pageviews',
-    label: 'Besøk (sidevisninger)',
-    filters: [{ column: 'event_type', operator: '=', value: '1' }],
-    description: 'Viser kun sidevisninger'
-  },
-  {
-    id: 'custom_events',
-    label: 'Egendefinerte hendelser',
-    filters: [{ column: 'event_type', operator: '=', value: '2' }],
-    description: 'Viser kun egendefinerte hendelser'
-  }
-];
-
 // Modified interface to receive date range info
 interface ChartFiltersProps {
   filters: Filter[];
@@ -187,22 +171,7 @@ const EventFilter = forwardRef(({
     }
   };
 
-  // Add function to remove a filter
   const removeFilter = (index: number) => {
-    const filterToRemove = filters[index];
-    // Check if this filter was added by a suggestion
-    const isSuggestionFilter = FILTER_SUGGESTIONS.some(suggestion =>
-      suggestion.filters.some(f =>
-        f.column === filterToRemove.column &&
-        f.operator === filterToRemove.operator &&
-        f.value === filterToRemove.value
-      )
-    );
-    // If we're removing a suggestion filter, clear the selection
-    if (isSuggestionFilter) {
-      setSelectedEventTypes([]);
-    }
-
     setFilters(filters.filter((_, i) => i !== index));
   };
 
@@ -217,7 +186,6 @@ const EventFilter = forwardRef(({
     setFilters([...filters, filter]);
   };
 
-  // Add this helper function
   const isDateRangeFilter = (filter: Filter): boolean => {
     return filter.column === 'created_at' && ['>=', '<='].includes(filter.operator || '');
   };
@@ -631,7 +599,6 @@ const EventFilter = forwardRef(({
             FILTER_COLUMNS={FILTER_COLUMNS}
             EVENT_TYPES={EVENT_TYPES}
 
-            // Pass active filter management props
             removeFilter={removeFilter}
             updateFilter={updateFilter}
             isDateRangeFilter={isDateRangeFilter}

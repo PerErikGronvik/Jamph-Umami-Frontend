@@ -109,8 +109,6 @@ const EventSelector = ({
     }
   };
 
-  const activeFilterCount = filters.filter(f => !isDateRangeFilter(f)).length;
-
   // State for event param filter in "Utvalgte hendelser" mode
   const [selectedEventParam, setSelectedEventParam] = useState<string>('');
   const [eventParamOperator, setEventParamOperator] = useState<string>('=');
@@ -118,8 +116,11 @@ const EventSelector = ({
 
   // Track whether user requested params for this session; derive loading state from props
   const [hasRequestedParams, setHasRequestedParams] = useState(false);
+  const [showActiveFilters, setShowActiveFilters] = useState(false);
 
   const isParamsLoading = hasRequestedParams && isEventsLoading;
+  const hasActivatedEventType = selectedEventTypes.length > 0;
+  const activeFilterCount = filters.filter(f => !isDateRangeFilter(f)).length;
 
   // Get parameters filtered by selected events
   const filteredParameters = parameters.filter(param => {
@@ -185,8 +186,6 @@ const EventSelector = ({
           <Tabs.List>
             <Tabs.Tab value="sidestier" label="Sidevisninger" />
             <Tabs.Tab value="hendelser" label="Egne hendelser" />
-            <Tabs.Tab value="flere_valg" label="Filtre" />
-            <Tabs.Tab value="active_filters" label={`Aktive filtre (${activeFilterCount})`} />
           </Tabs.List>
 
           <Tabs.Panel value="sidestier" className="pt-6">
@@ -565,100 +564,127 @@ const EventSelector = ({
             </div>
 
           </Tabs.Panel>
+        </Tabs>
+      </div>
 
-          <Tabs.Panel value="flere_valg" className="pt-6">
-            <div className="mb-4">
-              <div className="flex gap-2 items-center bg-(--ax-bg-default) p-3 rounded-md border border-(--ax-border-neutral) mt-3 mb-6">
-                <Select
-                  label="Legg til filtre"
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) {
-                      // Check if auto-enabling custom events is needed
-                      if ((val === 'event_name' || val === '_custom_param_') && customEventsMode === 'none') {
-                        setCustomEventsMode('all');
-                        handleEventTypeChange('custom_events', true);
-                      }
+      <div className="mt-4">
+        <Switch
+          checked={showActiveFilters}
+          onChange={(e) => setShowActiveFilters(e.target.checked)}
+          size="small"
+        >
+          Filtrer
+        </Switch>
+      </div>
 
-                      // Only fetch params if specifically choosing param filter
-                      if (val === '_custom_param_' && onEnableCustomEvents) {
-                        onEnableCustomEvents(true);
-                      }
+      <div className="mt-4">
+        {showActiveFilters && (
+          <div className="bg-(--ax-bg-default) p-4 rounded-md border shadow-inner">
+            <Tabs defaultValue="flere_valg" size="small">
+              <Tabs.List>
+                <Tabs.Tab value="flere_valg" label="Filtre" />
+                <Tabs.Tab value="active_filters" label={`Aktive filtre (${activeFilterCount})`} />
+              </Tabs.List>
 
-                      if (addFilter) {
-                        addFilter(val);
-                      }
-                      (e.target as HTMLSelectElement).value = '';
-                    }
-                  }}
-                  size="small"
-                  className="grow"
-                >
-                  <option value="">Velg filter...</option>
-                  {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                    <optgroup key={groupKey} label={group.label}>
-                      {group.columns
-                        .filter((col) => col.value !== 'created_at')
-                        .flatMap((col) => [
-                          <option key={col.value} value={col.value}>
-                            {col.label}
-                          </option>,
-                          ...(col.value === 'event_name'
-                            ? [<option key={`${col.value}_custom_param_`} value="_custom_param_">Hendelsesdetaljer</option>]
-                            : [])
-                        ])}
-                    </optgroup>
-                  ))}
-                </Select>
-              </div>
+              <Tabs.Panel value="flere_valg" className="pt-6">
+                <div className="mb-4">
+                  {hasActivatedEventType && (
+                    <div className="flex gap-2 items-center bg-(--ax-bg-default) p-3 rounded-md border border-(--ax-border-neutral) mt-3 mb-6">
+                      <Select
+                        label="Legg til filtre"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val) {
+                            if ((val === 'event_name' || val === '_custom_param_') && customEventsMode === 'none') {
+                              setCustomEventsMode('all');
+                              handleEventTypeChange('custom_events', true);
+                            }
 
-              {stagingAlertInfo?.show && (
-                <div className="mb-4 mt-4">
-                  <AlertWithCloseButton variant="success" onClose={handleStagingAlertClose}>
-                    {stagingAlertInfo.message}
-                  </AlertWithCloseButton>
-                </div>
-              )}
+                            if (val === '_custom_param_' && onEnableCustomEvents) {
+                              onEnableCustomEvents(true);
+                            }
 
-              {stagingFilter && setStagingFilter && (
-                <div className="mt-3 bg-(--ax-bg-default) p-4 rounded-md border shadow-sm">
-                  <div className="flex-1">
-                    <div className="grid gap-4">
-                      {/* Column Selector */}
-                      <div>
-                        <Select
-                          label="Kolonne"
-                          value={stagingFilter.column.startsWith('param_') ? stagingFilter.column : stagingFilter.column}
-                          onChange={(e) => setStagingFilter({ ...stagingFilter, column: e.target.value, operator: '=', value: '' })}
-                          size="small"
-                        >
-                          {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                            <optgroup key={groupKey} label={group.label}>
-                              {group.columns.map((col) => (
+                            if (addFilter) {
+                              addFilter(val);
+                            }
+                            (e.target as HTMLSelectElement).value = '';
+                          }
+                        }}
+                        size="small"
+                        className="grow"
+                      >
+                        <option value="">Velg filter...</option>
+                        {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                          <optgroup key={groupKey} label={group.label}>
+                            {group.columns
+                              .filter((col) => col.value !== 'created_at')
+                              .flatMap((col) => [
                                 <option key={col.value} value={col.value}>
                                   {col.label}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ))}
-                          {parameters.length > 0 && (
-                            <>
-                              <option value="_custom_param_">Hendelsesdetaljer</option>
-                              {/* Keep the current parameter in the list if it's selected, so the Select shows the right label */}
-                              {stagingFilter.column.startsWith('param_') && (() => {
-                                const selectedParam = uniqueParameters.find(
-                                  p => `param_${getCleanParamName(p)}` === stagingFilter.column
-                                );
-                                return (
-                                  <option value={stagingFilter.column}>
-                                    {selectedParam ? getParamDisplayName(selectedParam) : stagingFilter.column.replace('param_', '')}
+                                </option>,
+                                ...(col.value === 'event_name'
+                                  ? [<option key={`${col.value}_custom_param_`} value="_custom_param_">Hendelsesdetaljer</option>]
+                                  : [])
+                              ])}
+                          </optgroup>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
+
+                  {!hasActivatedEventType && (
+                    <div className="mt-3 mb-6 text-sm text-(--ax-text-subtle)">
+                      Aktiver en hendelsestype for å legge til filtre.
+                    </div>
+                  )}
+
+                  {hasActivatedEventType && stagingAlertInfo?.show && (
+                    <div className="mb-4 mt-4">
+                      <AlertWithCloseButton variant="success" onClose={handleStagingAlertClose}>
+                        {stagingAlertInfo.message}
+                      </AlertWithCloseButton>
+                    </div>
+                  )}
+
+                  {hasActivatedEventType && stagingFilter && setStagingFilter && (
+                    <div className="mt-3 bg-(--ax-bg-default) p-4 rounded-md border shadow-sm">
+                    <div className="flex-1">
+                      <div className="grid gap-4">
+                        {/* Column Selector */}
+                        <div>
+                          <Select
+                            label="Kolonne"
+                            value={stagingFilter.column.startsWith('param_') ? stagingFilter.column : stagingFilter.column}
+                            onChange={(e) => setStagingFilter({ ...stagingFilter, column: e.target.value, operator: '=', value: '' })}
+                            size="small"
+                          >
+                            {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                              <optgroup key={groupKey} label={group.label}>
+                                {group.columns.map((col) => (
+                                  <option key={col.value} value={col.value}>
+                                    {col.label}
                                   </option>
-                                );
-                              })()}
-                            </>
-                          )}
-                        </Select>
-                      </div>
+                                ))}
+                              </optgroup>
+                            ))}
+                            {parameters.length > 0 && (
+                              <>
+                                <option value="_custom_param_">Hendelsesdetaljer</option>
+                                {/* Keep the current parameter in the list if it's selected, so the Select shows the right label */}
+                                {stagingFilter.column.startsWith('param_') && (() => {
+                                  const selectedParam = uniqueParameters.find(
+                                    p => `param_${getCleanParamName(p)}` === stagingFilter.column
+                                  );
+                                  return (
+                                    <option value={stagingFilter.column}>
+                                      {selectedParam ? getParamDisplayName(selectedParam) : stagingFilter.column.replace('param_', '')}
+                                    </option>
+                                  );
+                                })()}
+                              </>
+                            )}
+                          </Select>
+                        </div>
 
                       {/* Parameter Selector (Visible when 'Hendelsesdata...' is selected) */}
                       {stagingFilter.column === '_custom_param_' && (
@@ -795,174 +821,170 @@ const EventSelector = ({
                       )}
                     </div>
                   </div>
-                  <div className="mt-4 flex justify-end gap-2">
-                    <Button
-                      variant="primary"
-                      size="small"
-                      onClick={() => commitStagingFilter?.()}
-                      disabled={!stagingFilter.operator || (!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator) && !stagingFilter.value)}
-                    >
-                      Legg til filter
-                    </Button>
-                    <Button
-                      variant="tertiary"
-                      size="small"
-                      onClick={() => setStagingFilter(null)}
-                    >
-                      Avbryt
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="active_filters" className="pt-6">
-            {filters.length === 0 && (
-              <div className="text-sm text-(--ax-text-subtle)">
-                Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
-              </div>
-            )}
-
-            {filters.length > 0 && (
-              <div className="space-y-3">
-                {/* Only show non-date range filters in the regular filter list */}
-                {filters.map((filter, index) => !isDateRangeFilter(filter) && (
-                  <div key={index} className="bg-(--ax-bg-default) p-3 rounded border border-(--ax-border-neutral)">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex gap-2 items-end flex-wrap">
-                          <Select
-                            label="Kolonne"
-                            value={filter.column}
-                            onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })}
-                            size="small"
-                            className="min-w-[150px]"
-                          >
-                            {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                              <optgroup key={groupKey} label={group.label}>
-                                {group.columns.map((col) => (
-                                  <option key={col.value} value={col.value}>
-                                    {col.label}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-                            {parameters.length > 0 && (
-                              <optgroup label="Hendelsesdetaljer">
-                                {uniqueParameters.map(param => (
-                                  <option
-                                    key={`param_${param.key}`}
-                                    value={`param_${getCleanParamName(param)}`}
-                                  >
-                                    {getParamDisplayName(param)}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            )}
-                          </Select>
-
-                          {/* Add interactive toggle button */}
-                          {filter.interactive ? (
-                            <div className="mb-1">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)]">
-                                Mottaker velger selv
-                              </span>
-                            </div>
-                          ) : (
-                            // Only show for non-interactive eligible filters
-                            <Button
-                              variant="tertiary"
-                              size="small"
-                              className="mb-1"
-                              onClick={() => {
-                                // Simple inline interactive toggle without alert
-                                const paramName = filter.column === 'url_path' ? 'url_sti' :
-                                  filter.column === 'event_name' ? 'hendelse' :
-                                    filter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-                                updateFilter(index, {
-                                  operator: '=',
-                                  value: `{{${paramName}}}`,
-                                  metabaseParam: true,
-                                  interactive: true
-                                });
-                              }}
-                            >
-                              Gjør til filtervalg
-                            </Button>
-                          )}
-
-                          {filter.column !== 'created_at' && !filter.interactive && (
-                            <Select
-                              label="Operator"
-                              value={filter.operator || '='}
-                              onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
-                              size="small"
-                              className="min-w-[100px]"
-                            >
-                              {OPERATORS.map(op => (
-                                <option key={op.value} value={op.value}>
-                                  {op.label}
-                                </option>
-                              ))}
-                            </Select>
-                          )}
-                        </div>
-
-                        {/* Show parameter name for interactive filters */}
-                        {filter.interactive ? (
-                          <div className="bg-[var(--ax-bg-accent-soft)] p-2 rounded text-sm text-[var(--ax-text-default)]">
-                            Parameter: <strong>{filter.value?.toString().replace('{{', '').replace('}}', '')}</strong>
-                          </div>
-                        ) : (
-                          // Existing value inputs for non-interactive filters
-                          !['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && (
-                            <div>
-                              <UNSAFE_Combobox
-                                label="Verdi"
-                                description={null}
-                                options={getOptionsForColumn(filter.column, customEventsList, availablePaths)} // Pass correct arrays
-                                selectedOptions={Array.isArray(filter.multipleValues) ? filter.multipleValues.map(v => v || '') :
-                                  (filter.value ? [filter.value] : [])}
-                                onToggleSelected={(option: string, isSelected: boolean) => {
-                                  if (option) {
-                                    const currentValues = Array.isArray(filter.multipleValues) ? filter.multipleValues :
-                                      (filter.value ? [filter.value] : []);
-                                    const newValues = isSelected
-                                      ? [...new Set([...currentValues, option])]
-                                      : currentValues.filter(val => val !== option);
-
-                                    updateFilter(index, {
-                                      operator: newValues.length > 1 ? 'IN' : filter.operator,
-                                      multipleValues: newValues.length > 0 ? newValues : undefined,
-                                      value: newValues.length > 0 ? newValues[0] : ''
-                                    });
-                                  }
-                                }}
-                                isMultiSelect={true}
-                                size="small"
-                                allowNewValues={filter.column !== 'event_type'}
-                                shouldAutocomplete={false}
-                              />
-                            </div>
-                          )
-                        )}
-                      </div>
+                    <div className="mt-4 flex justify-end gap-2">
                       <Button
-                        variant="tertiary-neutral"
+                        variant="primary"
                         size="small"
-                        onClick={() => removeFilter(index)}
-                        className="mt-6"
+                        onClick={() => commitStagingFilter?.()}
+                        disabled={!stagingFilter.operator || (!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator) && !stagingFilter.value)}
                       >
-                        Fjern
+                        Legg til filter
+                      </Button>
+                      <Button
+                        variant="tertiary"
+                        size="small"
+                        onClick={() => setStagingFilter(null)}
+                      >
+                        Avbryt
                       </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </Tabs.Panel>
-        </Tabs>
+                  )}
+                </div>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="active_filters" className="pt-6">
+                {filters.length === 0 && (
+                  <div className="text-sm text-(--ax-text-subtle)">
+                    Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
+                  </div>
+                )}
+
+                {filters.length > 0 && (
+                  <div className="space-y-3">
+                    {filters.map((filter, index) => !isDateRangeFilter(filter) && (
+                      <div key={index} className="bg-(--ax-bg-default) p-3 rounded border border-(--ax-border-neutral)">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex gap-2 items-end flex-wrap">
+                              <Select
+                                label="Kolonne"
+                                value={filter.column}
+                                onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })}
+                                size="small"
+                                className="min-w-[150px]"
+                              >
+                                {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                                  <optgroup key={groupKey} label={group.label}>
+                                    {group.columns.map((col) => (
+                                      <option key={col.value} value={col.value}>
+                                        {col.label}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))}
+                                {parameters.length > 0 && (
+                                  <optgroup label="Hendelsesdetaljer">
+                                    {uniqueParameters.map(param => (
+                                      <option
+                                        key={`param_${param.key}`}
+                                        value={`param_${getCleanParamName(param)}`}
+                                      >
+                                        {getParamDisplayName(param)}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                              </Select>
+
+                            {filter.interactive ? (
+                              <div className="mb-1">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)]">
+                                  Mottaker velger selv
+                                </span>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="tertiary"
+                                size="small"
+                                className="mb-1"
+                                onClick={() => {
+                                  const paramName = filter.column === 'url_path' ? 'url_sti' :
+                                    filter.column === 'event_name' ? 'hendelse' :
+                                      filter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+                                  updateFilter(index, {
+                                    operator: '=',
+                                    value: `{{${paramName}}}`,
+                                    metabaseParam: true,
+                                    interactive: true
+                                  });
+                                }}
+                              >
+                                Gjør til filtervalg
+                              </Button>
+                            )}
+
+                            {filter.column !== 'created_at' && !filter.interactive && (
+                              <Select
+                                label="Operator"
+                                value={filter.operator || '='}
+                                onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
+                                size="small"
+                                className="min-w-[100px]"
+                              >
+                                {OPERATORS.map(op => (
+                                  <option key={op.value} value={op.value}>
+                                    {op.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            )}
+                          </div>
+
+                          {filter.interactive ? (
+                            <div className="bg-[var(--ax-bg-accent-soft)] p-2 rounded text-sm text-[var(--ax-text-default)]">
+                              Parameter: <strong>{filter.value?.toString().replace('{{', '').replace('}}', '')}</strong>
+                            </div>
+                          ) : (
+                            !['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && (
+                              <div>
+                                <UNSAFE_Combobox
+                                  label="Verdi"
+                                  description={null}
+                                  options={getOptionsForColumn(filter.column, customEventsList, availablePaths)}
+                                  selectedOptions={Array.isArray(filter.multipleValues) ? filter.multipleValues.map(v => v || '') :
+                                    (filter.value ? [filter.value] : [])}
+                                  onToggleSelected={(option: string, isSelected: boolean) => {
+                                    if (option) {
+                                      const currentValues = Array.isArray(filter.multipleValues) ? filter.multipleValues :
+                                        (filter.value ? [filter.value] : []);
+                                      const newValues = isSelected
+                                        ? [...new Set([...currentValues, option])]
+                                        : currentValues.filter(val => val !== option);
+
+                                      updateFilter(index, {
+                                        operator: newValues.length > 1 ? 'IN' : filter.operator,
+                                        multipleValues: newValues.length > 0 ? newValues : undefined,
+                                        value: newValues.length > 0 ? newValues[0] : ''
+                                      });
+                                    }
+                                  }}
+                                  isMultiSelect={true}
+                                  size="small"
+                                  allowNewValues={filter.column !== 'event_type'}
+                                  shouldAutocomplete={false}
+                                />
+                              </div>
+                            )
+                          )}
+                          </div>
+                          <Button
+                            variant="tertiary-neutral"
+                            size="small"
+                            onClick={() => removeFilter(index)}
+                            className="mt-6"
+                          >
+                            Fjern
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Tabs.Panel>
+            </Tabs>
+          </div>
+        )}
       </div>
     </div >
   );
