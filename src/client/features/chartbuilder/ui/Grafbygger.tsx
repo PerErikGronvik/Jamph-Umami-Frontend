@@ -56,6 +56,7 @@ const ChartsPage = () => {
     setConfig,
     setParamAggregation,
     setLimit,
+    setColumnOrderMode,
     handleWebsiteChange,
     handleEventsLoad,
   } = useChartConfig();
@@ -133,6 +134,7 @@ const ChartsPage = () => {
                   parameters={parameters}
                   dateFormat={config.dateFormat}
                   orderBy={config.orderBy}
+                  columnOrderMode={config.columnOrderMode || 'default'}
                   paramAggregation={config.paramAggregation}
                   limit={config.limit}
                   DATE_FORMATS={DATE_FORMATS}
@@ -149,6 +151,7 @@ const ChartsPage = () => {
                   }))}
                   setParamAggregation={setParamAggregation}
                   setLimit={setLimit}
+                  setColumnOrderMode={setColumnOrderMode}
                   metrics={config.metrics}
                   filters={filters}
                   setFilters={setFilters}

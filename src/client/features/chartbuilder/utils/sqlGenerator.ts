@@ -558,12 +558,13 @@ export const generateSQLCore = (
   sql += ')\n\n';
 
   sql += 'SELECT\n';
-  const selectClauses = new Set<string>();
+  const groupingSelectClauses: string[] = [];
+  const metricSelectClauses: string[] = [];
 
   config.groupByFields.forEach(field => {
     if (field === 'created_at') {
       const format = DATE_FORMATS.find((f: { value: string; format: string }) => f.value === config.dateFormat)?.format || '%Y-%m-%d';
-      selectClauses.add(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
+      groupingSelectClauses.push(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
     } else if (field.startsWith('param_')) {
       const paramBase = field.replace('param_', '');
       const matchingParams = parameters.filter(p => {
@@ -574,12 +575,12 @@ export const generateSQLCore = (
         const param = matchingParams[0];
         const valueField = param.type === 'number' ? 'number_value' : 'string_value';
         if (config.paramAggregation === 'unique' && param.type === 'string') {
-          selectClauses.add(
+          groupingSelectClauses.push(
             `event_data_${paramBase}.${valueField} AS ${field}`
           );
         } else {
           const aggregator = getParameterAggregator(param.type);
-          selectClauses.add(
+          groupingSelectClauses.push(
             `${aggregator}(CASE 
                 WHEN SUBSTR(event_data.data_key, INSTR(event_data.data_key, '.') + 1) = '${paramBase}' THEN event_data.${valueField}
                 ELSE NULL
@@ -596,20 +597,25 @@ export const generateSQLCore = (
       );
 
       if (visitDurationBucketFilter && visitDurationBucketFilter.customColumn) {
-        selectClauses.add(`${visitDurationBucketFilter.customColumn} AS visit_duration_bucket`);
+        groupingSelectClauses.push(`${visitDurationBucketFilter.customColumn} AS visit_duration_bucket`);
       } else {
-        selectClauses.add(`base_query.visit_duration AS visit_duration`);
+        groupingSelectClauses.push(`base_query.visit_duration AS visit_duration`);
       }
     } else {
-      selectClauses.add(`base_query.${field}`);
+      groupingSelectClauses.push(`base_query.${field}`);
     }
   });
 
   config.metrics.forEach((metric, index) => {
-    selectClauses.add(getMetricSQL(metric, index, filters, config.website!.id));
+    metricSelectClauses.push(getMetricSQL(metric, index, filters, config.website!.id));
   });
 
-  sql += '  ' + Array.from(selectClauses).join(',\n  ');
+  const orderedSelectClauses = config.columnOrderMode === 'metrics_first'
+    ? [...metricSelectClauses, ...groupingSelectClauses]
+    : [...groupingSelectClauses, ...metricSelectClauses];
+  const dedupedSelectClauses = Array.from(new Set(orderedSelectClauses));
+
+  sql += '  ' + dedupedSelectClauses.join(',\n  ');
 
   sql += '\nFROM base_query\n';
 

@@ -1,4 +1,5 @@
-import { Table, Pagination } from '@navikt/ds-react';
+import { Table, Pagination, Switch } from '@navikt/ds-react';
+import { useMemo, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import type { DashboardRow } from '../../utils/widgetUtils.ts';
 import { formatTableValue, isClickablePath } from '../../utils/widgetUtils.ts';
@@ -13,6 +14,7 @@ interface DashboardWidgetTableProps {
 }
 
 const DashboardWidgetTable = ({ data, page, onPageChange, showTotal, onSelectUrl }: DashboardWidgetTableProps) => {
+    const [metricColumnsFirst, setMetricColumnsFirst] = useState(false);
     let tableData = data;
 
     if (showTotal) {
@@ -26,24 +28,47 @@ const DashboardWidgetTable = ({ data, page, onPageChange, showTotal, onSelectUrl
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
     const currentData = tableData.slice(start, end);
+    const baseKeys = Object.keys(tableData[0] || data[0] || {});
+
+    const orderedKeys = useMemo(() => {
+        if (!metricColumnsFirst || baseKeys.length <= 1) {
+            return baseKeys;
+        }
+
+        // Put columns with numeric values first when enabled.
+        const numericKeys = baseKeys.filter((key) =>
+            tableData.some((row) => typeof (row as Record<string, unknown>)[key] === 'number')
+        );
+        const otherKeys = baseKeys.filter((key) => !numericKeys.includes(key));
+
+        return [...numericKeys, ...otherKeys];
+    }, [baseKeys, metricColumnsFirst, tableData]);
 
     return (
         <div className="flex flex-col">
+            <div className="px-4 pb-2">
+                <Switch
+                    size="small"
+                    checked={metricColumnsFirst}
+                    onChange={(e) => setMetricColumnsFirst(e.target.checked)}
+                >
+                    Visningsvalg: måltall først
+                </Switch>
+            </div>
             <div className="overflow-x-auto px-4">
                 <Table size="small">
                     <Table.Header>
                         <Table.Row>
-                            {Object.keys(tableData[0] || data[0]).map(key => (
+                            {orderedKeys.map(key => (
                                 <Table.HeaderCell key={key}>{key}</Table.HeaderCell>
                             ))}
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
                         {currentData.map((row, i) => {
-                            const keys = Object.keys(row);
                             return (
                                 <Table.Row key={i}>
-                                    {keys.map((key, j) => {
+                                    {orderedKeys.map((key, j) => {
                                         const val = (row as Record<string, unknown>)[key];
                                         const rawString = formatTableValue(val);
                                         const translatedVal = String(translateValue(key, rawString));

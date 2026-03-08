@@ -30,6 +30,7 @@ export function useChartConfig() {
     metrics: [],
     groupByFields: [],
     orderBy: null,
+    columnOrderMode: 'default',
     dateFormat: 'day',
     paramAggregation: 'unique',
     limit: 1000
@@ -259,7 +260,8 @@ export function useChartConfig() {
       website: null,
       metrics: [],
       groupByFields: [],
-      orderBy: null
+      orderBy: null,
+      columnOrderMode: 'default'
     }));
 
     setResetIncludeParams(prev => !prev);
@@ -478,7 +480,8 @@ export function useChartConfig() {
         website,
         metrics: [],
         groupByFields: [],
-        orderBy: null
+        orderBy: null,
+        columnOrderMode: 'default'
       }));
     }
   }, [config.website?.id]);
@@ -520,6 +523,13 @@ export function useChartConfig() {
       };
       return updatedConfig;
     });
+  };
+
+  const setColumnOrderMode = (columnOrderMode: 'default' | 'metrics_first') => {
+    setConfig(prev => ({
+      ...prev,
+      columnOrderMode
+    }));
   };
 
   return {
@@ -567,6 +577,7 @@ export function useChartConfig() {
     setConfig,
     setParamAggregation,
     setLimit,
+    setColumnOrderMode,
     handleWebsiteChange,
     handleEventsLoad,
   };

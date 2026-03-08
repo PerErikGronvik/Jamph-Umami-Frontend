@@ -17,6 +17,7 @@ interface DisplayOptionsProps {
   parameters: Parameter[];
   dateFormat: string | null;
   orderBy: OrderBy | null;
+  columnOrderMode: 'default' | 'metrics_first';
   paramAggregation: 'representative' | 'unique';
   limit: number | null;
   DATE_FORMATS: DateFormat[];
@@ -30,6 +31,7 @@ interface DisplayOptionsProps {
   setDateFormat: (format: string) => void;
   setParamAggregation: (strategy: 'representative' | 'unique') => void;
   setLimit: (limit: number | null) => void;
+  setColumnOrderMode: (mode: 'default' | 'metrics_first') => void;
   metrics: Metric[];
   filters: Filter[];
   setFilters: (filters: Filter[]) => void;
@@ -46,6 +48,7 @@ const GroupingOptions = forwardRef(({
   parameters,
   dateFormat,
   orderBy,
+  columnOrderMode,
   limit,
   DATE_FORMATS,
   COLUMN_GROUPS,
@@ -58,6 +61,7 @@ const GroupingOptions = forwardRef(({
   setDateFormat,
   setParamAggregation,
   setLimit,
+  setColumnOrderMode,
   metrics,
   filters,
   setFilters,
@@ -261,6 +265,7 @@ const GroupingOptions = forwardRef(({
     clearOrderBy();
     setDateFormat('day');
     setLimit(1000);
+    setColumnOrderMode('default');
     setParamAggregation('representative');
 
     setActiveGroupingsTab('basic');
@@ -726,6 +731,17 @@ const GroupingOptions = forwardRef(({
                 interactiveMode={interactiveMode}
               />
             </div>
+
+            <Switch
+              size="small"
+              description={columnOrderMode === 'metrics_first'
+                ? 'Måltall før grupperingskolonner'
+                : 'Standard rekkefølge: Grupperinger før måltall'}
+              checked={columnOrderMode === 'metrics_first'}
+              onChange={(e) => setColumnOrderMode(e.target.checked ? 'metrics_first' : 'default')}
+            >
+              Bytt kolonnerekkefølge
+            </Switch>
 
             <Switch
               className="mt-1"

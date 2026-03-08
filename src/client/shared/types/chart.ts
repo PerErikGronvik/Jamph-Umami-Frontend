@@ -64,6 +64,7 @@ export interface ChartConfig {
   metrics: Metric[];
   groupByFields: string[];
   orderBy: { column: string; direction: 'ASC' | 'DESC' } | null;
+  columnOrderMode?: 'default' | 'metrics_first';
   dateFormat: string;
   paramAggregation: 'representative' | 'unique';
   limit: number | null; // Change from 'null' to 'number | null' to allow both values
