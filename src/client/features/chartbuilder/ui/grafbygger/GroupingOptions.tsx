@@ -516,7 +516,7 @@ const GroupingOptions = forwardRef(({
                     ) : (
                       <>
                         {hasEventNameFilter && (
-                          <div className="mb-3 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded">
+                          <div className="mb-3 text-sm text-[var(--ax-text-accent)] bg-[var(--ax-bg-accent-soft)] px-3 py-2 rounded">
                             Viser kun hendelsesdetaljer fra: {selectedEventNames.join(', ')}
                           </div>
                         )}
