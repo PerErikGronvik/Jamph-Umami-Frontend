@@ -377,7 +377,7 @@ const EventSelector = ({
                       }}
                       size="small"
                     >
-                      <Radio value="specific">Utvalgte hendelser / hendelsesdetaljer</Radio>
+                      <Radio value="specific">Utvalgte hendelser</Radio>
                       <Radio value="all">Alle hendelser</Radio>
                       <Radio value="interactive">Filter der mottaker velger selv i dashboardet</Radio>
                     </RadioGroup>
