@@ -29,8 +29,11 @@ const DashboardWidgetTable = ({ data, page, onPageChange, showTotal, onSelectUrl
 
     return (
         <div className="flex flex-col">
-            <div className="overflow-x-auto px-4">
-                <Table size="small">
+            <div className="overflow-x-auto">
+                <Table
+                    size="small"
+                    className="[&_th:first-child]:pl-0 [&_td:first-child]:pl-0"
+                >
                     <Table.Header>
                         <Table.Row>
                             {Object.keys(tableData[0] || data[0]).map(key => (
@@ -75,7 +78,7 @@ const DashboardWidgetTable = ({ data, page, onPageChange, showTotal, onSelectUrl
                 </Table>
             </div>
             {totalRows > rowsPerPage ? (
-                <div className="flex justify-center px-4 pb-4 pt-2">
+                <div className="flex justify-center pb-4 pt-2">
                     <Pagination
                         page={page}
                         onPageChange={onPageChange}
@@ -84,7 +87,7 @@ const DashboardWidgetTable = ({ data, page, onPageChange, showTotal, onSelectUrl
                     />
                 </div>
             ) : (
-                <div className="px-4 pb-4" aria-hidden="true" />
+                <div className="pb-4" aria-hidden="true" />
             )}
         </div>
     );
