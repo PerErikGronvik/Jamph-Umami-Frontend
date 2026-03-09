@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { subDays } from 'date-fns';
+import { subDays, subWeeks, startOfWeek, endOfWeek } from 'date-fns';
 import * as sqlFormatter from 'sql-formatter';
 
 import type { Website, QueryResult, QueryStats } from '../model/types';
@@ -42,11 +42,11 @@ export const useSqlEditor = () => {
     const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
         const now = new Date();
         return {
-            from: new Date(now.getFullYear(), now.getMonth(), 1),
+            from: subDays(now, 6),
             to: now,
         };
     });
-    const [period, setPeriod] = useState<string>('current_month');
+    const [period, setPeriod] = useState<string>('last_7_days');
     const [urlPath, setUrlPath] = useState('/');
     const [websiteIdState, setWebsiteIdState] = useState<string>('');
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -128,11 +128,30 @@ export const useSqlEditor = () => {
 
         // Init date range state from URL
         const now = new Date();
-        let from: Date | undefined = subDays(now, 30);
+        let from: Date | undefined = subDays(now, 6);
         let to: Date | undefined = now;
         if (dateRangeFromUrl === 'custom' && customStartFromUrl && customEndFromUrl) {
             from = new Date(customStartFromUrl);
             to = new Date(customEndFromUrl);
+        } else if (dateRangeFromUrl === 'today') {
+            from = now;
+            to = now;
+        } else if (dateRangeFromUrl === 'yesterday') {
+            from = subDays(now, 1);
+            to = subDays(now, 1);
+        } else if (dateRangeFromUrl === 'this_week') {
+            from = startOfWeek(now, { weekStartsOn: 1 });
+            to = now;
+        } else if (dateRangeFromUrl === 'last_7_days') {
+            from = subDays(now, 6);
+            to = now;
+        } else if (dateRangeFromUrl === 'last_week') {
+            const lastWeekDate = subWeeks(now, 1);
+            from = startOfWeek(lastWeekDate, { weekStartsOn: 1 });
+            to = endOfWeek(lastWeekDate, { weekStartsOn: 1 });
+        } else if (dateRangeFromUrl === 'last_28_days') {
+            from = subDays(now, 27);
+            to = now;
         } else if (dateRangeFromUrl === 'current_month') {
             from = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
             to = now;
@@ -392,6 +411,22 @@ export const useSqlEditor = () => {
 
         if (newPeriod === 'today') {
             newFrom = now;
+            newTo = now;
+        } else if (newPeriod === 'yesterday') {
+            newFrom = subDays(now, 1);
+            newTo = subDays(now, 1);
+        } else if (newPeriod === 'this_week') {
+            newFrom = startOfWeek(now, { weekStartsOn: 1 });
+            newTo = now;
+        } else if (newPeriod === 'last_7_days') {
+            newFrom = subDays(now, 6);
+            newTo = now;
+        } else if (newPeriod === 'last_week') {
+            const lastWeekDate = subWeeks(now, 1);
+            newFrom = startOfWeek(lastWeekDate, { weekStartsOn: 1 });
+            newTo = endOfWeek(lastWeekDate, { weekStartsOn: 1 });
+        } else if (newPeriod === 'last_28_days') {
+            newFrom = subDays(now, 27);
             newTo = now;
         } else if (newPeriod === 'current_month') {
             newFrom = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
