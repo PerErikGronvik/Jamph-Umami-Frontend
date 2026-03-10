@@ -1,29 +1,32 @@
-import { useState } from 'react';
-import { Alert, Button, Modal, Select, TextField } from '@navikt/ds-react';
-import type { DashboardDto, ProjectDto } from '../../model/types.ts';
+import { useEffect, useState } from 'react';
+import { Alert, Button, Modal, TextField } from '@navikt/ds-react';
+import type { DashboardDto } from '../../model/types.ts';
 
 type EditDashboardDialogProps = {
     open: boolean;
     dashboard: DashboardDto | null;
-    projects: ProjectDto[];
     loading?: boolean;
     error?: string | null;
     onClose: () => void;
-    onSave: (params: { name: string; projectId: number }) => Promise<void>;
+    onSave: (params: { name: string; description?: string }) => Promise<void>;
 };
 
 const EditDashboardDialog = ({
     open,
     dashboard,
-    projects,
     loading = false,
     error,
     onClose,
     onSave,
 }: EditDashboardDialogProps) => {
     const [name, setName] = useState(dashboard?.name ?? '');
-    const [projectId, setProjectId] = useState<number>(dashboard?.projectId ?? 0);
+    const [description, setDescription] = useState(dashboard?.description ?? '');
     const [localError, setLocalError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setName(dashboard?.name ?? '');
+        setDescription(dashboard?.description ?? '');
+    }, [dashboard]);
 
     const handleSave = async () => {
         if (!dashboard) return;
@@ -31,19 +34,15 @@ const EditDashboardDialog = ({
             setLocalError('Dashboardnavn er påkrevd');
             return;
         }
-        if (!projectId) {
-            setLocalError('Velg team');
-            return;
-        }
         setLocalError(null);
-        await onSave({ name: name.trim(), projectId });
+        await onSave({ name: name.trim(), description: description.trim() || undefined });
     };
 
     return (
         <Modal
             open={open}
             onClose={onClose}
-            header={{ heading: 'Rediger dashboard' }}
+            header={{ heading: 'Endre info' }}
             width="small"
         >
             <Modal.Body>
@@ -56,24 +55,17 @@ const EditDashboardDialog = ({
                         onChange={(event) => setName(event.target.value)}
                         size="small"
                     />
-                    <Select
-                        label="Team"
-                        value={projectId ? String(projectId) : ''}
-                        onChange={(event) => setProjectId(Number(event.target.value))}
+                    <TextField
+                        label="Beskrivelse (valgfri)"
+                        value={description}
+                        onChange={(event) => setDescription(event.target.value)}
                         size="small"
-                    >
-                        <option value="">Velg team</option>
-                        {projects.map((project) => (
-                            <option key={project.id} value={project.id}>
-                                {project.name}
-                            </option>
-                        ))}
-                    </Select>
+                    />
                 </div>
             </Modal.Body>
             <Modal.Footer>
                 <Button onClick={() => void handleSave()} loading={loading}>
-                    Lagre endringer
+                    Endre info
                 </Button>
                 <Button variant="secondary" onClick={onClose} disabled={loading}>
                     Avbryt

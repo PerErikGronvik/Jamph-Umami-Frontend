@@ -335,7 +335,14 @@ const ProjectManager = () => {
 
     const openEditDashboard = (projectId: number, dashboardId: number, name: string) => {
         setDashboardMutationError(null);
-        setEditDashboardTarget({ id: dashboardId, projectId, name });
+        const projectSummary = projectSummaries.find((summary) => summary.project.id === projectId);
+        const dashboardSummary = projectSummary?.dashboards.find((dashboard) => dashboard.id === dashboardId);
+        setEditDashboardTarget({
+            id: dashboardId,
+            projectId,
+            name: dashboardSummary?.name ?? name,
+            description: dashboardSummary?.description,
+        });
     };
 
     const openDeleteDashboard = (projectId: number, dashboardId: number, name: string) => {
@@ -350,7 +357,7 @@ const ProjectManager = () => {
         setIsCreateDashboardOpen(true);
     };
 
-    const handleSaveDashboard = async (params: { name: string; projectId: number }) => {
+    const handleSaveDashboard = async (params: { name: string; description?: string }) => {
         if (!editDashboardTarget) return;
         const result = await editDashboard(editDashboardTarget.projectId, editDashboardTarget.id, params);
         if (result === undefined) return;
@@ -1308,7 +1315,7 @@ const ProjectManager = () => {
                                                                         <ActionMenu.Item
                                                                             onClick={() => openEditDashboard(selectedProject.project.id, row.dashboardId, row.name)}
                                                                         >
-                                                                            Rediger dashboard
+                                                                            Endre info
                                                                         </ActionMenu.Item>
                                                                     )}
                                                                     {selectedProject && (
@@ -1463,7 +1470,6 @@ const ProjectManager = () => {
                 key={editDashboardTarget ? `edit-dashboard-${editDashboardTarget.id}-${editDashboardTarget.projectId}` : 'edit-dashboard-dialog'}
                 open={!!editDashboardTarget}
                 dashboard={editDashboardTarget}
-                projects={projectOptions}
                 loading={loading}
                 error={dashboardMutationError}
                 onClose={() => {

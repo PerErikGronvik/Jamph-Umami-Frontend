@@ -825,22 +825,17 @@ const Oversikt = () => {
         setActiveCategoryId(nextCategoryId);
     };
 
-    const handleSaveDashboard = async (params: { name: string; projectId: number }) => {
+    const handleSaveDashboard = async (params: { name: string; description?: string }) => {
         if (!editDashboardTarget || !selectedProjectId) return;
         setSavingDashboard(true);
         setDashboardMutationError(null);
         try {
             const updatedDashboard = await updateDashboard(selectedProjectId, editDashboardTarget.id, {
                 name: params.name,
-                projectId: params.projectId,
+                description: params.description,
             });
-
             setSelectedDashboardId(updatedDashboard.id);
-            if (params.projectId !== selectedProjectId) {
-                setSelectedProjectId(params.projectId);
-            } else {
-                await refreshDashboards(selectedProjectId, updatedDashboard.id);
-            }
+            await refreshDashboards(selectedProjectId, updatedDashboard.id);
             setEditDashboardTarget(null);
         } catch (err: unknown) {
             setDashboardMutationError(err instanceof Error ? err.message : 'Kunne ikke oppdatere dashboard');
@@ -1437,7 +1432,7 @@ const Oversikt = () => {
                                     onClick={openEditDashboardDialog}
                                     disabled={!selectedDashboard}
                                 >
-                                    Rediger dashboard detaljer
+                                    Endre info
                                 </Button>
                                 <Button
                                     variant="secondary"
@@ -2086,7 +2081,6 @@ const Oversikt = () => {
                 key={editDashboardTarget ? `edit-dashboard-${editDashboardTarget.id}-${editDashboardTarget.projectId}` : 'edit-dashboard-dialog'}
                 open={!!editDashboardTarget}
                 dashboard={editDashboardTarget}
-                projects={projects}
                 loading={savingDashboard}
                 error={dashboardMutationError}
                 onClose={() => {

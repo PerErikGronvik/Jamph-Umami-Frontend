@@ -14,6 +14,7 @@ type ProjectSummary = {
     dashboards: Array<{
         id: number;
         name: string;
+        description?: string;
         categories: Array<{
             id: number;
             name: string;
@@ -87,6 +88,7 @@ export const useProjectManager = () => {
                 return {
                     id: dashboard.id,
                     name: dashboard.name,
+                    description: dashboard.description,
                     categories: categoryData,
                     charts: allCharts,
                 };
@@ -146,21 +148,13 @@ export const useProjectManager = () => {
     );
 
     const editDashboard = useCallback(
-        (projectId: number, dashboardId: number, params: { name: string; projectId: number }) =>
+        (projectId: number, dashboardId: number, params: { name: string; description?: string }) =>
             run(async () => {
                 if (!params.name.trim()) throw new Error('Dashboardnavn er påkrevd');
-                if (!params.projectId) throw new Error('Velg prosjekt');
-                const updateParams = { name: params.name.trim(), projectId: params.projectId };
-                let updatedDashboard = await api.updateDashboard(projectId, dashboardId, updateParams);
-
-                // Some backend variants expect the target project in the URL path when moving.
-                if (params.projectId !== projectId && updatedDashboard.projectId !== params.projectId) {
-                    updatedDashboard = await api.updateDashboard(params.projectId, dashboardId, updateParams);
-                }
-
-                if (updatedDashboard.projectId !== params.projectId) {
-                    throw new Error('Dashboard ble ikke flyttet til valgt arbeidsområde');
-                }
+                await api.updateDashboard(projectId, dashboardId, {
+                    name: params.name.trim(),
+                    description: params.description?.trim() || undefined,
+                });
                 await loadProjectSummaries();
                 setMessage('Dashboard oppdatert');
             }),
