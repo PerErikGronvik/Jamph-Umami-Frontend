@@ -993,46 +993,46 @@ const ProjectManager = () => {
                             </Alert>
                         )}
 
-                        {!isInitialLoading && filteredProjectSummaries.map((summary) => {
-                            const isActive = summary.project.id === selectedProjectId;
-                            return (
-                                <div
-                                    key={summary.project.id}
-                                    className={`w-full text-left px-3 py-2 rounded-md border transition ${isActive
-                                        ? 'bg-[var(--ax-bg-accent-moderate)] border-[var(--ax-border-accent)]'
-                                        : 'bg-[var(--ax-bg-default)] border-[var(--ax-border-neutral-subtle)] hover:bg-[var(--ax-bg-neutral-moderate)]'
-                                        }`}
-                                >
-                                    <button
-                                        type="button"
-                                        className="w-full text-left px-0.5"
-                                        onClick={() => setSelectedProjectId(summary.project.id)}
-                                    >
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="font-medium text-sm truncate">{summary.project.name}</div>
-                                            <div className="flex items-center gap-3 text-xs text-[var(--ax-text-subtle)] shrink-0">
-                                                <span
-                                                    className="inline-flex items-center gap-1"
-                                                    title={`${summary.dashboardCount} dashboard`}
-                                                >
-                                                    <SquareGridIcon aria-hidden fontSize="0.9rem" />
-                                                    {summary.dashboardCount}
-                                                    <span className="sr-only"> dashboard</span>
-                                                </span>
-                                                <span
-                                                    className="inline-flex items-center gap-1"
-                                                    title={`${summary.chartCount} grafer`}
-                                                >
-                                                    <BarChartIcon aria-hidden fontSize="0.9rem" />
-                                                    {summary.chartCount}
-                                                    <span className="sr-only"> grafer</span>
-                                                </span>
+                        {!isInitialLoading && (
+                            <div className="flex flex-col gap-2">
+                                {filteredProjectSummaries.map((summary) => {
+                                    const isActive = summary.project.id === selectedProjectId;
+                                    return (
+                                        <button
+                                            key={summary.project.id}
+                                            type="button"
+                                            onClick={() => setSelectedProjectId(summary.project.id)}
+                                            className={`block w-full text-left px-3 py-2 rounded-md border transition ${isActive
+                                                ? 'bg-[var(--ax-bg-accent-moderate)] border-[var(--ax-border-accent)]'
+                                                : 'bg-[var(--ax-bg-default)] border-[var(--ax-border-neutral-subtle)] hover:bg-[var(--ax-bg-neutral-moderate)]'
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="font-medium text-sm truncate">{summary.project.name}</div>
+                                                <div className="flex items-center gap-3 text-xs text-[var(--ax-text-subtle)] shrink-0">
+                                                    <span
+                                                        className="inline-flex items-center gap-1"
+                                                        title={`${summary.dashboardCount} dashboard`}
+                                                    >
+                                                        <SquareGridIcon aria-hidden fontSize="0.9rem" />
+                                                        {summary.dashboardCount}
+                                                        <span className="sr-only"> dashboard</span>
+                                                    </span>
+                                                    <span
+                                                        className="inline-flex items-center gap-1"
+                                                        title={`${summary.chartCount} grafer`}
+                                                    >
+                                                        <BarChartIcon aria-hidden fontSize="0.9rem" />
+                                                        {summary.chartCount}
+                                                        <span className="sr-only"> grafer</span>
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </button>
-                                </div>
-                            );
-                        })}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         {!isInitialLoading && (
                             <div className="pt-2">
