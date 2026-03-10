@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
 import { ArrowLeftIcon } from '@navikt/aksel-icons';
-import { ActionMenu, Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, Tabs, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { ActionMenu, Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, Tabs, TextField, Textarea, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard';
@@ -128,6 +128,18 @@ const Oversikt = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importingChart, setImportingChart] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
+    const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
+    const [textTitle, setTextTitle] = useState('');
+    const [textMarkdown, setTextMarkdown] = useState('');
+    const [textWidth, setTextWidth] = useState('100');
+    const [addingText, setAddingText] = useState(false);
+    const [textError, setTextError] = useState<string | null>(null);
+    const [editTextChart, setEditTextChart] = useState<OversiktChart | null>(null);
+    const [editTextName, setEditTextName] = useState('');
+    const [editTextMarkdown, setEditTextMarkdown] = useState('');
+    const [editTextWidth, setEditTextWidth] = useState('100');
+    const [savingEditText, setSavingEditText] = useState(false);
+    const [editTextError, setEditTextError] = useState<string | null>(null);
     const [isCreateTabModalOpen, setIsCreateTabModalOpen] = useState(false);
     const [isRenameTabModalOpen, setIsRenameTabModalOpen] = useState(false);
     const [newTabName, setNewTabName] = useState('');
@@ -257,6 +269,14 @@ const Oversikt = () => {
         const baseChart = charts.find((item) => item.id === chartId) ?? null;
         const chart = baseChart ? getChartWithSelectedVariant(baseChart) : null;
         if (!chart) return;
+        if (chart.graphType === 'TEXT') {
+            setEditTextError(null);
+            setEditTextChart(chart);
+            setEditTextName(chart.title || '');
+            setEditTextMarkdown(chart.description ?? '');
+            setEditTextWidth(chart.width ? String(chart.width) : '100');
+            return;
+        }
         setMutationError(null);
         setEditChart(chart);
     };
@@ -1087,6 +1107,14 @@ const Oversikt = () => {
         setIsImportModalOpen(true);
     };
 
+    const openAddTextModal = () => {
+        if (!selectedDashboardId) return;
+        setTextError(null);
+        setTextTitle('');
+        setTextWidth('100');
+        setIsAddTextModalOpen(true);
+    };
+
     const handleImportChart = async (params: {
         name: string;
         graphType: GraphType;
@@ -1134,6 +1162,78 @@ const Oversikt = () => {
             setImportError(err instanceof Error ? err.message : 'Kunne ikke importere graf');
         } finally {
             setImportingChart(false);
+        }
+    };
+
+    const handleAddTextChart = async () => {
+        if (!selectedProjectId || !selectedDashboardId) return;
+        const title = textTitle.trim() || 'Tekst';
+        const markdown = textMarkdown.trim();
+        const parsedWidth = Number(textWidth);
+        if (!Number.isFinite(parsedWidth)) {
+            setTextError('Bredde må være et tall mellom 1 og 100');
+            return;
+        }
+        const normalizedWidth = Math.max(1, Math.min(100, Math.round(parsedWidth)));
+
+        setTextError(null);
+        setAddingText(true);
+        try {
+            let categoryId: number;
+            const dashboardCategories = await fetchCategories(selectedProjectId, selectedDashboardId);
+            if (activeCategoryId && dashboardCategories.some((category) => category.id === activeCategoryId)) {
+                categoryId = activeCategoryId;
+            } else if (dashboardCategories.length > 0) {
+                categoryId = dashboardCategories[0].id;
+            } else {
+                const created = await createCategory(selectedProjectId, selectedDashboardId, 'Fane 1');
+                categoryId = created.id;
+            }
+
+            await createGraph(selectedProjectId, selectedDashboardId, categoryId, {
+                name: title,
+                graphType: 'TEXT',
+                width: normalizedWidth,
+                description: markdown || undefined,
+            });
+            await refreshCategories(categoryId);
+            await refreshGraphs(categoryId);
+            setIsAddTextModalOpen(false);
+            setTextTitle('');
+            setTextMarkdown('');
+        } catch (err: unknown) {
+            setTextError(err instanceof Error ? err.message : 'Kunne ikke legge til tekst');
+        } finally {
+            setAddingText(false);
+        }
+    };
+
+    const handleSaveTextChart = async () => {
+        if (!editTextChart || !selectedProjectId || !selectedDashboardId) return;
+        const trimmedName = editTextName.trim() || 'Tekst';
+        const markdown = editTextMarkdown.trim();
+        const parsedWidth = Number(editTextWidth);
+        if (!Number.isFinite(parsedWidth)) {
+            setEditTextError('Bredde må være et tall mellom 1 og 100');
+            return;
+        }
+        const normalizedWidth = Math.max(1, Math.min(100, Math.round(parsedWidth)));
+
+        setEditTextError(null);
+        setSavingEditText(true);
+        try {
+            await updateGraph(selectedProjectId, selectedDashboardId, editTextChart.categoryId, editTextChart.graphId, {
+                name: trimmedName,
+                graphType: 'TEXT',
+                width: normalizedWidth,
+                description: markdown || undefined,
+            });
+            await refreshGraphs(editTextChart.categoryId);
+            setEditTextChart(null);
+        } catch (err: unknown) {
+            setEditTextError(err instanceof Error ? err.message : 'Kunne ikke oppdatere tekst');
+        } finally {
+            setSavingEditText(false);
         }
     };
 
@@ -1281,6 +1381,9 @@ const Oversikt = () => {
                         <ActionMenu.Content align="end">
                             <ActionMenu.Item as="a" href="/grafbygger">
                                 Legg til graf
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={openAddTextModal}>
+                                Legg til tekstboks
                             </ActionMenu.Item>
                             <ActionMenu.Item onClick={openImportModal}>
                                 Importer graf
@@ -1447,6 +1550,9 @@ const Oversikt = () => {
                                         <ActionMenu.Item as="a" href="/grafbygger">
                                             Legg til ny graf
                                         </ActionMenu.Item>
+                                        <ActionMenu.Item onClick={openAddTextModal}>
+                                            Legg til tekstboks
+                                        </ActionMenu.Item>
                                         <ActionMenu.Item onClick={openImportModal}>
                                             Importer graf
                                         </ActionMenu.Item>
@@ -1500,7 +1606,7 @@ const Oversikt = () => {
                                         dashboardTitle={selectedDashboard.name}
                                         onEditChart={openEditDialog}
                                         onDeleteChart={openDeleteDialog}
-                                        onCopyChart={openCopyDialog}
+                                        onCopyChart={chart.graphType === 'TEXT' ? undefined : openCopyDialog}
                                         onMoveChart={categories.length > 1 ? openMoveDialog : undefined}
                                         replaceExploreActionWithSqlEditor
                                         titleBelow={(chart.variants?.length ?? 0) > 1 ? (
@@ -1637,6 +1743,9 @@ const Oversikt = () => {
                                 <ActionMenu.Content align="end">
                                     <ActionMenu.Item as="a" href="/grafbygger">
                                         Legg til graf
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={openAddTextModal}>
+                                        Legg til tekstboks
                                     </ActionMenu.Item>
                                     <ActionMenu.Item onClick={openImportModal}>
                                         Importer graf
@@ -1874,6 +1983,102 @@ const Oversikt = () => {
                     onImport={handleImportChart}
                 />
             )}
+
+            <Modal
+                open={isAddTextModalOpen}
+                onClose={() => {
+                    setIsAddTextModalOpen(false);
+                    setTextError(null);
+                }}
+                header={{ heading: 'Legg til tekstboks' }}
+                width="medium"
+            >
+                <Modal.Body>
+                    <div className="space-y-4">
+                        <TextField
+                            label="Tittel"
+                            value={textTitle}
+                            onChange={(event) => setTextTitle(event.target.value)}
+                        />
+                        <Textarea
+                            label="Innhold (valgfritt)"
+                            value={textMarkdown}
+                            minRows={10}
+                            onChange={(event) => setTextMarkdown(event.target.value)}
+                        />
+                        <TextField
+                            label="Bredde (%)"
+                            value={textWidth}
+                            onChange={(event) => setTextWidth(event.target.value)}
+                        />
+                        {textError && (
+                            <Alert variant="error" size="small">{textError}</Alert>
+                        )}
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => void handleAddTextChart()} loading={addingText} disabled={!selectedDashboard}>
+                        Legg til tekstboks
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setIsAddTextModalOpen(false);
+                            setTextError(null);
+                        }}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal
+                open={!!editTextChart}
+                onClose={() => {
+                    setEditTextChart(null);
+                    setEditTextError(null);
+                }}
+                header={{ heading: 'Rediger tekst' }}
+                width="medium"
+            >
+                <Modal.Body>
+                    <div className="space-y-4">
+                        <TextField
+                            label="Tittel"
+                            value={editTextName}
+                            onChange={(event) => setEditTextName(event.target.value)}
+                        />
+                        <Textarea
+                            label="Innhold (valgfritt)"
+                            value={editTextMarkdown}
+                            minRows={10}
+                            onChange={(event) => setEditTextMarkdown(event.target.value)}
+                        />
+                        <TextField
+                            label="Bredde (%)"
+                            value={editTextWidth}
+                            onChange={(event) => setEditTextWidth(event.target.value)}
+                        />
+                        {editTextError && (
+                            <Alert variant="error" size="small">{editTextError}</Alert>
+                        )}
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => void handleSaveTextChart()} loading={savingEditText} disabled={!editTextChart}>
+                        Lagre
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setEditTextChart(null);
+                            setEditTextError(null);
+                        }}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <EditDashboardDialog
                 key={editDashboardTarget ? `edit-dashboard-${editDashboardTarget.id}-${editDashboardTarget.projectId}` : 'edit-dashboard-dialog'}

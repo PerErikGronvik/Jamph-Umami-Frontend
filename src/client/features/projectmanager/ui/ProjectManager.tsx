@@ -199,7 +199,8 @@ const ProjectManager = () => {
             const rows: FileTableRow[] = [dashboardRow];
             if (!hasMultipleCategories) {
                 const singleCategoryId = dashboard.categories[0]?.id;
-                rows.push(...dashboard.charts.map((chart) => ({
+                const visibleCharts = dashboard.charts.filter((chart) => chart.graphType !== 'TEXT');
+                rows.push(...visibleCharts.map((chart) => ({
                     id: `chart-${chart.id}`,
                     type: 'chart' as const,
                     name: chart.name,
@@ -226,7 +227,8 @@ const ProjectManager = () => {
                     categoryId: category.id,
                 });
 
-                rows.push(...category.charts.map((chart) => ({
+                const visibleCharts = category.charts.filter((chart) => chart.graphType !== 'TEXT');
+                rows.push(...visibleCharts.map((chart) => ({
                     id: `chart-${chart.id}`,
                     type: 'chart' as const,
                     name: chart.name,

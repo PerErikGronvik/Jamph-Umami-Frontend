@@ -35,6 +35,7 @@ export type GraphDto = {
     id: number;
     categoryId: number;
     name: string;
+    description?: string;
     graphType?: string;
     width?: number;
     ordering?: number;

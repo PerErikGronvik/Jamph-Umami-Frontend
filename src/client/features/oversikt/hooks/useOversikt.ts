@@ -107,19 +107,21 @@ export const useOversikt = () => {
     const charts = useMemo<OversiktChart[]>(() => {
         return [...graphs]
             .sort((a, b) => (a.graph.ordering ?? 0) - (b.graph.ordering ?? 0))
-            .filter((item) => item.queries.length > 0)
+            .filter((item) => item.queries.length > 0 || item.graph.graphType === 'TEXT')
             .map((item) => {
                 const primaryQuery = item.queries[0];
+                const isTextGraph = item.graph.graphType === 'TEXT';
                 return {
                     id: `graph-${item.graph.id}`,
                     title: item.graph.name,
                     type: mapGraphTypeToChart(item.graph.graphType),
-                    sql: primaryQuery.sqlText,
+                    sql: primaryQuery?.sqlText,
                     width: item.graph.width && item.graph.width > 0 ? String(item.graph.width) : '50',
+                    description: item.graph.description,
                     graphId: item.graph.id,
                     graphType: normalizeGraphType(item.graph.graphType),
-                    queryId: primaryQuery.id,
-                    queryName: primaryQuery.name,
+                    queryId: primaryQuery?.id ?? 0,
+                    queryName: primaryQuery?.name ?? (isTextGraph ? 'Tekst' : 'Query'),
                     categoryId: item.categoryId,
                     variants: item.queries.map((query) => ({
                         queryId: query.id,

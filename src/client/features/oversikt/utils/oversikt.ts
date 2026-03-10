@@ -24,11 +24,12 @@ export const mapGraphTypeToChart = (graphType?: string): SavedChart['type'] => {
     if (graphType === 'BAR') return 'bar';
     if (graphType === 'PIE') return 'pie';
     if (graphType === 'TABLE') return 'table';
+    if (graphType === 'TEXT') return 'text';
     return 'table';
 };
 
 export const normalizeGraphType = (graphType?: string): GraphType => {
-    if (graphType === 'LINE' || graphType === 'BAR' || graphType === 'PIE' || graphType === 'TABLE') {
+    if (graphType === 'LINE' || graphType === 'BAR' || graphType === 'PIE' || graphType === 'TABLE' || graphType === 'TEXT') {
         return graphType;
     }
     return 'TABLE';

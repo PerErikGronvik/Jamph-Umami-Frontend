@@ -176,7 +176,7 @@ export async function createGraph(
   projectId: number,
   dashboardId: number,
   categoryId: number,
-  params: { name: string; graphType: GraphType; width?: number },
+  params: { name: string; graphType: GraphType; width?: number; description?: string },
 ): Promise<GraphDto> {
   return requestJson<GraphDto>(
     `/api/backend/projects/${projectId}/dashboards/${dashboardId}/categories/${categoryId}/graphs`,
@@ -210,7 +210,7 @@ export async function updateGraph(
   dashboardId: number,
   categoryId: number,
   graphId: number,
-  params: { name: string; graphType: GraphType; width?: number; categoryId?: number },
+  params: { name: string; graphType: GraphType; width?: number; categoryId?: number; description?: string },
 ): Promise<GraphDto> {
   return requestJson<GraphDto>(
     `/api/backend/projects/${projectId}/dashboards/${dashboardId}/categories/${categoryId}/graphs/${graphId}`,

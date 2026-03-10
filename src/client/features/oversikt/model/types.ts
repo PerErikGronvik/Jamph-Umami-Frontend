@@ -18,7 +18,7 @@ export type GraphWithQueries = {
     categoryId: number;
 };
 
-export type GraphType = 'LINE' | 'BAR' | 'PIE' | 'TABLE';
+export type GraphType = 'LINE' | 'BAR' | 'PIE' | 'TABLE' | 'TEXT';
 
 export type MetricType = 'visitors' | 'pageviews' | 'proportion' | 'visits';
 

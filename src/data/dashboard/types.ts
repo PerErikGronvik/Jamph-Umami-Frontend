@@ -1,7 +1,7 @@
 export interface SavedChart {
     id?: string;
     title: string;
-    type: 'line' | 'bar' | 'pie' | 'table' | 'title' | 'siteimprove';
+    type: 'line' | 'bar' | 'pie' | 'table' | 'title' | 'siteimprove' | 'text';
     sql?: string;
     width?: 'full' | 'half' | string;
     description?: string;
