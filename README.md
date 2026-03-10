@@ -36,6 +36,8 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
 
    > `pnpm install` and `pnpm dev` work without any credentials file. BigQuery is only used at runtime when you run `pnpm start`.
 
+   > **Troubleshooting 401 errors during install:** If you see `ERR_PNPM_FETCH_401` for `@navikt/*` packages, your global `.npmrc` is probably routing `@navikt` to GitHub Packages (`npm.pkg.github.com`). This project's `.npmrc` overrides that back to the public npm registry — make sure you have not deleted it.
+
    ### macOS / Linux
    ```bash
    # If pnpm is not on PATH, use Corepack
