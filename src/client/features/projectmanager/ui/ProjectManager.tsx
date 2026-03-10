@@ -352,7 +352,8 @@ const ProjectManager = () => {
 
     const handleSaveDashboard = async (params: { name: string; projectId: number }) => {
         if (!editDashboardTarget) return;
-        await editDashboard(editDashboardTarget.projectId, editDashboardTarget.id, params);
+        const result = await editDashboard(editDashboardTarget.projectId, editDashboardTarget.id, params);
+        if (result === undefined) return;
         setEditDashboardTarget(null);
     };
 
@@ -1872,7 +1873,7 @@ const ProjectManager = () => {
                     <div className="space-y-4">
                         {localError && <Alert variant="error" size="small">{localError}</Alert>}
                         <BodyShort>
-                            Er du sikker på at du vil slette arbeidsområdet <strong>{deleteTarget?.project.name}</strong>?
+                            Er du sikker på at du vil slette teamet <strong>{deleteTarget?.project.name}</strong>?
                         </BodyShort>
                         {(deleteTarget?.dashboardCount ?? 0) > 0 || (deleteTarget?.chartCount ?? 0) > 0 ? (
                             <Alert variant="warning" size="small">

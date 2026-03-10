@@ -150,7 +150,17 @@ export const useProjectManager = () => {
             run(async () => {
                 if (!params.name.trim()) throw new Error('Dashboardnavn er påkrevd');
                 if (!params.projectId) throw new Error('Velg prosjekt');
-                await api.updateDashboard(projectId, dashboardId, { name: params.name.trim(), projectId: params.projectId });
+                const updateParams = { name: params.name.trim(), projectId: params.projectId };
+                let updatedDashboard = await api.updateDashboard(projectId, dashboardId, updateParams);
+
+                // Some backend variants expect the target project in the URL path when moving.
+                if (params.projectId !== projectId && updatedDashboard.projectId !== params.projectId) {
+                    updatedDashboard = await api.updateDashboard(params.projectId, dashboardId, updateParams);
+                }
+
+                if (updatedDashboard.projectId !== params.projectId) {
+                    throw new Error('Dashboard ble ikke flyttet til valgt arbeidsområde');
+                }
                 await loadProjectSummaries();
                 setMessage('Dashboard oppdatert');
             }),

@@ -32,7 +32,7 @@ const EditDashboardDialog = ({
             return;
         }
         if (!projectId) {
-            setLocalError('Velg arbeidsområde');
+            setLocalError('Velg team');
             return;
         }
         setLocalError(null);
@@ -57,12 +57,12 @@ const EditDashboardDialog = ({
                         size="small"
                     />
                     <Select
-                        label="Arbeidsområde"
+                        label="Team"
                         value={projectId ? String(projectId) : ''}
                         onChange={(event) => setProjectId(Number(event.target.value))}
                         size="small"
                     >
-                        <option value="">Velg arbeidsområde</option>
+                        <option value="">Velg team</option>
                         {projects.map((project) => (
                             <option key={project.id} value={project.id}>
                                 {project.name}
