@@ -22,7 +22,6 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
 
 ## Jamph-Umami-Frontend (Our version of Start-Umami-Student edition)
    git clone https://github.com/PerErikGronvik/Jamph-Umami-Frontend Jamph-Umami-Frontend
-   - Paste the file `fagtorsdag-prod-81a6-52ac69097f46.json` into the `Jamph-Umami-Frontend` folder. Keep the file secret, do not share it.
 
 **Install and start**:
 
@@ -33,15 +32,15 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
    | Command | What it does | Needs credentials file? |
    |---|---|---|
    | `pnpm dev` | Starts **only the Vite frontend** — view and browse the UI | **No** |
-   | `pnpm start` | Starts frontend **+ Express/BigQuery server** — data is loaded from BigQuery | **Yes** — requires `fagtorsdag-prod-81a6-52ac69097f46.json` in the project root |
+   | `pnpm start` | Starts frontend **+ Express/BigQuery server** — data is loaded from BigQuery | **Yes** — see below |
 
-   > If you only want to look at the frontend UI, use **`pnpm dev`** — no credentials file or BigQuery connection needed.
+   > `pnpm install` and `pnpm dev` work without any credentials file. BigQuery is only used at runtime when you run `pnpm start`.
 
    ### macOS / Linux
    ```bash
    # If pnpm is not on PATH, use Corepack
    corepack prepare pnpm@9.12.2 --activate
-   pnpm install        # first time only
+   pnpm install        # works without credentials — no BigQuery connection needed
    pnpm dev            # frontend only — no BigQuery needed
    # or: pnpm start    # frontend + BigQuery server (requires credentials file)
    ```
@@ -50,10 +49,14 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
    > **OBS:** `corepack enable` krever admin-rettigheter på Windows og feiler uten det. Bruk heller npm til å installere pnpm-verktøyet én gang – prosjektet bruker fortsatt pnpm som pakkebehandler.
    ```powershell
    npm install -g pnpm   # installer pnpm-verktøyet én gang (krever ikke admin)
-   pnpm install          # første gang – bruker pnpm-lock.yaml
+   pnpm install          # første gang – bruker pnpm-lock.yaml, krever ikke credentials
    pnpm dev              # kun frontend — BigQuery-tilkobling ikke nødvendig
    # eller: pnpm start   # frontend + BigQuery-server (krever credentials-fil)
    ```
    Click the link to continue
 
    Note: To restart, press `Ctrl/command+C` to stop it, then run `pnpm dev` (or `pnpm start`) again.
+
+   ### Using BigQuery data with `pnpm start`
+
+   To load live data, paste `fagtorsdag-prod-81a6-52ac69097f46.json` into the project root before running `pnpm start`. Keep the file secret — do not commit or share it.
