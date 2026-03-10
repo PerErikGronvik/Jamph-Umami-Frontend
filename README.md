@@ -28,12 +28,22 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
 
    > **Note:** This project uses **pnpm** as its package manager (declared in `package.json` as `"packageManager": "pnpm@9.12.2"` and tracked via `pnpm-lock.yaml`). Please use pnpm for all install and start commands to avoid creating a conflicting `package-lock.json` or dependency drift.
 
+   ### Two ways to start the app
+
+   | Command | What it does | Needs credentials file? |
+   |---|---|---|
+   | `pnpm dev` | Starts **only the Vite frontend** — view and browse the UI | **No** |
+   | `pnpm start` | Starts frontend **+ Express/BigQuery server** — data is loaded from BigQuery | **Yes** — requires `fagtorsdag-prod-81a6-52ac69097f46.json` in the project root |
+
+   > If you only want to look at the frontend UI, use **`pnpm dev`** — no credentials file or BigQuery connection needed.
+
    ### macOS / Linux
    ```bash
    # If pnpm is not on PATH, use Corepack
    corepack prepare pnpm@9.12.2 --activate
    pnpm install        # first time only
-   pnpm start
+   pnpm dev            # frontend only — no BigQuery needed
+   # or: pnpm start    # frontend + BigQuery server (requires credentials file)
    ```
 
    ### Windows
@@ -41,8 +51,9 @@ kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
    ```powershell
    npm install -g pnpm   # installer pnpm-verktøyet én gang (krever ikke admin)
    pnpm install          # første gang – bruker pnpm-lock.yaml
-   pnpm start
+   pnpm dev              # kun frontend — BigQuery-tilkobling ikke nødvendig
+   # eller: pnpm start   # frontend + BigQuery-server (krever credentials-fil)
    ```
    Click the link to continue
 
-   Note: To restart the server, press `Ctrl/command+C` to stop it, then run `pnpm start` again.
+   Note: To restart, press `Ctrl/command+C` to stop it, then run `pnpm dev` (or `pnpm start`) again.
