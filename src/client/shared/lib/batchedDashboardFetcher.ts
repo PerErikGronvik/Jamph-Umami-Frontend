@@ -11,7 +11,7 @@
 
 import type {SavedChart} from '../../../data/dashboard';
 import {format, subDays} from 'date-fns';
-import {getGcpProjectId} from './runtimeConfig.ts';
+import {getGcpProjectId, getBqViewsDataset, getBqEventTable, getBqSessionTable} from './runtimeConfig.ts';
 import {isRecord} from './typeGuards';
 
 type JsonPrimitive = string | number | boolean | null | undefined;
@@ -97,7 +97,7 @@ function getSessionField(chart: SavedChart): string | null {
     if (!chart.sql) return null;
 
     const sql = chart.sql.toLowerCase();
-    if (!sql.includes('public_session') && !sql.includes('umami_views.session')) return null;
+    if (!sql.includes('public_session') && !sql.includes(`${getBqViewsDataset()}.${getBqSessionTable()}`)) return null;
 
     for (const field of SESSION_FIELDS) {
         if (sql.includes(`base_query.${field}`) && sql.includes(`group by`)) {
@@ -122,8 +122,8 @@ function buildCombinedSessionQuery(
     fields: string[]
 ): string {
     const projectId = getGcpProjectId();
-    const tableName = `\`${projectId}.umami_views.event\``;
-    const sessionTable = `\`${projectId}.umami_views.session\``;
+    const tableName = `\`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\``;
+    const sessionTable = `\`${projectId}.${getBqViewsDataset()}.${getBqSessionTable()}\``;
 
     // Build the fields string
     const fieldsSelect = fields.map(f => `${sessionTable}.${f}`).join(',\n    ');
@@ -400,7 +400,7 @@ export async function fetchDashboardDataBatched(
                 const projectId = getGcpProjectId();
                 const totalVisitorsSql = `
                     SELECT COUNT(DISTINCT session_id) as total
-                    FROM \`${projectId}.umami_views.event\`
+                    FROM \`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\`
                     WHERE website_id = '${websiteId}'
                     AND event_type = 1
                     AND created_at BETWEEN ${fromSql} AND ${toSql}

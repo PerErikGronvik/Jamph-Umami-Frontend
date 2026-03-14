@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { requireBigQuery, getNavIdent, MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createWebsiteRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -19,7 +20,7 @@ export function createWebsiteRoutes({ bigquery, GCP_PROJECT_ID }) {
             ANY_VALUE(share_id) as shareId,
             ANY_VALUE(team_id) as teamId,
             ANY_VALUE(created_at) as createdAt
-        FROM \`${GCP_PROJECT_ID}.umami.public_website\`
+        FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.public_website\`
         WHERE deleted_at IS NULL
           AND name IS NOT NULL
         GROUP BY website_id

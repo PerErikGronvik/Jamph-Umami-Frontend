@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }) {
   const router = express.Router();
@@ -49,7 +50,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
 
           const query = `
               SELECT event_name, COUNT(*) as count
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
               WHERE website_id = @websiteId
                 AND created_at BETWEEN @startDate AND @endDate
                 AND event_name IS NOT NULL
@@ -173,8 +174,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                       WHEN p.data_type = 4 THEN 'date'
                       ELSE 'string'
                   END AS type
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
-              JOIN \`${GCP_PROJECT_ID}.umami_views.event_data\` d
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
+              JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d
                   ON e.event_id = d.website_event_id
                   AND e.website_id = d.website_id
                   AND e.created_at = d.created_at
@@ -198,7 +199,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               SELECT 
                   event_name,
                   COUNT(*) AS total
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
               WHERE website_id = @websiteId
               AND created_at BETWEEN @startDate AND @endDate
               AND event_name IS NOT NULL
@@ -347,7 +348,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                   SELECT
                       TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
                       COUNT(*) as count
-                  FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+                  FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
                   WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
                   AND event_name IS NOT NULL
@@ -410,7 +411,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               SELECT 
                   MIN(created_at) as mindate,
                   MAX(created_at) as maxdate
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
               WHERE website_id = @websiteId
           `;
 
@@ -496,8 +497,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               SELECT
                   p.string_value,
                   COUNT(*) as count
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
-              JOIN \`${GCP_PROJECT_ID}.umami_views.event_data\` d
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
+              JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d
                   ON e.event_id = d.website_event_id
                   AND e.website_id = d.website_id
                   AND e.created_at = d.created_at
@@ -614,8 +615,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                   e.event_id,
                   e.created_at,
                   ARRAY_AGG(STRUCT(p.data_key, p.string_value) ORDER BY p.data_key) as parameters
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
-              JOIN \`${GCP_PROJECT_ID}.umami_views.event_data\` d
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
+              JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d
                   ON e.event_id = d.website_event_id
                   AND e.website_id = d.website_id
                   AND e.created_at = d.created_at
@@ -769,8 +770,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                           END, 
                           '||' ORDER BY CASE WHEN p.data_key IN ('lenketekst', 'tittel') THEN 0 ELSE 1 END, p.data_key LIMIT 25
                       ) as props_str
-                  FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
-                  LEFT JOIN \`${GCP_PROJECT_ID}.umami_views.event_data\` d
+                  FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
+                  LEFT JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d
                       ON e.event_id = d.website_event_id
                       AND e.website_id = d.website_id
                       AND e.created_at = d.created_at
@@ -847,7 +848,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                   SELECT 
                       e.session_id, 
                       MIN(e.created_at) as visit_time
-                  FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
+                  FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
                   WHERE e.website_id = @websiteId
                   AND e.created_at BETWEEN @startDate AND @endDate
                   AND e.event_name IS NULL -- Pageview
@@ -856,7 +857,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               ),
               Interactions AS (
                   SELECT DISTINCT e.session_id
-                  FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
+                  FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
                   WHERE e.website_id = @websiteId
                   AND e.created_at BETWEEN @startDate AND @endDate
                   AND e.event_name IS NOT NULL -- Events
@@ -865,7 +866,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               Navigation AS (
                   SELECT DISTINCT t.session_id
                   FROM TargetVisits t
-                  JOIN \`${GCP_PROJECT_ID}.umami.public_website_event\` later
+                  JOIN \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` later
                       ON t.session_id = later.session_id
                       AND later.created_at BETWEEN @startDate AND @endDate
                       AND later.created_at > t.visit_time

@@ -4,6 +4,7 @@ import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual, startOfWeek, startOfMonth } from 'date-fns';
 import AlertWithCloseButton from '../grafbygger/AlertWithCloseButton.tsx';
+import { getBqViewsDataset, getBqEventTable } from '../../../../shared/lib/runtimeConfig.ts';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
 import { formatPathLabel, parseFormattedPath } from '../../../analysis/utils/urlPathFilter.ts';
@@ -313,7 +314,7 @@ const QueryPreview = ({
       const projectId = getGcpProjectId();
       const fromSql = `TIMESTAMP('${format(dateRange.from, 'yyyy-MM-dd')}')`;
       const toSql = `TIMESTAMP('${format(dateRange.to, 'yyyy-MM-dd')}T23:59:59')`;
-      const replacement = `AND \`${projectId}.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+      const replacement = `AND \`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
       processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, replacement);
     }
 

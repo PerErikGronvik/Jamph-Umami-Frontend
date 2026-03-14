@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -24,8 +25,8 @@ export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
                   COUNTIF(e.event_type = 1) as pageviews,
                   COUNTIF(e.event_type = 2) as custom_events,
                   MAX(e.created_at) as last_event_at
-              FROM \`${GCP_PROJECT_ID}.umami.public_website\` w
-              LEFT JOIN \`${GCP_PROJECT_ID}.umami.public_website_event\` e
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.public_website\` w
+              LEFT JOIN \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
                   ON w.website_id = e.website_id
                   AND e.created_at BETWEEN @startDate AND @endDate
               GROUP BY 1, 2, 3
@@ -109,7 +110,7 @@ export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
                   FORMAT_TIMESTAMP('%Y-%m', created_at) as month,
                   COUNTIF(event_type = 1) as pageviews,
                   COUNTIF(event_type = 2) as custom_events
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
               WHERE website_id = @websiteId
                 AND created_at >= TIMESTAMP(DATE_SUB(CURRENT_DATE('Europe/Oslo'), INTERVAL 6 MONTH))
               GROUP BY 1
@@ -119,7 +120,7 @@ export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
           // Query 2: Absolute last event timestamp
           const lastEventQuery = `
               SELECT MAX(created_at) as last_event_at
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
               WHERE website_id = @websiteId
           `;
 

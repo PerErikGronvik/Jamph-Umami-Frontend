@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { requireBigQuery, getNavIdent, getDryRunStats, MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -20,36 +21,36 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
 
       // Regex patterns
       const patterns = {
-        'Fødselsnummer': '\\b\\d{11}\\b',
+        'FÃ¸dselsnummer': '\\b\\d{11}\\b',
         'UUID': '\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b',
         'Navident': '\\b[a-zA-Z]\\d{6}\\b',
         'E-post': '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b',
         'IP-adresse': '\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b',
         'Telefonnummer': '\\b[2-9]\\d{7}\\b',
         'Bankkort': '\\b\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}\\b',
-        'Mulig navn': '\\b[A-ZÆØÅ][a-zæøå]{1,20}\\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\\s[A-ZÆØÅ][a-zæøå]{1,20})?\\b',
-        'Mulig adresse': '\\b\\d{4}\\s[A-ZÆØÅ][A-ZÆØÅa-zæøå]+(?:\\s[A-ZÆØÅa-zæøå]+)*\\b',
+        'Mulig navn': '\\b[A-ZÃ†Ã˜Ã…][a-zÃ¦Ã¸Ã¥]{1,20}\\s[A-ZÃ†Ã˜Ã…][a-zÃ¦Ã¸Ã¥]{1,20}(?:\\s[A-ZÃ†Ã˜Ã…][a-zÃ¦Ã¸Ã¥]{1,20})?\\b',
+        'Mulig adresse': '\\b\\d{4}\\s[A-ZÃ†Ã˜Ã…][A-ZÃ†Ã˜Ã…a-zÃ¦Ã¸Ã¥]+(?:\\s[A-ZÃ†Ã˜Ã…a-zÃ¦Ã¸Ã¥]+)*\\b',
         'Hemmelig adresse': '(?i)hemmelig(?:%20|\\s+)(?:20\\s*%(?:%20|\\s+))?adresse',
         'Kontonummer': '\\b\\d{4}\\.?\\d{2}\\.\\d{5}\\b',
         'Organisasjonsnummer': '\\b\\d{9}\\b',
         'Bilnummer': '\\b[A-Z]{2}\\s?\\d{5}\\b',
-        'Mulig søk': '[?&](?:q|query|search|k|ord)=[^&]+',
+        'Mulig sÃ¸k': '[?&](?:q|query|search|k|ord)=[^&]+',
         'Redacted': '\\[.*?\\]',
       };
 
       // Tables and columns to check
       const checks = [
-        { table: 'public_website_event', column: 'url_path' },
-        { table: 'public_website_event', column: 'url_query' },
-        { table: 'public_website_event', column: 'referrer_path' },
-        { table: 'public_website_event', column: 'referrer_query' },
-        { table: 'public_website_event', column: 'referrer_domain' },
-        { table: 'public_website_event', column: 'page_title' },
-        { table: 'public_website_event', column: 'event_name' },
-        { table: 'public_session', column: 'hostname' },
-        { table: 'public_session', column: 'browser' },
-        { table: 'public_session', column: 'os' },
-        { table: 'public_session', column: 'device' },
+        { table: BQ_EVENT_TABLE, column: 'url_path' },
+        { table: BQ_EVENT_TABLE, column: 'url_query' },
+        { table: BQ_EVENT_TABLE, column: 'referrer_path' },
+        { table: BQ_EVENT_TABLE, column: 'referrer_query' },
+        { table: BQ_EVENT_TABLE, column: 'referrer_domain' },
+        { table: BQ_EVENT_TABLE, column: 'page_title' },
+        { table: BQ_EVENT_TABLE, column: 'event_name' },
+        { table: BQ_SESSION_TABLE, column: 'hostname' },
+        { table: BQ_SESSION_TABLE, column: 'browser' },
+        { table: BQ_SESSION_TABLE, column: 'os' },
+        { table: BQ_SESSION_TABLE, column: 'device' },
       ];
 
       // If global search, fetch website names first
@@ -57,7 +58,7 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
       if (!websiteId) {
         try {
           const [siteRows] = await bigquery.query(addAuditLogging({
-            query: `SELECT website_id, name FROM \`${GCP_PROJECT_ID}.umami.public_website\``,
+            query: `SELECT website_id, name FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.public_website\``,
             maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Personvernssjekk'));
           siteRows.forEach(r => websiteMap.set(r.website_id, r.name));
@@ -86,7 +87,7 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
                     ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_nav_count,
                     ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_other_count,
                     ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
-                FROM \`.umami.${check.table}\`
+                FROM \`.${BQ_DATASET}.${check.table}\`
                 WHERE website_id = @websiteId
                 AND created_at BETWEEN @startDate AND @endDate
                 AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
@@ -105,7 +106,7 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
                     ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_nav_count,
                     ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_other_count,
                     ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
-                FROM \`.umami.${check.table}\`
+                FROM \`.${BQ_DATASET}.${check.table}\`
                 WHERE created_at BETWEEN @startDate AND @endDate
                 AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
                 ${extraFilter}
@@ -133,8 +134,8 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
                   ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_nav_count,
                   ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_other_count,
                   ARRAY_AGG(DISTINCT p.string_value LIMIT 5) as examples
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
-              JOIN \`${GCP_PROJECT_ID}.umami_views.event_data\` d
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
+              JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d
                   ON e.event_id = d.website_event_id
                   AND e.website_id = d.website_id
                   AND e.created_at = d.created_at
@@ -157,8 +158,8 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
                   ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_nav_count,
                   ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_other_count,
                   ARRAY_AGG(DISTINCT p.string_value LIMIT 5) as examples
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
-              JOIN \`${GCP_PROJECT_ID}.umami_views.event_data\` d
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e
+              JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d
                   ON e.event_id = d.website_event_id
                   AND e.website_id = d.website_id
                   AND e.created_at = d.created_at

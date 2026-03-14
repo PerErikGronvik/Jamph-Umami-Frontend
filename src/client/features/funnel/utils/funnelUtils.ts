@@ -1,7 +1,7 @@
 import type { FunnelStep, FunnelResultRow, TimingResultRow } from '../model/types';
 import type { Website } from '../../../shared/types/chart';
 import { normalizeUrlToPath } from '../../../shared/lib/utils';
-import { getGcpProjectId } from '../../../shared/lib/runtimeConfig';
+import { getGcpProjectId, getBqViewsDataset, getBqEventTable } from '../../../shared/lib/runtimeConfig';
 export { copyToClipboard } from '../../../shared/lib/clipboard';
 
 /**
@@ -119,7 +119,7 @@ WITH events_raw AS (
         END as step_value,
         event_id,
         created_at
-    FROM \`${projectId}.umami_views.event\`
+    FROM \`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\`
     WHERE website_id = '${selectedWebsite.id}'
       AND event_type IN (${eventTypesList})
       [[AND {{created_at}}]]
@@ -153,7 +153,7 @@ events AS (
 
                 return `EXISTS (
         SELECT 1
-        FROM \`${projectId}.umami_views.event_data\` d_${index}_${pIdx}
+        FROM \`${projectId}.${getBqViewsDataset()}.event_data\` d_${index}_${pIdx}
         CROSS JOIN UNNEST(d_${index}_${pIdx}.event_parameters) p_${index}_${pIdx}
         WHERE d_${index}_${pIdx}.website_event_id = e.event_id
           AND d_${index}_${pIdx}.website_id = '${selectedWebsite.id}'
@@ -257,7 +257,7 @@ WITH events_raw AS (
         session_id,
         COALESCE(NULLIF(RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/'), ''), '/') as url_path,
         created_at
-    FROM \`${projectId}.umami_views.event\`
+    FROM \`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\`
     WHERE website_id = '${selectedWebsite.id}'
       AND event_type = 1
       [[AND {{created_at}}]]

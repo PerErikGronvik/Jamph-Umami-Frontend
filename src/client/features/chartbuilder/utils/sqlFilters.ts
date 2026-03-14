@@ -1,4 +1,4 @@
-import { getGcpProjectId } from '../../../shared/lib/runtimeConfig.ts';
+import { getGcpProjectId, getBqViewsDataset, getBqEventTable, getBqSessionTable } from '../../../shared/lib/runtimeConfig.ts';
 import { subDays, format } from 'date-fns';
 
 interface SqlFilterParams {
@@ -93,11 +93,12 @@ export const applyUrlFiltersToSql = (sql: string, params: SqlFilterParams): stri
     const toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
 
     const projectId = getGcpProjectId();
-    let tablePrefix = `\`${projectId}.umami_views.event\``;
-    if (processedSql.includes('umami_views.event')) {
-      tablePrefix = `\`${projectId}.umami_views.event\``;
-    } else if (processedSql.includes('umami_views.session')) {
-      tablePrefix = `\`${projectId}.umami_views.session\``;
+    const bqViewsDs = getBqViewsDataset();
+    const bqEventTbl = getBqEventTable();
+    const bqSessionTbl = getBqSessionTable();
+    let tablePrefix = `\`${projectId}.${bqViewsDs}.${bqEventTbl}\``;
+    if (processedSql.includes(`${bqViewsDs}.${bqSessionTbl}`)) {
+      tablePrefix = `\`${projectId}.${bqViewsDs}.${bqSessionTbl}\``;
     }
 
     const whereDatePlaceholderPattern = /\bWHERE\s+\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi;

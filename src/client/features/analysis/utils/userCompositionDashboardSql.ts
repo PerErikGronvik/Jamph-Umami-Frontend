@@ -1,8 +1,8 @@
-import { getGcpProjectId } from '../../../shared/lib/runtimeConfig.ts';
+import { getGcpProjectId, getBqViewsDataset, getBqEventTable, getBqSessionTable } from '../../../shared/lib/runtimeConfig.ts';
 
 const projectId = getGcpProjectId();
-const eventTable = `\`${projectId}.umami_views.event\``;
-const sessionTable = `\`${projectId}.umami_views.session\``;
+const eventTable = `\`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\``;
+const sessionTable = `\`${projectId}.${getBqViewsDataset()}.${getBqSessionTable()}\``;
 
 const fieldByCategory: Record<string, string | undefined> = {
     browser: 'browser',

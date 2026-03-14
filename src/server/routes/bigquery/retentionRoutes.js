@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { requireBigQuery, getNavIdent, getDryRunStats, MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createRetentionRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -19,8 +20,8 @@ export function createRetentionRoutes({ bigquery, GCP_PROJECT_ID }) {
       const useSwitch = useDistinctId && hasCountBySwitchAt;
       const col = useDistinctId ? 'e.' : '';
       const fromClause = useDistinctId
-        ? `\`${GCP_PROJECT_ID}.umami.public_website_event\` e LEFT JOIN \`${GCP_PROJECT_ID}.umami_views.session\` s ON e.session_id = s.session_id`
-        : `\`${GCP_PROJECT_ID}.umami.public_website_event\``;
+        ? `\`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e LEFT JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\` s ON e.session_id = s.session_id`
+        : `\`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\``;
       const userIdExpression = useSwitch
         ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
         : (useDistinctId ? 's.distinct_id' : `${col}session_id`);

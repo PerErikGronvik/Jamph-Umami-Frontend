@@ -106,11 +106,13 @@ export const useProjectManager = () => {
         setProjectSummaries(summaryItems);
     }, []);
 
-    useEffect(() => {
-        void run(async () => {
-            await loadProjectSummaries();
-        });
-    }, [run, loadProjectSummaries]);
+    // STUDENT-VERSION: backend service (start-umami-backend) not available in fagtorsdag env.
+    // Comment the block below back in when merging to production.
+    // useEffect(() => {
+    //     void run(async () => {
+    //         await loadProjectSummaries();
+    //     });
+    // }, [run, loadProjectSummaries]);
 
     const createProject = useCallback(
         () =>

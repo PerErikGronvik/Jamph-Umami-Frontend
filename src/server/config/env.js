@@ -23,6 +23,11 @@ export const BACKEND_BASE_URL = normalizeBaseUrl(
 export const SITEIMPROVE_BASE_URL = normalizeBaseUrl(process.env.SITEIMPROVE_BASE_URL || process.env.VITE_SITEIMPROVE_BASE_URL);
 export const UMAMI_BASE_URL = normalizeBaseUrl(process.env.UMAMI_BASE_URL || process.env.VITE_UMAMI_BASE_URL);
 export const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || process.env.VITE_GCP_PROJECT_ID;
+export const BQ_DATASET = process.env.BQ_DATASET || 'umami';
+export const BQ_VIEWS_DATASET = process.env.BQ_VIEWS_DATASET || 'umami_views';
+export const BQ_SESSION_DATASET = process.env.BQ_SESSION_DATASET || BQ_VIEWS_DATASET;
+export const BQ_EVENT_TABLE = process.env.BQ_EVENT_TABLE || 'public_website_event';
+export const BQ_SESSION_TABLE = process.env.BQ_SESSION_TABLE || 'public_session';
 
 if (!BACKEND_BASE_URL) {
   throw new Error('Missing env var: BACKEND_BASE_URL');

@@ -1,7 +1,7 @@
-import { getGcpProjectId } from '../../../shared/lib/runtimeConfig.ts';
+import { getGcpProjectId, getBqViewsDataset, getBqEventTable } from '../../../shared/lib/runtimeConfig.ts';
 
 const projectId = getGcpProjectId();
-const eventTable = `\`${projectId}.umami_views.event\``;
+const eventTable = `\`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\``;
 
 const baseQuery = `
 WITH base_query AS (

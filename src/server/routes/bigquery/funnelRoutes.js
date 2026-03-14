@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging, substituteQueryParameters } from '../../bigquery/audit.js';
 import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -50,7 +51,7 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
                   END as step_value,
                   ${urlNormSql} as url_path_normalized,
                   created_at
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
               WHERE website_id = @websiteId
                 AND created_at BETWEEN @startDate AND @endDate
                 AND event_type IN (${eventTypesList})
@@ -85,7 +86,7 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
 
             return `EXISTS (
                 SELECT 1
-                FROM \`${GCP_PROJECT_ID}.umami_views.event_data\` d_${index}_${pIdx}
+                FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d_${index}_${pIdx}
                 CROSS JOIN UNNEST(d_${index}_${pIdx}.event_parameters) p_${index}_${pIdx}
                 WHERE d_${index}_${pIdx}.website_event_id = e.event_id
                   AND d_${index}_${pIdx}.website_id = e.website_id
@@ -263,7 +264,7 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
                   END as step_value,
                   ${urlNormSql} as url_path_normalized,
                   created_at
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
               WHERE website_id = @websiteId
                 AND created_at BETWEEN @startDate AND @endDate
                 AND event_type IN (${eventTypesList})
@@ -298,7 +299,7 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
 
             return `EXISTS (
                 SELECT 1
-                FROM \`${GCP_PROJECT_ID}.umami_views.event_data\` d_${index}_${pIdx}
+                FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event_data\` d_${index}_${pIdx}
                 CROSS JOIN UNNEST(d_${index}_${pIdx}.event_parameters) p_${index}_${pIdx}
                 WHERE d_${index}_${pIdx}.website_event_id = e.event_id
                   AND d_${index}_${pIdx}.website_id = e.website_id

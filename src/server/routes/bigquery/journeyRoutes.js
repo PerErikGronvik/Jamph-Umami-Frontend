@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createJourneyRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -29,7 +30,7 @@ export function createJourneyRoutes({ bigquery, GCP_PROJECT_ID }) {
                       THEN created_at 
                   END) 
                       OVER (PARTITION BY session_id) AS start_time
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+              FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
               WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
                   AND event_type = 1 -- Pageview

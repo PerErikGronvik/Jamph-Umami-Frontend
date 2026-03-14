@@ -17,6 +17,7 @@ import {
 } from '../utils/sqlProcessing';
 import { prepareLineChartData, prepareBarChartData, preparePieChartData } from '../utils/chartHelpers';
 import { fetchWebsites, estimateQueryCost, executeQueryApi } from '../api/sqlApi';
+import { getBqViewsDataset, getBqEventTable, getBqSessionTable } from '../../../shared/lib/runtimeConfig.ts';
 
 export const useSqlEditor = () => {
     const [searchParams] = useSearchParams();
@@ -376,8 +377,8 @@ export const useSqlEditor = () => {
 
     const handleUpgradeTables = () => {
         const newQuery = query
-            .replace(/umami\.public_website_event/gi, 'umami_views.event')
-            .replace(/umami\.public_session/gi, 'umami_views.session');
+            .replace(/umami\.public_website_event/gi, `${getBqViewsDataset()}.${getBqEventTable()}`)
+            .replace(/umami\.public_session/gi, `${getBqViewsDataset()}.${getBqSessionTable()}`);
         setQuery(newQuery);
         setOldTableWarning(false);
         setShowUpgradeSuccess(true);

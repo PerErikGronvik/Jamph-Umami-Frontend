@@ -1,5 +1,6 @@
 import { subDays, format } from 'date-fns';
 import { getGcpProjectId } from './formatters';
+import { getBqViewsDataset, getBqEventTable, getBqSessionTable } from '../../../shared/lib/runtimeConfig.ts';
 import type { Website } from '../model/types';
 
 interface SqlFilterContext {
@@ -118,11 +119,14 @@ export const applyUrlFiltersToSql = (sql: string, ctx: SqlFilterContext): string
         toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
 
         const projectId = getGcpProjectId();
-        let tablePrefix = `\`${projectId}.umami_views.event\``;
-        if (processedSql.includes('umami_views.event')) {
-            tablePrefix = `\`${projectId}.umami_views.event\``;
-        } else if (processedSql.includes('umami_views.session')) {
-            tablePrefix = `\`${projectId}.umami_views.session\``;
+        const bqViewsDs = getBqViewsDataset();
+        const bqEventTbl = getBqEventTable();
+        const bqSessionTbl = getBqSessionTable();
+        let tablePrefix = `\`${projectId}.${bqViewsDs}.${bqEventTbl}\``;
+        if (processedSql.includes(`${bqViewsDs}.${bqEventTbl}`)) {
+            tablePrefix = `\`${projectId}.${bqViewsDs}.${bqEventTbl}\``;
+        } else if (processedSql.includes(`${bqViewsDs}.${bqSessionTbl}`)) {
+            tablePrefix = `\`${projectId}.${bqViewsDs}.${bqSessionTbl}\``;
         } else if (processedSql.includes('public_session') && !processedSql.includes('public_website_event')) {
             tablePrefix = `\`${projectId}.umami.public_session\``;
         }
@@ -134,8 +138,8 @@ export const applyUrlFiltersToSql = (sql: string, ctx: SqlFilterContext): string
     // If query joins partitioned public_session, mirror the date filter
     if (fromSql && toSql && /public_session/gi.test(processedSql) && !/public_session[^\n]*created_at/gi.test(processedSql)) {
         const projectId = getGcpProjectId();
-        const eventFilter = `\`${projectId}.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
-        const sessionPredicate = `\`${projectId}.umami_views.session\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+        const eventFilter = `\`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+        const sessionPredicate = `\`${projectId}.${getBqViewsDataset()}.${getBqSessionTable()}\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
 
         if (processedSql.includes(eventFilter)) {
             processedSql = processedSql.replace(eventFilter, `${eventFilter} AND ${sessionPredicate}`);
@@ -183,7 +187,7 @@ export const ensureWebsitePlaceholder = (currentQuery: string): string => {
         return currentQuery;
     }
 
-    const table = `\`${getGcpProjectId()}.umami_views.event\``;
+    const table = `\`${getGcpProjectId()}.${getBqViewsDataset()}.${getBqEventTable()}\``;
 
     if (/WHERE/i.test(currentQuery)) {
         return currentQuery.replace(/WHERE/i, (match) => `${match} ${table}.website_id = '{{website_id}}' AND`);

@@ -1,5 +1,6 @@
 import { Button } from '@navikt/ds-react';
 import { ReadMore } from '@navikt/ds-react';
+import { getBqViewsDataset, getBqEventTable, getBqSessionTable } from '../../../shared/lib/runtimeConfig.ts';
 
 interface AvailableTablesInfoProps {
     projectId: string;
@@ -29,9 +30,9 @@ export default function AvailableTablesInfo({ projectId }: AvailableTablesInfoPr
         <ReadMore header="Tilgjengelige tabeller" size="small" className="mt-4">
             <ul className="space-y-3">
                 <TableEntry label="Nettsider/apper" tableName={`${projectId}.umami.public_website`} />
-                <TableEntry label="Personer" tableName={`${projectId}.umami_views.session`} />
-                <TableEntry label="Alle hendelser" tableName={`${projectId}.umami_views.event`} />
-                <TableEntry label="Egenfedinerte hendelser metadata" tableName={`${projectId}.umami_views.event_data`} />
+                <TableEntry label="Personer" tableName={`${projectId}.${getBqViewsDataset()}.${getBqSessionTable()}`} />
+                <TableEntry label="Alle hendelser" tableName={`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}`} />
+                <TableEntry label="Egenfedinerte hendelser metadata" tableName={`${projectId}.${getBqViewsDataset()}.event_data`} />
             </ul>
             <ReadMore header="Umami (legacy)" size="small" className="mt-6 mb-6">
                 <ul className="space-y-3">

@@ -1,5 +1,5 @@
 import type { ChartConfig, Filter, Metric, Parameter } from '../../../shared/types/chart.ts';
-import { getGcpProjectId } from '../../../shared/lib/runtimeConfig.ts';
+import { getGcpProjectId, getBqViewsDataset, getBqEventTable, getBqSessionTable } from '../../../shared/lib/runtimeConfig.ts';
 import { DATE_FORMATS } from '../model/constants.ts';
 import { sanitizeColumnName, sanitizeFieldNameForBigQuery } from './sanitize.ts';
 import { getParameterAggregator } from './metricColumns.ts';
@@ -195,11 +195,13 @@ export const getMetricSQLByType = (
         });
 
         const projectId = getGcpProjectId();
+        const bqViewsDs = getBqViewsDataset();
+        const bqEventTbl = getBqEventTable();
         if (column === 'session_id') {
           return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column}) 
-                FROM \`${projectId}.umami_views.event\`
+                FROM \`${projectId}.${bqViewsDs}.${bqEventTbl}\`
                 WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -207,7 +209,7 @@ export const getMetricSQLByType = (
           return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column})
-                FROM \`${projectId}.umami_views.event\`
+                FROM \`${projectId}.${bqViewsDs}.${bqEventTbl}\`
                 WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -244,8 +246,8 @@ export const generateSQLCore = (
   );
 
   const projectId = getGcpProjectId();
-  const fullWebsiteTable = `\`${projectId}.umami_views.event\``;
-  const fullSessionTable = `\`${projectId}.umami_views.session\``;
+  const fullWebsiteTable = `\`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\``;
+  const fullSessionTable = `\`${projectId}.${getBqViewsDataset()}.${getBqSessionTable()}\``;
 
   const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
 
@@ -358,7 +360,7 @@ export const generateSQLCore = (
     sql += '    visit_id,\n';
     sql += '    MIN(created_at) AS first_event_time,\n';
     sql += '    CASE WHEN COUNT(*) > 1 THEN TIMESTAMP_DIFF(MAX(created_at), MIN(created_at), SECOND) ELSE 0 END AS duration_seconds\n';
-    sql += `  FROM \`${projectId}.umami_views.event\`\n`;
+    sql += `  FROM \`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\`\n`;
     sql += `  WHERE website_id = '${config.website.id}'\n`;
 
     if (hasInteractiveDateFilter) {
@@ -625,7 +627,7 @@ export const generateSQLCore = (
       config.metrics.some(metric => metric.column?.startsWith('param_'));
 
     if (needsEventData) {
-      sql += `LEFT JOIN \`${projectId}.umami_views.event_data\` AS ed_view\n`;
+      sql += `LEFT JOIN \`${projectId}.${getBqViewsDataset()}.event_data\` AS ed_view\n`;
       sql += '  ON base_query.event_id = ed_view.website_event_id\n';
       sql += '  AND base_query.website_id = ed_view.website_id\n';
       sql += '  AND base_query.created_at = ed_view.created_at\n';

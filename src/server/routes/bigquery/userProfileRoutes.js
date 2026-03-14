@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -86,7 +87,7 @@ export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
         urlFilterCTE = `
             matching_sessions AS (
                 SELECT DISTINCT session_id
-                FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+                FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\`
                 WHERE website_id = @websiteId
                 AND created_at BETWEEN @startDate AND @endDate
                 AND ${condition}
@@ -113,7 +114,7 @@ export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
                   ARRAY_AGG(DISTINCT session.session_id) as session_ids,
                   ARRAY_AGG(session.session_id ORDER BY session.created_at DESC LIMIT 1)[OFFSET(0)] as primary_session_id,
                   COUNT(*) as event_count
-              FROM \`${GCP_PROJECT_ID}.umami_views.session\` as session
+              FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\` as session
               ${urlFilterJoin}
               WHERE session.website_id = @websiteId
               AND session.created_at BETWEEN @startDate AND @endDate
@@ -139,7 +140,7 @@ export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
           WITH ${urlFilterCTE}
           filtered_sessions AS (
               SELECT DISTINCT ${userKeyExpression} as user_id
-              FROM \`${GCP_PROJECT_ID}.umami_views.session\` as session
+              FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\` as session
               ${urlFilterJoin}
               WHERE session.website_id = @websiteId
               AND session.created_at BETWEEN @startDate AND @endDate
@@ -205,7 +206,7 @@ export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
               event_name,
               url_path,
               page_title
-          FROM \`${GCP_PROJECT_ID}.umami_views.event\`
+          FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\`
           WHERE website_id = @websiteId
           AND session_id = @sessionId
           AND created_at BETWEEN @startDate AND @endDate

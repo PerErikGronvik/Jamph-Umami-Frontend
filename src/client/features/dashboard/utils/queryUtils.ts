@@ -1,19 +1,5 @@
 import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subDays, subMonths, subWeeks } from 'date-fns';
-
-declare global {
-    interface Window {
-        __GCP_PROJECT_ID__?: string;
-    }
-}
-
-// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
-const getGcpProjectId = (): string => {
-    if (typeof window !== 'undefined' && window.__GCP_PROJECT_ID__) {
-        return window.__GCP_PROJECT_ID__;
-    }
-    // Fallback for development/SSR contexts
-    throw new Error('Missing runtime config: GCP_PROJECT_ID');
-};
+import { getGcpProjectId, getBqViewsDataset, getBqEventTable } from '../../../shared/lib/runtimeConfig.ts';
 
 interface FilterState {
     urlFilters: string[];
@@ -146,12 +132,8 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
     const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59', '${timezone}')`;
 
     const projectId = getGcpProjectId();
-    // For newer queries using umami_views, we should use that table name.
-    // However, since this utility replaces a placeholder in existing SQL, we need to check which table calls for it or use a safer regex.
-    // The current implementation hardcodes the table name which is risky if the base query uses a different table.
-    // Let's try to infer it or use the new default if not sure.
-    // But to satisfy the immediate request of updating table names:
-    const dateReplacement = `AND \`${projectId}.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+    // For newer queries using configurable views dataset.
+    const dateReplacement = `AND \`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
     processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, dateReplacement);
 
     // 4. Handle metric type substitutions
@@ -162,7 +144,7 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
         );
         processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Sidevisninger');
     } else if (filters.metricType === 'proportion') {
-        const totalSiteVisitorsSubquery = `(SELECT COUNT(DISTINCT session_id) FROM \`${projectId}.umami_views.event\` WHERE website_id = '${websiteId}' AND event_type = 1 AND created_at BETWEEN ${fromSql} AND ${toSql})`;
+        const totalSiteVisitorsSubquery = `(SELECT COUNT(DISTINCT session_id) FROM \`${projectId}.${getBqViewsDataset()}.${getBqEventTable()}\` WHERE website_id = '${websiteId}' AND event_type = 1 AND created_at BETWEEN ${fromSql} AND ${toSql})`;
         processedSql = processedSql.replace(
             /COUNT\s*\(\s*DISTINCT\s+(?:([a-zA-Z_.]+)\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
             (_match, tablePrefix) => {

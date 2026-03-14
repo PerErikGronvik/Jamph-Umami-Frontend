@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging, getAnalysisTypeOverride } from '../../bigquery/audit.js';
 import { MAX_BYTES_BILLED, normalizeUrlSql } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }) {
   const router = express.Router();
@@ -21,8 +22,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const useSwitch = useDistinctId && hasCountBySwitchAt;
           const col = useDistinctId ? 'e.' : '';
           const fromClause = useDistinctId
-              ? `\`${GCP_PROJECT_ID}.umami_views.event\` e LEFT JOIN \`${GCP_PROJECT_ID}.umami_views.session\` s ON e.session_id = s.session_id`
-              : `\`${GCP_PROJECT_ID}.umami_views.event\``;
+              ? `\`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\` e LEFT JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\` s ON e.session_id = s.session_id`
+              : `\`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\``;
           const userIdExpression = useSwitch
               ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
               : (useDistinctId ? 's.distinct_id' : 'session_id');
@@ -143,11 +144,11 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
               if (metricType === 'pageviews') {
                   countExpression = 'COUNT(*)';
               } else if (metricType === 'visits') {
-                  countExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`; // økter / besøk
+                  countExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`; // Ã¸kter / besÃ¸k
               } else {
                   countExpression = useDistinctId
                       ? `APPROX_COUNT_DISTINCT(${userIdExpression})`
-                      : `APPROX_COUNT_DISTINCT(session_id)`; // visitors (unike besøkende)
+                      : `APPROX_COUNT_DISTINCT(session_id)`; // visitors (unike besÃ¸kende)
 
               }
               console.log(`[Traffic Series] Count Expression: ${countExpression}, useDistinctId: ${useDistinctId}`);
@@ -310,7 +311,7 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
               proportionCTE = `
                   total_site_visitors AS (
                       SELECT COUNT(DISTINCT session_id) as total_count
-                      FROM \`${GCP_PROJECT_ID}.umami_views.event\`
+                      FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\`
                       WHERE website_id = @websiteId
                         AND created_at BETWEEN @startDate AND @endDate
                         AND event_type = 1 -- Pageview
@@ -350,7 +351,7 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
                           referrer_domain,
                           ${normalizeUrlSql('url_path')} as url_path,
                           created_at
-                      FROM \`${GCP_PROJECT_ID}.umami_views.event\`
+                      FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\`
                       WHERE website_id = @websiteId
                         AND created_at BETWEEN @startDate AND @endDate
                         AND event_type = 1 -- Pageview
@@ -394,7 +395,7 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
                           ${normalizeUrlSql('url_path')} as url_path,
                           created_at,
                           ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) as rn
-                      FROM \`${GCP_PROJECT_ID}.umami_views.event\`
+                      FROM \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\`
                       WHERE website_id = @websiteId
                         AND created_at BETWEEN @startDate AND @endDate
                         AND event_type = 1 -- Pageview
@@ -495,8 +496,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const useSwitch = useDistinctId && hasCountBySwitchAt;
           const col = useDistinctId ? 'e.' : '';
           const fromClause = useDistinctId
-              ? `\`${GCP_PROJECT_ID}.umami_views.event\` e LEFT JOIN \`${GCP_PROJECT_ID}.umami_views.session\` s ON e.session_id = s.session_id`
-              : `\`${GCP_PROJECT_ID}.umami_views.event\``;
+              ? `\`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\` e LEFT JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\` s ON e.session_id = s.session_id`
+              : `\`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\``;
           const userIdExpression = useSwitch
               ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
               : (useDistinctId ? 's.distinct_id' : 'session_id');
@@ -607,8 +608,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const useSwitch = useDistinctId && hasCountBySwitchAt;
           const col = useDistinctId ? 'e.' : '';
           const fromClause = useDistinctId
-              ? `\`${GCP_PROJECT_ID}.umami_views.event\` e LEFT JOIN \`${GCP_PROJECT_ID}.umami_views.session\` s ON e.session_id = s.session_id`
-              : `\`${GCP_PROJECT_ID}.umami_views.event\``;
+              ? `\`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\` e LEFT JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\` s ON e.session_id = s.session_id`
+              : `\`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.event\``;
           const userIdExpression = useSwitch
               ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
               : (useDistinctId ? 's.distinct_id' : 'session_id');
@@ -656,12 +657,12 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           if (metricType === 'pageviews') {
               sourceAndExitCountExpression = 'COUNT(*)';
           } else if (metricType === 'visits') {
-              sourceAndExitCountExpression = 'APPROX_COUNT_DISTINCT(visit_id)'; // økter / besøk
+              sourceAndExitCountExpression = 'APPROX_COUNT_DISTINCT(visit_id)'; // Ã¸kter / besÃ¸k
           } else if (metricType === 'proportion') {
               // Return fraction (0-1) to stay consistent with other proportion endpoints.
               sourceAndExitCountExpression = 'SAFE_DIVIDE(APPROX_COUNT_DISTINCT(user_id), (SELECT total_users FROM total_filtered_users))';
           } else {
-              sourceAndExitCountExpression = 'APPROX_COUNT_DISTINCT(user_id)'; // visitors (unike besøkende)
+              sourceAndExitCountExpression = 'APPROX_COUNT_DISTINCT(user_id)'; // visitors (unike besÃ¸kende)
           }
           console.log(`[Traffic Breakdown] Count Expression: ${sourceAndExitCountExpression}, useDistinctId: ${useDistinctId}`);
 
@@ -778,8 +779,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const useSwitch = useDistinctId && hasCountBySwitchAt;
           const col = useDistinctId ? 'e.' : '';
           const fromClause = useDistinctId
-              ? `\`${GCP_PROJECT_ID}.umami.public_website_event\` e LEFT JOIN \`${GCP_PROJECT_ID}.umami_views.session\` s ON e.session_id = s.session_id`
-              : `\`${GCP_PROJECT_ID}.umami.public_website_event\``;
+              ? `\`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e LEFT JOIN \`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\` s ON e.session_id = s.session_id`
+              : `\`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\``;
           const userIdExpression = useSwitch
               ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
               : (useDistinctId ? 's.distinct_id' : `${col}session_id`);

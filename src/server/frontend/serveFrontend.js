@@ -1,4 +1,5 @@
 import { readFile } from 'fs/promises';
+import { BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../config/env.js';
 
 export function registerFrontend(app, { buildPath, UMAMI_BASE_URL, GCP_PROJECT_ID }) {
     // Serve index.html with injected runtime config
@@ -11,6 +12,9 @@ export function registerFrontend(app, { buildPath, UMAMI_BASE_URL, GCP_PROJECT_I
         const runtimeConfig = {
             UMAMI_BASE_URL,
             GCP_PROJECT_ID,
+            BQ_VIEWS_DATASET,
+            BQ_EVENT_TABLE,
+            BQ_SESSION_TABLE,
         };
 
         // Prevent </script> injection by escaping < in JSON string.

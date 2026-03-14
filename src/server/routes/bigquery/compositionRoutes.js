@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
 import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
+import { BQ_DATASET, BQ_VIEWS_DATASET, BQ_EVENT_TABLE, BQ_SESSION_TABLE } from '../../config/env.js';
 
 export function createCompositionRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -18,8 +19,8 @@ export function createCompositionRoutes({ bigquery, GCP_PROJECT_ID }) {
       const useDistinctId = countBy === 'distinct_id';
       const useSwitch = useDistinctId && hasCountBySwitchAt;
       const table = useDistinctId
-        ? `\`${GCP_PROJECT_ID}.umami_views.session\``
-        : `\`${GCP_PROJECT_ID}.umami.public_session\``;
+        ? `\`${GCP_PROJECT_ID}.${BQ_VIEWS_DATASET}.session\``
+        : `\`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_SESSION_TABLE}\``;
 
       const userIdExpression = useSwitch
         ? `IF(s.created_at >= @countBySwitchAt, s.distinct_id, s.session_id)`
@@ -43,7 +44,7 @@ export function createCompositionRoutes({ bigquery, GCP_PROJECT_ID }) {
                 ${urlPath ? `
                 AND EXISTS (
                   SELECT 1 
-                  FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e 
+                  FROM \`${GCP_PROJECT_ID}.${BQ_DATASET}.${BQ_EVENT_TABLE}\` e 
                   WHERE e.session_id = s.session_id 
                     AND e.website_id = @websiteId
                     AND e.created_at BETWEEN @startDate AND @endDate

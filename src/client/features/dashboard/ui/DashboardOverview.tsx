@@ -1,7 +1,7 @@
 import { Heading, LinkPanel, Page } from "@navikt/ds-react";
 import { Link as RouterLink } from "react-router-dom";
 import { dashboards } from "../../../../data/dashboard";
-import { BarChartIcon, Buildings3Icon, ExternalLinkIcon, WheelchairIcon } from "@navikt/aksel-icons";
+import { BarChartIcon, Buildings3Icon, ExternalLinkIcon, WheelchairIcon, LineGraphIcon, PersonGroupIcon } from "@navikt/aksel-icons";
 import { UrlSearchForm } from "..";
 import { KontaktSeksjon } from "../../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx";
 
@@ -18,6 +18,14 @@ const dashboardMeta: Record<string, { icon: React.ReactNode; title?: string }> =
     'hjelpemiddelsentral': {
         icon: <WheelchairIcon className="w-8 h-8 text-[var(--ax-text-accent)]" aria-hidden />,
         title: 'Hjelpemiddelsentralene'
+    },
+    'team1': {
+        icon: <LineGraphIcon className="w-8 h-8 text-[var(--ax-text-accent)]" aria-hidden />,
+        title: 'Team 1: Trafikk og innhold'
+    },
+    'team2': {
+        icon: <PersonGroupIcon className="w-8 h-8 text-[var(--ax-text-accent)]" aria-hidden />,
+        title: 'Team 2: Hendelser og brukere'
     }
 };
 
