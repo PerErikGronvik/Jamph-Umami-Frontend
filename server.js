@@ -164,12 +164,17 @@ const substituteQueryParameters = (query, params) => {
 
 const buildPath = path.join(path.resolve(__dirname, './dist'))
 
-app.use('/', express.static(buildPath, { index: false }))
+app.use((req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex')
+    next()
+})
 
 app.use('/robots.txt', function (req, res, next) {
     res.type('text/plain')
-    res.send("User-agent: *\nAllow: /");
+    res.send("User-agent: *\nDisallow: /");
 });
+
+app.use('/', express.static(buildPath, { index: false }))
 
 app.get('/isalive', (req, res) => {
     res.send('OK')
