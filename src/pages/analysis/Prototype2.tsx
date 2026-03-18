@@ -90,7 +90,7 @@ export default function Prototype2() {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:8004/api/sql', {
+            const response = await fetch(`${import.meta.env.VITE_RAG_API_URL}/api/sql`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: promptToUse, model: 'qwen2.5-coder:7b' })
@@ -118,7 +118,7 @@ export default function Prototype2() {
                 setQuery('-- API-svar mottatt men ingen SQL-respons funnet\n-- Debug:\n' + JSON.stringify(data, null, 2));
             }
         } catch {
-            setQuery(`-- Feil: Kunne ikke koble til AI-serveren\n-- Sjekk at serveren kjører på http://localhost:8004\n\n${defaultQuery}`);
+            setQuery(`-- Feil: Kunne ikke koble til AI-serveren\n-- Sjekk at serveren kjører på ${import.meta.env.VITE_RAG_API_URL}\n\n${defaultQuery}`);
         } finally {
             setGeneratingAI(false);
             // Auto-advance to results step and execute query
