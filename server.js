@@ -3839,7 +3839,7 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
 // Proxy to RAG/LLM API - avoids CORS issues by forwarding requests server-side
 const RAG_API_URL = process.env.RAG_API_URL || 'https://jamph-rag-api-umami.ekstern.dev.nav.no'
 
-app.all('/api/rag/*', async (req, res) => {
+app.all('/api/rag/*path', async (req, res) => {
     const subPath = req.path.replace('/api/rag', '')
     const targetUrl = `${RAG_API_URL}${subPath}`
 
