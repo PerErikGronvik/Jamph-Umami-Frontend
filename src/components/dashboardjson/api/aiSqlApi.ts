@@ -1,4 +1,3 @@
-const DEFAULT_LLM_MODEL = 'qwen2.5-coder:7b';
 
 function stripMarkdownCodeFences(input: string): string {
     return input
@@ -72,7 +71,6 @@ export async function generateSqlFromPrompt(prompt: string): Promise<string> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             query: prompt,
-            model: DEFAULT_LLM_MODEL,
         }),
     });
 

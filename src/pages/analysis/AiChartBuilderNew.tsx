@@ -92,7 +92,7 @@ export default function AiChartBuilderNew() {
             const res = await fetch(`${import.meta.env.VITE_RAG_API_URL}/api/sql`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: text, model: 'qwen2.5-coder:7b' }),
+                body: JSON.stringify({ query: text }),
             });
             const data = await res.json();
             const parsed = data?.sql

@@ -91,8 +91,7 @@ export default function AiChartBuilder() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    query: promptToUse,
-                    model: 'qwen2.5-coder:7b'
+                    query: promptToUse
                 })
             });
 
