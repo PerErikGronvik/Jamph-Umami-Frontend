@@ -7,7 +7,9 @@ export type DashboardWidgetType =
     | 'piechart'
     | 'statcards'
     | 'stegvisning'
-    | 'kiforklaring';
+    | 'kiforklaring'
+    | 'pageflow'
+    | 'metrics';
 
 export interface DashboardWidgetSize {
     cols: number;
