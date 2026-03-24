@@ -38,7 +38,8 @@ import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 
 
 const routes = [
-    { path: "/", component: <Home /> },
+    { path: "/", component: <KiAssistent /> },
+    { path: "/home", component: <Home /> },
     { path: "/komigang", component: <Komigang /> },
     { path: "/oppsett", component: <Oppsett /> },
     { path: "/personvern", component: <Personvern /> },
