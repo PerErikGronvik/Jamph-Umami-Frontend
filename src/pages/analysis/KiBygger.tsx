@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BodyShort, Button, Tabs, Textarea } from '@navikt/ds-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import PinnedWidget from '../../components/dashboard/PinnedWidget';
@@ -63,6 +63,7 @@ const ALL_ANALYSIS_OPTIONS = [
 ];
 
 type ChartType = 'linechart' | 'barchart' | 'piechart' | 'table';
+type GrafTab = ChartType | 'nokkeltall' | 'ki-forklaring';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -87,33 +88,67 @@ export default function KiBygger() {
     const [kiPrompt, setKiPrompt] = useState('');
     const [kiSuggestionShown, setKiSuggestionShown] = useState(false);
     const [hoveredKiInfo, setHoveredKiInfo] = useState(false);
-    const [chartType, setChartType] = useState<ChartType>('linechart');
+    const [grafTab, setGrafTab] = useState<GrafTab>('linechart');
     const [previewResult, setPreviewResult] = useState<unknown[] | null>(null);
     const [sqlValue, setSqlValue] = useState(MOCK_SQL);
     const [showAddDashboardMenu, setShowAddDashboardMenu] = useState(false);
     const [newDashboardName, setNewDashboardName] = useState('');
-    const [dashboards, setDashboards] = useState(['Mitt Dashboard', 'Prosjekt A']);
-    const [selectedDashboard, setSelectedDashboard] = useState('Mitt Dashboard');
+    const [dashboards, setDashboards] = useState<string[]>(() => {
+        try { const s = localStorage.getItem('kibygger-dashboards'); return s ? JSON.parse(s) : ['Mitt Dashboard', 'Prosjekt A']; } catch { return ['Mitt Dashboard', 'Prosjekt A']; }
+    });
+    const [selectedDashboard, setSelectedDashboard] = useState<string>(() => {
+        try { const s = localStorage.getItem('kibygger-selected-dashboard'); return s ?? 'Mitt Dashboard'; } catch { return 'Mitt Dashboard'; }
+    });
     const [showNewDashboardModal, setShowNewDashboardModal] = useState(false);
     const [newDashboardInputName, setNewDashboardInputName] = useState('');
     const [showNewDashboardInput, setShowNewDashboardInput] = useState(false);
+    const [pendingDashboard, setPendingDashboard] = useState<string | null>(null);
+    const [dashboardGraphs, setDashboardGraphs] = useState<Record<string, { title: string; data: unknown[]; size: 'half' | 'full' }[]>>(() => {
+        try { const s = localStorage.getItem('kibygger-dashboard-graphs'); return s ? JSON.parse(s) : {}; } catch { return {}; }
+    });
+    const [urlError, setUrlError] = useState<string | null>(null);
+    const [analyseError, setAnalyseError] = useState<string | null>(null);
+    const [kiError, setKiError] = useState<string | null>(null);
+    const dragIndexRef = useRef<number | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null);
+    const [hoveredDashboard, setHoveredDashboard] = useState<string | null>(null);
+    const [deletingDashboard, setDeletingDashboard] = useState<string | null>(null);
+    const [sqlCopied, setSqlCopied] = useState(false);
+    const [grafTitle, setGrafTitle] = useState('Sidevisninger per dag');
 
     const dashboardMenuRef = useRef<HTMLDivElement>(null);
     const andreDropdownRef = useRef<HTMLDivElement>(null);
 
+    // ── Persist to localStorage ───────────────────────────────────────────────
+    useEffect(() => { localStorage.setItem('kibygger-dashboards', JSON.stringify(dashboards)); }, [dashboards]);
+    useEffect(() => { localStorage.setItem('kibygger-selected-dashboard', selectedDashboard); }, [selectedDashboard]);
+    useEffect(() => { localStorage.setItem('kibygger-dashboard-graphs', JSON.stringify(dashboardGraphs)); }, [dashboardGraphs]);
+
     // ── Handlers ──────────────────────────────────────────────────────────────
 
     const handleHentGraf = () => {
+        const newUrlError = !url.trim() ? 'Du må lime inn en URL først.' : null;
+        const newAnalyseError = (!selectedShortcut && !selectedAndre) ? 'Velg en analysetype før du henter graf.' : null;
+        setUrlError(newUrlError);
+        setAnalyseError(newAnalyseError);
+        if (newUrlError || newAnalyseError) return;
         setPreviewResult(MOCK_CHART_DATA);
         setSqlValue(MOCK_SQL);
         setKiSuggestionShown(false);
+        setGrafTitle(`${selectedShortcut ?? selectedAndre ?? 'Graf'} – sidevisninger per dag`);
     };
 
     const handleKiHentGraf = () => {
-        if (!kiPrompt.trim()) return;
+        if (!kiPrompt.trim()) {
+            setKiError('Skriv inn et spørsmål til KI-assistenten først.');
+            return;
+        }
+        setKiError(null);
         setPreviewResult(MOCK_CHART_DATA);
         setSqlValue(MOCK_SQL);
         setKiSuggestionShown(true);
+        setGrafTitle(kiPrompt.trim() || 'Sidevisninger per dag');
     };
 
     const handleApplySuggestion = () => {
@@ -125,6 +160,15 @@ export default function KiBygger() {
         setSelectedAndre(null);
         setTypePeriode('desember-2025');
         setVisning('besokende');
+        setUrl('');
+        setUrlError(null);
+        setAnalyseError(null);
+        setPreviewResult(null);
+        setSqlValue(MOCK_SQL);
+        setKiPrompt('');
+        setKiSuggestionShown(false);
+        setKiError(null);
+        setGrafTab('linechart');
     };
 
     const handleCreateNewDashboard = () => {
@@ -132,6 +176,44 @@ export default function KiBygger() {
         setDashboards((prev) => [...prev, newDashboardName.trim()]);
         setNewDashboardName('');
         setShowNewDashboardInput(false);
+    };
+
+    const handleOpenInGrafbygger = (g: { title: string; data: unknown[]; size: 'half' | 'full' }) => {
+        setPreviewResult(g.data as unknown[]);
+        setSqlValue(MOCK_SQL);
+        setKiSuggestionShown(false);
+        setExpandedCardIndex(null);
+        setActiveTab('grafbygger');
+    };
+
+    const handleDeleteCard = (index: number) => {
+        setDashboardGraphs((prev) => {
+            const list = [...(prev[selectedDashboard] ?? [])];
+            list.splice(index, 1);
+            return { ...prev, [selectedDashboard]: list };
+        });
+        setExpandedCardIndex(null);
+    };
+
+    const handleToggleSize = (index: number) => {
+        setDashboardGraphs((prev) => {
+            const list = [...(prev[selectedDashboard] ?? [])];
+            list[index] = { ...list[index], size: list[index].size === 'full' ? 'half' : 'full' };
+            return { ...prev, [selectedDashboard]: list };
+        });
+        setExpandedCardIndex(null);
+    };
+
+    const handleDeleteDashboard = (db: string) => {
+        setDashboards((prev) => prev.filter((d) => d !== db));
+        setDashboardGraphs((prev) => {
+            const next = { ...prev };
+            delete next[db];
+            return next;
+        });
+        if (selectedDashboard === db) {
+            setSelectedDashboard('');
+        }
     };
 
     // ── Quick filter config per analysis type ─────────────────────────────────
@@ -156,39 +238,44 @@ export default function KiBygger() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
                             {/* Box 1: URL */}
-                            <div style={boxStyle}>
+                            <div style={{ ...boxStyle, border: urlError ? '1px solid #c0392b' : boxStyle.border }}>
                                 <BodyShort weight="semibold" style={boxTitleStyle}>1. Lim inn URL for å se webstatistikk</BodyShort>
                                 <input
                                     type="url"
                                     placeholder="https://www.nav.no/..."
                                     value={url}
-                                    onChange={(e) => setUrl(e.target.value)}
+                                    onChange={(e) => { setUrl(e.target.value); setUrlError(null); }}
                                     style={inputStyle}
                                 />
                             </div>
+                            {urlError && (
+                                <p style={{ margin: '-0.5rem 0 0 0', fontSize: '0.8rem', color: '#c0392b' }}>{urlError}</p>
+                            )}
 
                             {/* Box 2: Velg analysetype */}
-                            <div style={boxStyle}>
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                    <button
+                                        onClick={handleNullstill}
+                                        title="Nullstill valg"
+                                        style={{
+                                            border: 'none',
+                                            background: 'transparent',
+                                            color: '#0067C5',
+                                            fontSize: '0.8rem',
+                                            cursor: 'pointer',
+                                            padding: '2px 0',
+                                            fontWeight: 500,
+                                            textDecoration: 'underline',
+                                        }}
+                                    >
+                                        Nullstill valg
+                                    </button>
+                                </div>
+                                <div style={{ ...boxStyle, border: analyseError ? '1px solid #c0392b' : boxStyle.border }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                    <BodyShort weight="semibold" style={boxTitleStyle}>2. Velg analysetype</BodyShort>
+                                    <BodyShort weight="semibold" style={{ ...boxTitleStyle, marginBottom: 0, display: 'inline' }}>2. Velg analysetype</BodyShort>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <button
-                                            onClick={handleNullstill}
-                                            title="Nullstill valg"
-                                            style={{
-                                                border: 'none',
-                                                background: 'transparent',
-                                                color: '#0067C5',
-                                                fontSize: '0.8rem',
-                                                cursor: 'pointer',
-                                                padding: '2px 6px',
-                                                borderRadius: '4px',
-                                                fontWeight: 500,
-                                                textDecoration: 'underline',
-                                            }}
-                                        >
-                                            Nullstill valg
-                                        </button>
                                         <button
                                             onClick={() => setShowSettings(!showSettings)}
                                             title="Innstillinger"
@@ -196,7 +283,7 @@ export default function KiBygger() {
                                                 border: 'none',
                                                 background: 'transparent',
                                                 color: '#0067C5',
-                                                fontSize: '1.2rem',
+                                                fontSize: '1.5rem',
                                                 cursor: 'pointer',
                                                 padding: '2px',
                                                 display: 'flex',
@@ -213,7 +300,7 @@ export default function KiBygger() {
                                     {shortcuts.map((s) => (
                                         <button
                                             key={s}
-                                            onClick={() => { setSelectedShortcut(s); setSelectedAndre(null); }}
+                                            onClick={() => { setSelectedShortcut(s); setSelectedAndre(null); setAnalyseError(null); }}
                                             style={{
                                                 border: selectedShortcut === s ? 'none' : '1px solid #a0a0a0',
                                                 borderRadius: '6px',
@@ -278,7 +365,7 @@ export default function KiBygger() {
                                                     }}
                                                 >
                                                     <span
-                                                        onClick={() => { setSelectedAndre(opt); setSelectedShortcut(null); setShowAndreDropdown(false); }}
+                                                        onClick={() => { setSelectedAndre(opt); setSelectedShortcut(null); setShowAndreDropdown(false); setAnalyseError(null); }}
                                                         style={{ flex: 1, fontSize: '0.875rem', color: '#0067C5', fontWeight: 500 }}
                                                     >
                                                         {opt}
@@ -297,7 +384,7 @@ export default function KiBygger() {
                                                             marginLeft: '0.5rem', transition: 'all 0.15s',
                                                         }}>ℹ</span>
                                                         {hoveredAndreInfo === opt && (
-                                                            <div style={tooltipStyle}>
+                                                            <div style={{ ...tooltipStyle, right: 'auto', left: '26px', top: '-5px', maxWidth: '320px', width: 'max-content' }}>
                                                                 {ANDRE_ANALYSER_DESCRIPTIONS[opt]}
                                                             </div>
                                                         )}
@@ -307,7 +394,11 @@ export default function KiBygger() {
                                         </div>
                                     )}
                                 </div>
+                                </div>
                             </div>
+                            {analyseError && (
+                                <p style={{ margin: '-0.5rem 0 0 0', fontSize: '0.8rem', color: '#c0392b' }}>{analyseError}</p>
+                            )}
 
                             {/* Settings panel */}
                             {showSettings && (
@@ -385,7 +476,7 @@ export default function KiBygger() {
                                             fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.15s',
                                         }}>ℹ</span>
                                         {hoveredKiInfo && (
-                                            <div style={{ ...tooltipStyle, right: '25px', top: '-10px', maxWidth: '420px', width: 'max-content' }}>
+                                            <div style={{ ...tooltipStyle, right: 'auto', left: '25px', top: '-10px', maxWidth: '420px', width: 'max-content' }}>
                                                 Lim inn URL først. Bruk så KI-byggeren som et alternativ til, eller i tillegg til, valgene på venstre panel, eller til å stille spørsmål.
                                             </div>
                                         )}
@@ -410,7 +501,9 @@ export default function KiBygger() {
                                                 Hent graf
                                             </Button>
                                         </div>
-
+                                        {kiError && (
+                                            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#c0392b' }}>{kiError}</p>
+                                        )}
                                         {kiSuggestionShown && (
                                             <div
                                                 onClick={handleApplySuggestion}
@@ -444,56 +537,61 @@ export default function KiBygger() {
                             <div style={boxStyle}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                                     <BodyShort weight="semibold">Grafvindu</BodyShort>
-                                    <button
-                                        title="Del grafvindu"
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#0067C5', fontSize: '1.1rem' }}
-                                    >
-                                        ↗
-                                    </button>
                                 </div>
 
-                                {/* Chart type switcher */}
-                                <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                                    {(['linechart', 'piechart', 'barchart', 'table'] as ChartType[]).map((ct) => {
-                                        const labels: Record<ChartType, string> = { linechart: 'Linje', piechart: 'Kake', barchart: 'Stolpe', table: 'Tabell' };
-                                        return (
-                                            <span
-                                                key={ct}
-                                                onClick={() => setChartType(ct)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.9rem',
-                                                    fontWeight: chartType === ct ? 600 : 400,
-                                                    color: chartType === ct ? '#0067C5' : '#666',
-                                                    textDecoration: chartType === ct ? 'underline' : 'none',
-                                                    transition: 'all 0.15s',
-                                                }}
-                                            >
-                                                {labels[ct]}
-                                            </span>
-                                        );
-                                    })}
+                                {/* Graf tab bar */}
+                                <div style={{ display: 'flex', gap: '0', marginBottom: '1rem', borderBottom: '2px solid #e0e0e0' }}>
+                                    {([
+                                        { key: 'linechart', label: 'Linje' },
+                                        { key: 'piechart', label: 'Kake' },
+                                        { key: 'barchart', label: 'Stolpe' },
+                                        { key: 'table', label: 'Tabell' },
+                                        { key: 'nokkeltall', label: 'Nøkkeltall' },
+                                        { key: 'ki-forklaring', label: 'KI-forklaring' },
+                                    ] as { key: GrafTab; label: string }[]).map(({ key, label }) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => setGrafTab(key)}
+                                            style={{
+                                                border: 'none',
+                                                borderBottom: grafTab === key ? '2px solid #0067C5' : '2px solid transparent',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                padding: '0.4rem 0.75rem',
+                                                marginBottom: '-2px',
+                                                fontSize: '0.875rem',
+                                                fontWeight: grafTab === key ? 600 : 400,
+                                                color: grafTab === key ? '#0067C5' : '#555',
+                                                transition: 'all 0.15s',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
                                 </div>
 
-                                {/* Nøkkeltall + KI-forklaring */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                                    <div style={{ ...boxStyle, backgroundColor: '#f9fbff', padding: '0.75rem' }}>
-                                        <BodyShort size="small" weight="semibold" style={{ marginBottom: '0.25rem', color: '#0067C5' }}>Nøkkeltall</BodyShort>
-                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#333' }}>
-                                            {previewResult ? '10 840 sidevisninger totalt · Snitt 1 548 / dag' : '—'}
+                                {/* Info panels for Nøkkeltall / KI-forklaring — shown above chart */}
+                                {grafTab === 'nokkeltall' && (
+                                    <div style={{ ...boxStyle, backgroundColor: '#f9fbff', padding: '1rem', marginBottom: '1rem' }}>
+                                        <BodyShort size="small" weight="semibold" style={{ marginBottom: '0.5rem', color: '#0067C5' }}>Nøkkeltall</BodyShort>
+                                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#333' }}>
+                                            {previewResult ? '10 840 sidevisninger totalt · Snitt 1 548 / dag' : 'Hent graf for å se nøkkeltall.'}
                                         </p>
                                     </div>
-                                    <div style={{ ...boxStyle, backgroundColor: '#f9fbff', padding: '0.75rem' }}>
-                                        <BodyShort size="small" weight="semibold" style={{ marginBottom: '0.25rem', color: '#0067C5' }}>KI-forklaring</BodyShort>
-                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#333' }}>
-                                            {previewResult ? 'Trafikken økte 45 % fra start til slutt av perioden med to tydelige topper.' : '—'}
+                                )}
+                                {grafTab === 'ki-forklaring' && (
+                                    <div style={{ ...boxStyle, backgroundColor: '#f0f4ff', padding: '1rem', marginBottom: '1rem' }}>
+                                        <BodyShort size="small" weight="semibold" style={{ marginBottom: '0.5rem', color: '#0067C5' }}>KI-forklaring</BodyShort>
+                                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#333', lineHeight: '1.6' }}>
+                                            {previewResult ? 'Trafikken økte 45 % fra start til slutt av perioden med to tydelige topper.' : 'Hent graf for å se KI-forklaring.'}
                                         </p>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Chart area */}
+                                {/* Chart area — always visible */}
                                 <div style={{ minHeight: '320px', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '0.5rem', backgroundColor: '#fff', marginBottom: '1rem' }}>
-                                    {previewResult && chartType === 'linechart' ? (
+                                    {previewResult && (grafTab === 'linechart' || grafTab === 'nokkeltall' || grafTab === 'ki-forklaring') ? (
                                         <PinnedWidget
                                             result={{ data: previewResult }}
                                             chartType="linechart"
@@ -502,7 +600,7 @@ export default function KiBygger() {
                                     ) : (
                                         <div style={{ height: '100%', minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '0.9rem' }}>
                                             {previewResult
-                                                ? `${chartType === 'piechart' ? 'Kakediagram' : chartType === 'barchart' ? 'Stolpediagram' : 'Tabell'} ikke tilgjengelig i prototype`
+                                                ? `${grafTab === 'piechart' ? 'Kakediagram' : grafTab === 'barchart' ? 'Stolpediagram' : 'Tabell'} ikke tilgjengelig i prototype`
                                                 : 'Grafen vises her etter at du trykker «Hent graf»'}
                                         </div>
                                     )}
@@ -528,7 +626,7 @@ export default function KiBygger() {
 
                                     {/* Add to dashboard */}
                                     <div ref={dashboardMenuRef} style={{ position: 'relative' }}>
-                                        <Button size="small" variant="primary" onClick={() => setShowAddDashboardMenu(!showAddDashboardMenu)}>
+                                        <Button size="small" variant="primary" disabled={!previewResult} onClick={() => setShowAddDashboardMenu(!showAddDashboardMenu)}>
                                             + Legg til Dashboard
                                         </Button>
                                         {showAddDashboardMenu && (
@@ -537,17 +635,60 @@ export default function KiBygger() {
                                                 backgroundColor: '#fff', border: '1px solid #a0a0a0', borderRadius: '6px',
                                                 boxShadow: '0 2px 12px rgba(0,0,0,0.15)', zIndex: 20, minWidth: '220px', padding: '0.5rem 0',
                                             }}>
-                                                {dashboards.map((db) => (
-                                                    <div
-                                                        key={db}
-                                                        onClick={() => { setSelectedDashboard(db); setShowAddDashboardMenu(false); setActiveTab('dashboard'); }}
-                                                        style={{ padding: '0.5rem 1rem', cursor: 'pointer', color: '#0067C5', fontWeight: 500, fontSize: '0.875rem', borderBottom: '1px solid #f0f0f0' }}
-                                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
-                                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                                    >
-                                                        {db}
+                                                {pendingDashboard ? (
+                                                    <div style={{ padding: '0.75rem 1rem' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                                            <button
+                                                                onClick={() => setPendingDashboard(null)}
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#888', padding: 0, marginRight: '0.5rem' }}
+                                                            >
+                                                            ←
+                                                            </button>
+                                                        </div>
+                                                        <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Velg størrelse</p>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            {(['half', 'full'] as const).map((s) => (
+                                                                <button
+                                                                    key={s}
+                                                                    onClick={() => {
+                                                                        if (previewResult) {
+                                                                            setDashboardGraphs((prev) => ({
+                                                                                ...prev,
+                                                                                [pendingDashboard]: [...(prev[pendingDashboard] ?? []), { title: grafTitle, data: previewResult as unknown[], size: s }],
+                                                                            }));
+                                                                        }
+                                                                        setSelectedDashboard(pendingDashboard);
+                                                                        setPendingDashboard(null);
+                                                                        setShowAddDashboardMenu(false);
+                                                                        setActiveTab('dashboard');
+                                                                    }}
+                                                                    style={{
+                                                                        flex: 1, padding: '0.5rem', border: '1px solid #a0a0a0', borderRadius: '6px',
+                                                                        background: '#fff', cursor: 'pointer', fontSize: '0.8rem', color: '#333', fontWeight: 500,
+                                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
+                                                                    }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0067C5'; e.currentTarget.style.color = '#0067C5'; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#a0a0a0'; e.currentTarget.style.color = '#333'; }}
+                                                                >
+                                                                    <span style={{ fontSize: '1.2rem' }}>{s === 'half' ? '▣' : '■'}</span>
+                                                                    {s === 'half' ? '1×2 (halv)' : '2×2 (hel)'}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                ))}
+                                                ) : (
+                                                    <>
+                                                        {dashboards.map((db) => (
+                                                            <div
+                                                                key={db}
+                                                                onClick={() => setPendingDashboard(db)}
+                                                                style={{ padding: '0.5rem 1rem', cursor: 'pointer', color: '#0067C5', fontWeight: 500, fontSize: '0.875rem', borderBottom: '1px solid #f0f0f0' }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                            >
+                                                                {db}
+                                                            </div>
+                                                        ))}
                                                 {showNewDashboardInput ? (
                                                     <div style={{ padding: '0.5rem 1rem' }}>
                                                         <input
@@ -562,14 +703,16 @@ export default function KiBygger() {
                                                         <Button size="small" variant="primary" style={{ width: '100%' }} onClick={handleCreateNewDashboard}>Opprett</Button>
                                                     </div>
                                                 ) : (
-                                                    <div
-                                                        onClick={() => setShowNewDashboardInput(true)}
-                                                        style={{ padding: '0.5rem 1rem', cursor: 'pointer', color: '#0067C5', fontWeight: 500, fontSize: '0.875rem' }}
-                                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
-                                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                                    >
-                                                        + Opprett nytt Dashboard
-                                                    </div>
+                                                        <div
+                                                            onClick={() => setShowNewDashboardInput(true)}
+                                                            style={{ padding: '0.5rem 1rem', cursor: 'pointer', color: '#0067C5', fontWeight: 600, fontSize: '0.875rem', borderTop: '1px solid #e0e0e0', marginTop: '0.25rem' }}
+                                                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f0f4ff'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                        >
+                                                            + Opprett nytt Dashboard
+                                                        </div>
+                                                )}
+                                                    </>
                                                 )}
                                             </div>
                                         )}
@@ -579,7 +722,7 @@ export default function KiBygger() {
                                         title="Del grafvindu"
                                         style={{ border: '1px solid #d0d0d0', background: '#fff', cursor: 'pointer', borderRadius: '6px', padding: '6px 14px', fontSize: '0.85rem', color: '#444' }}
                                     >
-                                        Del ↗
+                                        Del
                                     </button>
                                 </div>
                             </div>
@@ -599,32 +742,38 @@ export default function KiBygger() {
                                     </div>
                                     <button
                                         title="Del SQL"
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#0067C5', fontSize: '1.1rem' }}
+                                        style={secondaryButtonStyle}
                                     >
-                                        ↗
+                                        Del
                                     </button>
                                 </div>
                                 {sqlOpen && (
-                                    <>
-                                        <SqlCodeEditor
-                                            value={sqlValue}
-                                            onChange={setSqlValue}
-                                            height={280}
-                                        />
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                            <button style={secondaryButtonStyle}>Kostnad</button>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <button
-                                                    onClick={() => navigator.clipboard.writeText(sqlValue)}
-                                                    style={secondaryButtonStyle}
-                                                >
-                                                    Kopier
-                                                </button>
-                                                <button style={secondaryButtonStyle}>Formater</button>
-                                                <button style={secondaryButtonStyle}>Valider</button>
+                                    previewResult ? (
+                                        <>
+                                            <SqlCodeEditor
+                                                value={sqlValue}
+                                                onChange={setSqlValue}
+                                                height={280}
+                                            />
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button
+                                                        onClick={() => { navigator.clipboard.writeText(sqlValue); setSqlCopied(true); setTimeout(() => setSqlCopied(false), 2000); }}
+                                                        style={secondaryButtonStyle}
+                                                    >
+                                                        {sqlCopied ? 'Kopiert!' : 'Kopier'}
+                                                    </button>
+                                                    <button style={secondaryButtonStyle}>Formater</button>
+                                                    <button style={secondaryButtonStyle}>Valider</button>
+                                                </div>
+                                                <button style={secondaryButtonStyle}>Kostnad</button>
                                             </div>
-                                        </div>
-                                    </>
+                                        </>
+                                    ) : (
+                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#999' }}>
+                                            SQL vises her etter at du henter en graf.
+                                        </p>
+                                    )
                                 )}
                             </div>
                         </div>
@@ -650,15 +799,30 @@ export default function KiBygger() {
                                 <div
                                     key={db}
                                     onClick={() => setSelectedDashboard(db)}
+                                    onMouseEnter={() => setHoveredDashboard(db)}
+                                    onMouseLeave={() => setHoveredDashboard(null)}
                                     style={{
+                                        position: 'relative',
                                         padding: '1.5rem 1rem', border: selectedDashboard === db ? '2px solid #0067C5' : '1px solid #e0e0e0',
                                         borderRadius: '12px', backgroundColor: selectedDashboard === db ? '#f0f4ff' : '#ffffff',
                                         cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s',
                                         boxShadow: selectedDashboard === db ? '0 4px 12px rgba(0,103,197,0.15)' : '0 2px 6px rgba(0,0,0,0.07)',
                                     }}
-                                    onMouseOver={(e) => { if (selectedDashboard !== db) { e.currentTarget.style.borderColor = '#c0d4ff'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
-                                    onMouseOut={(e) => { if (selectedDashboard !== db) { e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.transform = 'translateY(0)'; } }}
                                 >
+                                    {hoveredDashboard === db && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setDeletingDashboard(db); }}
+                                            style={{
+                                                position: 'absolute', top: '6px', right: '8px',
+                                                border: 'none', background: 'transparent',
+                                                color: '#c0392b', fontSize: '1rem', cursor: 'pointer',
+                                                lineHeight: 1, padding: '2px 4px', borderRadius: '4px',
+                                            }}
+                                            title="Slett mappe"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
                                     <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📁</div>
                                     <div style={{ fontSize: '0.9rem', fontWeight: 500, color: '#333', wordBreak: 'break-word' }}>{db}</div>
                                 </div>
@@ -673,8 +837,138 @@ export default function KiBygger() {
                                 <button style={secondaryButtonStyle}>Importer</button>
                                 <button style={secondaryButtonStyle}>Eksporter</button>
                             </div>
-                            <div style={{ color: '#999', fontSize: '0.9rem', textAlign: 'center', paddingTop: '3rem' }}>
-                                Ingen grafer lagt til i «{selectedDashboard}» ennå. Gå til Grafbygger-fanen og trykk «+ Legg til Dashboard».
+                            {(dashboardGraphs[selectedDashboard] ?? []).length === 0 ? (
+                                <div style={{ color: '#999', fontSize: '0.9rem', textAlign: 'center', paddingTop: '3rem' }}>
+                                    Ingen grafer lagt til i «{selectedDashboard}» ennå. Gå til Grafbygger-fanen og trykk «+ Legg til Dashboard».
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }} onClick={() => setExpandedCardIndex(null)}>
+                                    {(dashboardGraphs[selectedDashboard] ?? []).map((g, i) => (
+                                        <div
+                                            key={i}
+                                            draggable
+                                            onDragStart={() => { dragIndexRef.current = i; }}
+                                            onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
+                                            onDragLeave={() => setDragOverIndex(null)}
+                                            onDrop={() => {
+                                                const from = dragIndexRef.current;
+                                                if (from === null || from === i) { setDragOverIndex(null); return; }
+                                                setDashboardGraphs((prev) => {
+                                                    const list = [...(prev[selectedDashboard] ?? [])];
+                                                    const [moved] = list.splice(from, 1);
+                                                    list.splice(i, 0, moved);
+                                                    return { ...prev, [selectedDashboard]: list };
+                                                });
+                                                dragIndexRef.current = null;
+                                                setDragOverIndex(null);
+                                            }}
+                                            onDragEnd={() => { dragIndexRef.current = null; setDragOverIndex(null); }}
+                                            onDoubleClick={() => setExpandedCardIndex(expandedCardIndex === i ? null : i)}
+                                            style={{
+                                                ...boxStyle,
+                                                overflow: 'hidden',
+                                                position: 'relative',
+                                                gridColumn: g.size === 'full' ? 'span 2' : 'span 1',
+                                                cursor: 'grab',
+                                                outline: dragOverIndex === i ? '2px dashed #0067C5' : 'none',
+                                                opacity: dragIndexRef.current === i ? 0.5 : 1,
+                                                transition: 'outline 0.1s, opacity 0.1s',
+                                            }}
+                                        >
+                                            <div style={{ height: '260px', position: 'relative', overflow: 'hidden' }}>
+                                                <PinnedWidget result={{ data: g.data }} chartType="linechart" title={g.title} />
+                                            </div>
+
+                                            {/* Double-click overlay */}
+                                            {expandedCardIndex === i && (
+                                                <div
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        backgroundColor: 'rgba(0,0,0,0.45)',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.75rem',
+                                                        borderRadius: '12px',
+                                                        zIndex: 10,
+                                                    }}
+                                                >
+                                                    <button
+                                                        onClick={() => handleOpenInGrafbygger(g)}
+                                                        style={{
+                                                            padding: '0.55rem 1.4rem',
+                                                            borderRadius: '6px',
+                                                            border: 'none',
+                                                            backgroundColor: '#0067C5',
+                                                            color: '#fff',
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.9rem',
+                                                            fontWeight: 500,
+                                                            width: '180px',
+                                                        }}
+                                                    >
+                                                        Åpne i Grafbygger
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleToggleSize(i)}
+                                                        style={{
+                                                            padding: '0.55rem 1.4rem',
+                                                            borderRadius: '6px',
+                                                            border: '1.5px solid #fff',
+                                                            backgroundColor: 'transparent',
+                                                            color: '#fff',
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.9rem',
+                                                            fontWeight: 500,
+                                                            width: '180px',
+                                                        }}
+                                                    >
+                                                        {g.size === 'full' ? 'Gjør halvbredde (1×2)' : 'Gjør fullbredde (2×2)'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteCard(i)}
+                                                        style={{
+                                                            padding: '0.55rem 1.4rem',
+                                                            borderRadius: '6px',
+                                                            border: 'none',
+                                                            backgroundColor: '#e74c3c',
+                                                            color: '#fff',
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.9rem',
+                                                            fontWeight: 500,
+                                                            width: '180px',
+                                                        }}
+                                                    >
+                                                        Slett
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {deletingDashboard && (
+                        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                            <div style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '2rem', minWidth: '360px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                <h2 style={{ margin: '0 0 0.75rem 0', fontSize: '1.1rem', color: '#333' }}>Slett mappe</h2>
+                                <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.9rem', color: '#555' }}>
+                                    Er du sikker på at du vil slette <strong>«{deletingDashboard}»</strong>? Alle grafer i mappen vil også bli slettet.
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                    <button onClick={() => setDeletingDashboard(null)} style={cancelButtonStyle}>Avbryt</button>
+                                    <button
+                                        onClick={() => { handleDeleteDashboard(deletingDashboard); setDeletingDashboard(null); }}
+                                        style={{ padding: '0.5rem 1.5rem', borderRadius: '6px', border: 'none', backgroundColor: '#e74c3c', color: '#fff', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500 }}
+                                    >
+                                        Slett
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -706,8 +1000,9 @@ export default function KiBygger() {
                                     >
                                         Opprett
                                     </button>
-                                </div>
-                            </div>
+                                </div>                                {analyseError && (
+                                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#c0392b' }}>{analyseError}</p>
+                                )}                            </div>
                         </div>
                     )}
                 </Tabs.Panel>
@@ -748,9 +1043,9 @@ function QuickFilters({
                 </select>
                 {typePeriode === 'egendefinert' && (
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.4rem' }}>
-                        <input type="date" style={{ ...selectStyle, flex: 1 }} />
-                        <span style={{ fontSize: '0.75rem', color: '#888' }}>til</span>
-                        <input type="date" style={{ ...selectStyle, flex: 1 }} />
+                        <input type="date" style={{ ...selectStyle, flex: 1, minWidth: 0, fontSize: '0.75rem', padding: '0.35rem 0.4rem' }} />
+                        <span style={{ fontSize: '0.75rem', color: '#888', flexShrink: 0 }}>til</span>
+                        <input type="date" style={{ ...selectStyle, flex: 1, minWidth: 0, fontSize: '0.75rem', padding: '0.35rem 0.4rem' }} />
                     </div>
                 )}
             </div>
