@@ -14,7 +14,13 @@ function asRecord(data: unknown): Record<string, unknown> | null {
 }
 
 function extractResponseField(payload: Record<string, unknown>): string | null {
-    return typeof payload.response === 'string' ? stripMarkdownCodeFences(payload.response) : null;
+    if (typeof payload.response === 'string') {
+        return stripMarkdownCodeFences(payload.response);
+    }
+    if (typeof payload.sql === 'string') {
+        return stripMarkdownCodeFences(payload.sql);
+    }
+    return null;
 }
 
 function parseSqlValue(sqlValue: unknown): string | null {
