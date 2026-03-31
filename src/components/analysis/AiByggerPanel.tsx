@@ -428,7 +428,7 @@ LIMIT 25;`,
             const response = await fetch(`${import.meta.env.VITE_RAG_API_URL}/api/sql`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: contextPrefix + basePrompt, model: 'qwen2.5-coder:7b' }),
+                body: JSON.stringify({ query: contextPrefix + basePrompt }),
             });
             const data = await response.json();
             let rawSql: string | undefined;
