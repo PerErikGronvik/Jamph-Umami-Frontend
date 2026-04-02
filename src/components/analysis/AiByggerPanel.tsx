@@ -389,71 +389,54 @@ LIMIT 25;`,
     const generateSqlFromAi = async () => {
         const basePrompt = aiPrompt.trim() || `Vis meg daglige sidevisninger for ${pathLabel} i 2025`;
 
-        // Check if prompt matches a pre-fetched example — use mock data instead of API calls
-        const matchIdx = examplesAiBuilder.findIndex(ex =>
-            basePrompt === ex.title
-        );
-        if (matchIdx !== -1) {
-            const item = examplesAiBuilder[matchIdx];
-            const order = item.tabOrder ?? [];
-            setTabOrder(order);
-            setIsApiOnly(!!(item as any).apiOnly);
-            setCurrentExplanation((item as any).explanation ?? null);
-            if ((item as any).apiOnly) {
-                const jd = mockupJourneyData as { nodes: any[]; links: any[] };
-                if (jd.nodes.length > 0) setJourneyData(jd);
-                setP2Tab(order[0] ?? 'stegvisning');
-            } else {
-                setQuery(item.sql);
-                const mockRows = (mockupExampleResults as Record<string, any[]>)[String(matchIdx)];
-                if (mockRows) {
-                    setResult({ success: true, data: mockRows, rowCount: mockRows.length });
-                    shouldAutoExecuteRef.current = false;
-                } else {
-                    setResult(null);
-                    shouldAutoExecuteRef.current = true;
-                }
-                setP2Tab(order[0] ?? 'table');
-            }
-            setStep(2);
-            return;
-        }
-
         const pathDesc = pathOperator === 'starts-with' && path !== '/'
             ? ` (url_path LIKE '${path}%')`
             : pathOperator === 'equals' ? ` (url_path = '${path}')` : '';
         const contextPrefix = `BigQuery-tabell: \`fagtorsdag-prod-81a6.umami_student.event\`. website_id = '${websiteId}'${pathDesc}. Svar kun med SQL.\n\nSpørsmål: `;
         setError(null);
+        let sqlOk = false;
         try {
-            const response = await fetch(`${import.meta.env.VITE_RAG_API_URL}/api/sql`, {
+            const ragApiBase = import.meta.env.VITE_RAG_API_URL ?? '';
+            const response = await fetch(`${ragApiBase}/api/sql`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: contextPrefix + basePrompt }),
             });
-            const data = await response.json();
-            let rawSql: string | undefined;
-            if (typeof data?.sql === 'string') {
-                rawSql = data.sql;
-            } else if (data?.sql?.response) {
-                rawSql = data.sql.response;
-            } else if (data?.response) {
-                rawSql = data.response;
-            }
-            if (rawSql) {
-                if (rawSql.includes('```')) {
-                    rawSql = rawSql.replaceAll('```sql\n', '').replaceAll('```sql', '').replaceAll('```\n', '').replaceAll('```', '');
-                }
-                setQuery(rawSql.trim());
+            if (!response.ok) {
+                const errData = await response.json().catch(() => null);
+                const errMsg = errData?.error || `RAG API feilet (${response.status})`;
+                setError(errMsg);
+                setQuery(`-- Feil fra KI-tjenesten: ${errMsg}\n\n${defaultQuery}`);
             } else {
-                setQuery('-- Ingen SQL i svaret\n' + JSON.stringify(data, null, 2));
+                const data = await response.json();
+                let rawSql: string | undefined;
+                if (typeof data?.sql === 'string') {
+                    rawSql = data.sql;
+                } else if (data?.sql?.response) {
+                    rawSql = data.sql.response;
+                } else if (data?.response) {
+                    rawSql = data.response;
+                }
+                if (rawSql) {
+                    if (rawSql.includes('```')) {
+                        rawSql = rawSql.replaceAll('```sql\n', '').replaceAll('```sql', '').replaceAll('```\n', '').replaceAll('```', '');
+                    }
+                    setQuery(rawSql.trim());
+                    sqlOk = true;
+                } else {
+                    setError('KI-tjenesten returnerte ingen SQL');
+                    setQuery('-- Ingen SQL i svaret\n' + JSON.stringify(data, null, 2));
+                }
             }
         } catch {
+            setError('Kunne ikke koble til KI-tjenesten');
             setQuery(`-- Feil: Kunne ikke koble til AI-serveren\n\n${defaultQuery}`);
         } finally {
             const guessed = guessChartType(basePrompt);
             setP2Tab(guessed);
             if (guessed === 'regresjon') setRegressionTitle(basePrompt || defaultRegressionTitle);
-            shouldAutoExecuteRef.current = guessed !== 'stegvisning';
+            // Only auto-execute if we got valid SQL from RAG
+            shouldAutoExecuteRef.current = sqlOk && guessed !== 'stegvisning';
             setStep(2);
         }
     };
@@ -768,7 +751,6 @@ ORDER BY term`;
                         <textarea
                             value={aiPrompt}
                             onChange={(e) => setAiPrompt(e.target.value)}
-                            onClick={() => { if (!aiPrompt) setAiPrompt(examplesAiBuilder[0].title); }}
                             placeholder={`Eksempel: Daglige sidevisninger for ${pathLabel} i 2025`}
                             rows={5}
                             className="navds-textarea__input w-full"
@@ -777,14 +759,7 @@ ORDER BY term`;
                             onFocus={e => e.currentTarget.style.boxShadow = '0 0 0 3px #0067C5'}
                             onBlur={e => e.currentTarget.style.boxShadow = 'none'}
                         />
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '6px' }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0067C5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>AI</span>
-                            </div>
-                            <div style={{ background: '#f0f4ff', border: '1px solid #c8d9f5', borderRadius: '0 8px 8px 8px', padding: '10px 14px', fontSize: '0.95rem', color: '#1a1a1a', lineHeight: '1.5' }}>
-                                Ditt spørsmål er veldig spennende! Hva med å legge til «i måneden» og «jeg ønsker ikke treff fra admin-sider»?
-                            </div>
-                        </div>
+
                     </div>
                     <div style={{ height: '10%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Button variant="secondary" size="small" onClick={() => { setSelectedTidligere(null); setTidligereOpen(true); }}>
