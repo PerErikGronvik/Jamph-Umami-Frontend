@@ -1,5 +1,5 @@
 import { Heading, Page } from "@navikt/ds-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface BenchmarkResult {
     model: string;
@@ -17,24 +17,68 @@ function TestModell() {
     const [benchmarkLoading, setBenchmarkLoading] = useState(false);
     const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkResult | null>(null);
     const [benchmarkError, setBenchmarkError] = useState<string | null>(null);
+    const [debugLog, setDebugLog] = useState<string[]>([]);
+    const debugBoxRef = useRef<HTMLPreElement>(null);
+
+    useEffect(() => {
+        if (debugBoxRef.current) {
+            debugBoxRef.current.scrollTop = debugBoxRef.current.scrollHeight;
+        }
+    }, [debugLog]);
 
     async function handleBenchmark() {
         setBenchmarkLoading(true);
         setBenchmarkResult(null);
         setBenchmarkError(null);
+        setDebugLog([]);
+
         try {
             const ragApiBase = import.meta.env.VITE_RAG_API_URL ?? "";
-            const res = await fetch(`${ragApiBase}/api/benchmark`, {
+            const res = await fetch(`${ragApiBase}/api/benchmark/stream`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ model: benchmarkModel }),
             });
+
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ error: res.statusText }));
                 throw new Error(err.error ?? res.statusText);
             }
-            const data: BenchmarkResult = await res.json();
-            setBenchmarkResult(data);
+
+            const reader = res.body?.getReader();
+            if (!reader) throw new Error("No response stream");
+
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split("\n\n");
+                buffer = parts.pop() ?? "";
+
+                for (const part of parts) {
+                    const line = part.trim();
+                    if (!line.startsWith("data: ")) continue;
+                    const json = line.slice(6);
+                    try {
+                        const event = JSON.parse(json);
+                        if (event.type === "debug") {
+                            setDebugLog((prev) => [...prev, event.message]);
+                        } else if (event.type === "result") {
+                            setBenchmarkResult(event.result);
+                        } else if (event.type === "error") {
+                            setBenchmarkError(event.message);
+                        } else if (event.type === "done") {
+                            setDebugLog((prev) => [...prev, `--- ${event.message} ---`]);
+                        }
+                    } catch {
+                        // skip malformed events
+                    }
+                }
+            }
         } catch (e: unknown) {
             setBenchmarkError(e instanceof Error ? e.message : "Ukjent feil");
         } finally {
@@ -87,6 +131,28 @@ function TestModell() {
                     <p style={{ marginTop: '16px', color: '#b91c1c', fontSize: '15px' }}>
                         Feil: {benchmarkError}
                     </p>
+                )}
+
+                {debugLog.length > 0 && (
+                    <pre
+                        ref={debugBoxRef}
+                        style={{
+                            marginTop: '20px',
+                            padding: '16px',
+                            backgroundColor: '#1e1e1e',
+                            color: '#d4d4d4',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            lineHeight: '1.6',
+                            maxHeight: '400px',
+                            overflowY: 'auto',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
+                        }}
+                    >
+                        {debugLog.join('\n')}
+                    </pre>
                 )}
 
                 {benchmarkResult && (
