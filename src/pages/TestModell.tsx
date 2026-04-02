@@ -1,21 +1,9 @@
 import { Heading, Page } from "@navikt/ds-react";
 import { useState, useRef, useEffect } from "react";
 
-interface BenchmarkResult {
-    model: string;
-    timestamp: string;
-    sqlAccuracy: number;
-    dialectAccuracy: number;
-    tokensPerSecond: number;
-    promptTokens: number;
-    responseTokens: number;
-    evalDurationMs: number;
-}
-
 function TestModell() {
     const [benchmarkModel, setBenchmarkModel] = useState("qwen2.5-coder:7b");
     const [benchmarkLoading, setBenchmarkLoading] = useState(false);
-    const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkResult | null>(null);
     const [benchmarkError, setBenchmarkError] = useState<string | null>(null);
     const [debugLog, setDebugLog] = useState<string[]>([]);
     const debugBoxRef = useRef<HTMLPreElement>(null);
@@ -28,7 +16,6 @@ function TestModell() {
 
     async function handleBenchmark() {
         setBenchmarkLoading(true);
-        setBenchmarkResult(null);
         setBenchmarkError(null);
         setDebugLog([]);
 
@@ -67,8 +54,6 @@ function TestModell() {
                         const event = JSON.parse(json);
                         if (event.type === "debug") {
                             setDebugLog((prev) => [...prev, event.message]);
-                        } else if (event.type === "result") {
-                            setBenchmarkResult(event.result);
                         } else if (event.type === "error") {
                             setBenchmarkError(event.message);
                         } else if (event.type === "done") {
@@ -153,27 +138,6 @@ function TestModell() {
                     >
                         {debugLog.join('\n')}
                     </pre>
-                )}
-
-                {benchmarkResult && (
-                    <div style={{
-                        marginTop: '24px',
-                        padding: '20px',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '15px',
-                        lineHeight: '1.8',
-                    }}>
-                        <strong>Modell:</strong> {benchmarkResult.model}<br />
-                        <strong>SQL-nøyaktighet:</strong> {(benchmarkResult.sqlAccuracy * 100).toFixed(0)}%<br />
-                        <strong>Dialekt-nøyaktighet:</strong> {(benchmarkResult.dialectAccuracy * 100).toFixed(0)}%<br />
-                        <strong>Tokens/sek:</strong> {benchmarkResult.tokensPerSecond.toFixed(1)}<br />
-                        <strong>Prompt-tokens:</strong> {benchmarkResult.promptTokens}<br />
-                        <strong>Respons-tokens:</strong> {benchmarkResult.responseTokens}<br />
-                        <strong>Tid:</strong> {benchmarkResult.evalDurationMs} ms<br />
-                        <strong>Kjørt:</strong> {new Date(benchmarkResult.timestamp).toLocaleString('no-NO')}
-                    </div>
                 )}
             </div>
         </Page.Block>
