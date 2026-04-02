@@ -491,7 +491,7 @@ LIMIT 25;`,
             return;
         }
         try {
-            sqlFormatter.format(query);
+            sqlFormatter.format(query, { language: 'bigquery' });
             setValidateError('SQL er gyldig!');
         } catch (e: any) {
             setValidateError('Ugyldig SQL: ' + (e.message || 'Syntaksfeil'));
