@@ -333,6 +333,7 @@ const Prototype3 = () => {
                         aiByggerPanel={
                             <AiByggerPanel
                                 websiteId={effectiveWebsiteId}
+                                domain={selectedWebsite?.domain || 'aksel.nav.no'}
                                 path={activeFilters.urlFilters[0] || '/'}
                                 pathOperator={activeFilters.pathOperator || 'starts-with'}
                                 startDate={activeFilters.customStartDate}

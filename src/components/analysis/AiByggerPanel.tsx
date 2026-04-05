@@ -53,6 +53,7 @@ const allTabs = [
 
 interface Props {
     readonly websiteId: string;
+    readonly domain?: string;
     readonly path: string;
     readonly pathOperator: string;
     readonly startDate?: Date;
@@ -61,7 +62,7 @@ interface Props {
     readonly editWidget?: { sql: string; chartType: string; title: string; aiPrompt?: string; result?: any } | null;
 }
 
-export function AiByggerPanel({ websiteId, path, pathOperator, startDate: propStartDate, endDate: propEndDate, onAddWidget, editWidget }: Props) {
+export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate: propStartDate, endDate: propEndDate, onAddWidget, editWidget }: Props) {
     const pathConditionSQL = pathOperator === 'starts-with'
         ? (path === '/' ? '' : `AND url_path LIKE '${path}%'`)
         : `AND url_path = '${path}'`;
@@ -388,11 +389,9 @@ LIMIT 25;`,
 
     const generateSqlFromAi = async () => {
         const basePrompt = aiPrompt.trim() || `Vis meg daglige sidevisninger for ${pathLabel} i 2025`;
+        const effectiveDomain = domain || 'aksel.nav.no';
+        const fullUrl = `https://${effectiveDomain}${path}`;
 
-        const pathDesc = pathOperator === 'starts-with' && path !== '/'
-            ? ` (url_path LIKE '${path}%')`
-            : pathOperator === 'equals' ? ` (url_path = '${path}')` : '';
-        const contextPrefix = `BigQuery-tabell: \`fagtorsdag-prod-81a6.umami_student.event\`. website_id = '${websiteId}'${pathDesc}. Svar kun med SQL.\n\nSpørsmål: `;
         setError(null);
         let sqlOk = false;
         try {
@@ -400,7 +399,10 @@ LIMIT 25;`,
             const response = await fetch(`${ragApiBase}/api/sql`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: contextPrefix + basePrompt }),
+                body: JSON.stringify({ 
+                    query: basePrompt,
+                    url: fullUrl
+                }),
             });
             if (!response.ok) {
                 const errData = await response.json().catch(() => null);
