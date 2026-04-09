@@ -401,8 +401,7 @@ LIMIT 25;`,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     query: basePrompt,
-                    url: fullUrl,
-                    debug: true
+                    url: fullUrl
                 }),
             });
             if (!response.ok) {
@@ -424,20 +423,23 @@ LIMIT 25;`,
                     if (rawSql.includes('```')) {
                         rawSql = rawSql.replaceAll('```sql\n', '').replaceAll('```sql', '').replaceAll('```\n', '').replaceAll('```', '');
                     }
-                    // Add debug info as SQL comments if available
+                    
+                    // Add debug info as SQL comments if present
+                    let finalSql = rawSql.trim();
                     if (data.debugInfo) {
-                        const debugComments = [
-                            `-- Debug Info:`,
-                            `-- Query Type: ${data.debugInfo.queryType || 'N/A'}`,
-                            data.debugInfo.rawClassificationResponse ? `-- Raw LLM Response: "${data.debugInfo.rawClassificationResponse}"` : null,
-                            data.debugInfo.extractedVariables ? `-- Extracted Variables: ${data.debugInfo.extractedVariables}` : null,
-                            `-- Site ID: ${data.debugInfo.siteId || 'N/A'}`,
-                            `-- URL Path: ${data.debugInfo.urlPath || 'N/A'}`,
-                            `--`
-                        ].filter(Boolean).join('\n');
-                        rawSql = `${debugComments}\n${rawSql}`;
+                        const debugComments: string[] = [];
+                        if (data.debugInfo.rawClassificationResponse) {
+                            debugComments.push(`-- Classification Response: ${data.debugInfo.rawClassificationResponse}`);
+                        }
+                        if (data.debugInfo.queryType) {
+                            debugComments.push(`-- Query Type: ${data.debugInfo.queryType}`);
+                        }
+                        if (debugComments.length > 0) {
+                            finalSql = debugComments.join('\n') + '\n\n' + finalSql;
+                        }
                     }
-                    setQuery(rawSql.trim());
+                    
+                    setQuery(finalSql);
                     sqlOk = true;
                 } else {
                     setError('KI-tjenesten returnerte ingen SQL');
@@ -879,7 +881,7 @@ ORDER BY term`;
                             </div>
                         </div>
                         <div style={{ height: '10%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Button variant="secondary" size="small" icon={<ChevronLeft size={16} />} onClick={() => setStep(1)}>Til KI bygger</Button>
+                            <Button variant="secondary" size="small" icon={<ChevronLeft size={16} />} onClick={() => { setError(null); setStep(1); }}>Til KI bygger</Button>
                             <Button variant="secondary" size="small" onClick={() => setDownloadModalOpen(true)}>Last ned</Button>
                             {onAddWidget && (
                                 <Button
@@ -903,7 +905,7 @@ ORDER BY term`;
                                 </Button>
                             )}
                             <Button variant="secondary" size="small" onClick={() => setShareWidgetOpen(true)}>Del</Button>
-                            <Button variant="secondary" size="small" iconPosition="right" icon={<ChevronRight size={16} />} onClick={() => setStep(3)}>SQL</Button>
+                            <Button variant="secondary" size="small" iconPosition="right" icon={<ChevronRight size={16} />} onClick={() => { setError(null); setStep(3); }}>SQL</Button>
                         </div>
                     </div>
                     {shareWidgetOpen && <ShareWidgetModal
@@ -1003,7 +1005,7 @@ ORDER BY term`;
                         )}
                     </div>
                     <div style={{ height: '10%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Button variant="secondary" size="small" icon={<ChevronLeft size={16} />} onClick={() => { shouldAutoExecuteRef.current = true; setStep(2); }}>Til resultater</Button>
+                        <Button variant="secondary" size="small" icon={<ChevronLeft size={16} />} onClick={() => { setError(null); shouldAutoExecuteRef.current = true; setStep(2); }}>Til resultater</Button>
                         <Button size="small" variant="secondary" onClick={formatSQL}>{formatSuccess ? '✓ Formatert' : 'Formater'}</Button>
                         <Button size="small" variant="secondary" onClick={validateSQL}>Valider</Button>
                         <Button size="small" variant="secondary" loading={estimating} onClick={estimateCost}>Kostnad</Button>
