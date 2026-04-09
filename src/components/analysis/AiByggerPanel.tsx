@@ -401,7 +401,8 @@ LIMIT 25;`,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     query: basePrompt,
-                    url: fullUrl
+                    url: fullUrl,
+                    debug: true
                 }),
             });
             if (!response.ok) {
@@ -422,6 +423,19 @@ LIMIT 25;`,
                 if (rawSql) {
                     if (rawSql.includes('```')) {
                         rawSql = rawSql.replaceAll('```sql\n', '').replaceAll('```sql', '').replaceAll('```\n', '').replaceAll('```', '');
+                    }
+                    // Add debug info as SQL comments if available
+                    if (data.debugInfo) {
+                        const debugComments = [
+                            `-- Debug Info:`,
+                            `-- Query Type: ${data.debugInfo.queryType || 'N/A'}`,
+                            data.debugInfo.rawClassificationResponse ? `-- Raw LLM Response: "${data.debugInfo.rawClassificationResponse}"` : null,
+                            data.debugInfo.extractedVariables ? `-- Extracted Variables: ${data.debugInfo.extractedVariables}` : null,
+                            `-- Site ID: ${data.debugInfo.siteId || 'N/A'}`,
+                            `-- URL Path: ${data.debugInfo.urlPath || 'N/A'}`,
+                            `--`
+                        ].filter(Boolean).join('\n');
+                        rawSql = `${debugComments}\n${rawSql}`;
                     }
                     setQuery(rawSql.trim());
                     sqlOk = true;
