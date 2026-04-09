@@ -58,7 +58,7 @@ export default function AiChartBuilder() {
     };
 
     const websiteId = extractWebsiteId(query);
-    
+
     // Check for SQL in URL params on mount
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -90,38 +90,35 @@ export default function AiChartBuilder() {
             const response = await fetch(`${import.meta.env.VITE_RAG_API_URL}/api/sql`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     query: promptToUse,
                     model: 'qwen2.5-coder:7b'
                 })
             });
 
             const data = await response.json();
-            
-            // Check if response is in data.sql (wrapped JSON string)
-            let sqlResponse;
-            if (data?.sql) {
-                try {
-                    sqlResponse = typeof data.sql === 'string' ? JSON.parse(data.sql) : data.sql;
-                } catch {
-                    sqlResponse = data;
-                }
-            } else {
-                sqlResponse = data;
+
+            // Extract SQL from response
+            let rawSql: string | undefined;
+            if (typeof data?.sql === 'string') {
+                // Direct SQL string: { "sql": "SELECT ..." }
+                rawSql = data.sql;
+            } else if (data?.sql?.response) {
+                rawSql = data.sql.response;
+            } else if (data?.response) {
+                rawSql = data.response;
             }
-            
-            if (sqlResponse?.response) {
+
+            if (rawSql) {
                 // Remove markdown code blocks if present
-                let cleanedSql = sqlResponse.response;
-                if (cleanedSql.includes('```')) {
-                    cleanedSql = cleanedSql
+                if (rawSql.includes('```')) {
+                    rawSql = rawSql
                         .replace(/```sql\n/g, '')
                         .replace(/```sql/g, '')
                         .replace(/```\n/g, '')
                         .replace(/```/g, '');
                 }
-                cleanedSql = cleanedSql.trim();
-                setQuery(cleanedSql);
+                setQuery(rawSql.trim());
             } else {
                 setQuery('-- API-svar mottatt men ingen SQL-respons funnet\n-- Debug:\n' + JSON.stringify(data, null, 2));
             }

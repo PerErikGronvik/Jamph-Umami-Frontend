@@ -1,5 +1,3 @@
-const DEFAULT_LLM_MODEL = 'qwen2.5-coder:7b';
-
 function stripMarkdownCodeFences(input: string): string {
     return input
         .replaceAll(/```sql\r?\n?/gi, '')
@@ -16,7 +14,13 @@ function asRecord(data: unknown): Record<string, unknown> | null {
 }
 
 function extractResponseField(payload: Record<string, unknown>): string | null {
-    return typeof payload.response === 'string' ? stripMarkdownCodeFences(payload.response) : null;
+    if (typeof payload.response === 'string') {
+        return stripMarkdownCodeFences(payload.response);
+    }
+    if (typeof payload.sql === 'string') {
+        return stripMarkdownCodeFences(payload.sql);
+    }
+    return null;
 }
 
 function parseSqlValue(sqlValue: unknown): string | null {
@@ -72,7 +76,6 @@ export async function generateSqlFromPrompt(prompt: string): Promise<string> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             query: prompt,
-            model: DEFAULT_LLM_MODEL,
         }),
     });
 
