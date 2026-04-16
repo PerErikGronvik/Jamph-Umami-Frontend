@@ -91,6 +91,8 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
     const [lagEgenSqlTitle, setLagEgenSqlTitle] = useState('');
     const shouldAutoExecuteRef = useRef(false);
     const [editingTitle, setEditingTitle] = useState(false);
+    const [ragLoading, setRagLoading] = useState(false);
+    const [ragCounter, setRagCounter] = useState(0);
 
     // Load a widget from the dashboard for editing
     useEffect(() => {
@@ -109,6 +111,18 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
 
     const [tabOrder, setTabOrder] = useState<string[]>([]);
     const [currentExplanation, setCurrentExplanation] = useState<string | null>(null);
+
+    // Counter for RAG loading state
+    useEffect(() => {
+        if (!ragLoading) {
+            setRagCounter(0);
+            return;
+        }
+        const interval = setInterval(() => {
+            setRagCounter(c => c + 1);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [ragLoading]);
 
     const sortedTabs = tabOrder.length > 0
         ? [...allTabs].sort((a, b) => {
@@ -159,6 +173,7 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
         const fullUrl = `https://${domain || 'aksel.nav.no'}${path}`;
 
         setError(null);
+        setRagLoading(true);
         let sqlOk = false;
         try {
             const ragApiBase = import.meta.env.VITE_RAG_API_URL ?? '';
@@ -186,6 +201,7 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
                 : err.message;
             setError(msg);
         } finally {
+            setRagLoading(false);
             setP2Tab(guessChartType(basePrompt));
             shouldAutoExecuteRef.current = sqlOk;
             setStep(2);
@@ -316,8 +332,9 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
                         </Button>
                         <Button variant="secondary" size="small" iconPosition="right" icon={<ChevronRight size={16} />}
                             data-tour="lag-graf"
+                            loading={ragLoading}
                             onClick={() => { shouldAutoExecuteRef.current = true; generateSqlFromAi(); }}>
-                            Til resultater
+                            {ragLoading ? `Genererer... ${ragCounter}s` : 'Til resultater'}
                         </Button>
                     </div>
                 </div>
