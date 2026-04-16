@@ -9,12 +9,10 @@ import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { useChartDataPrep } from '../../lib/useChartDataPrep';
-import UmamiJourneyView from './journey/UmamiJourneyView';
 import DashboardStatCards from '../dashboard/DashboardStatCards';
 import DashboardKIForklaring from '../dashboard/DashboardKIForklaring';
 import { WIDGET_SIZES } from '../../lib/widgetSizes';
 import mockupExampleResults from '../../data/dashboard/mockupExampleResults.json';
-import mockupJourneyData from '../../data/dashboard/mockupJourneyData.json';
 
 const defaultQuery = `SELECT
   website_id,
@@ -31,7 +29,6 @@ const boxClass = 'bg-green-50 p-4 border border-green-100 w-full h-full flex fle
 /** Picks the most likely chart type from a natural-language prompt. */
 function guessChartType(prompt: string): string {
     const p = prompt.toLowerCase();
-    if (/sideflyt|beveger|flyt|navigasjon|navigerer|reise|brukerreise/.test(p)) return 'stegvisning';
     if (/regresjon|korrelasjon|lineær|trend.*linje|stigningstall|r2|r²|rmse|prediksjon/.test(p)) return 'regresjon';
     if (/daglig|m.ned|ukentlig|tidslinje|over tid|trend|utvikling|per dag|per m.ned/.test(p)) return 'linechart';
     if (/andel|prosent|fordeling|kake/.test(p)) return 'piechart';
@@ -110,11 +107,6 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
         setStep(2);
     }, [editWidget]);
 
-    const [journeyData, setJourneyData] = useState<{ nodes: any[]; links: any[] } | null>(null);
-    const [journeyLoading, setJourneyLoading] = useState(false);
-    const defaultRegressionTitle = `Lineær regresjon: daglige sidevisninger for ${pathLabel} (2025)`;
-    const [regressionTitle, setRegressionTitle] = useState(defaultRegressionTitle);
-    const [isApiOnly, setIsApiOnly] = useState(false);
     const [tabOrder, setTabOrder] = useState<string[]>([]);
     const [currentExplanation, setCurrentExplanation] = useState<string | null>(null);
 
@@ -134,244 +126,19 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
     const overflowTabs = sortedTabs.slice(MAX_VISIBLE_TABS);
     const activeIsOverflow = overflowTabs.some(t => t.value === p2Tab);
 
-    const buildRegressionSQLInline = () => {
-        const pathFilter = pathConditionSQL.trim();
-        return `WITH base AS (
-  SELECT CAST(x AS FLOAT64) AS x, CAST(y AS FLOAT64) AS y FROM (
-    SELECT
-      DATE_DIFF(DATE(created_at), DATE('2025-01-01'), DAY) + 1 AS x,
-      COUNT(*) AS y
-    FROM \`fagtorsdag-prod-81a6.umami_student.event\`
-    WHERE event_type = 1
-      AND website_id = '${websiteId}'
-      ${pathFilter}
-      AND EXTRACT(YEAR FROM created_at) = 2025
-    GROUP BY x
-  )
-),
-stats AS (
-  SELECT COUNT(*) AS n, AVG(x) AS x_bar, AVG(y) AS y_bar,
-         VAR_SAMP(x) AS var_x, COVAR_SAMP(x, y) AS cov_xy
-  FROM base
-),
-params AS (
-  SELECT n, x_bar, y_bar,
-    SAFE_DIVIDE(cov_xy, var_x) AS slope,
-    y_bar - SAFE_DIVIDE(cov_xy, var_x) * x_bar AS intercept
-  FROM stats
-),
-resid AS (
-  SELECT b.x, b.y, p.n, p.x_bar, p.y_bar, p.slope, p.intercept,
-    b.y - (p.intercept + p.slope * b.x) AS r
-  FROM base b CROSS JOIN params p
-),
-sums AS (
-  SELECT MIN(n) AS n, MIN(intercept) AS a, MIN(slope) AS b,
-         MIN(x_bar) AS x_bar, MIN(y_bar) AS y_bar,
-    SUM(POW(r, 2)) AS sse,
-    SUM(POW(y - y_bar, 2)) AS sst,
-    SUM(POW(x - x_bar, 2)) AS sxx
-  FROM resid
-),
-m AS (
-  SELECT n, a, b,
-    1 - SAFE_DIVIDE(sse, sst) AS r2,
-    SQRT(SAFE_DIVIDE(sse, n - 2)) AS rmse,
-    SQRT(SAFE_DIVIDE(SAFE_DIVIDE(sse, n - 2), sxx)) AS se_b,
-    SQRT(SAFE_DIVIDE(sse, n - 2) * (1.0 / n + POW(x_bar, 2) / sxx)) AS se_a
-  FROM sums
-),
-pv AS (
-  SELECT n, a, b, r2, rmse, se_a, se_b,
-    SAFE_DIVIDE(a, se_a) AS t_a,
-    SAFE_DIVIDE(b, se_b) AS t_b,
-    GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(a, se_a)), 2)) / 2.506628 * (
-       0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)))
-      - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 2)
-      + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 3))) AS p_a,
-    GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(b, se_b)), 2)) / 2.506628 * (
-       0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)))
-      - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 2)
-      + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 3))) AS p_b
-  FROM m
-)
-SELECT 'Skjæringspunkt (a)' AS term,
-  ROUND(a, 4) AS estimat, ROUND(se_a, 4) AS std_feil,
-  ROUND(t_a, 3) AS t_verdi, ROUND(p_a, 4) AS p_verdi,
-  ROUND(r2, 4) AS r2, ROUND(rmse, 3) AS rmse, n
-FROM pv
-UNION ALL
-SELECT 'Stigningstall (b)',
-  ROUND(b, 4), ROUND(se_b, 4),
-  ROUND(t_b, 3), ROUND(p_b, 4),
-  ROUND(r2, 4), ROUND(rmse, 3), n
-FROM pv
-ORDER BY term`;
-    };
+    // All SQL is now generated via RAG - no hardcoded SQL functions
+    // Examples will be loaded from external source
 
     const examplesAiBuilder = [
-        {
-            title: `Daglige sidevisninger for siden i 2025`,
-            sql: `SELECT\n  FORMAT_TIMESTAMP('%Y-%m-%d', created_at) AS dato,\n  COUNT(*) AS sidevisninger\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\nGROUP BY dato\nORDER BY dato ASC;`,
-            tabOrder: ['linechart', 'areachart', 'barchart', 'table', 'piechart', 'kiforklaring'],
-            explanation: `Gjennomsnittet ligger på rundt 165 sidevisninger per dag, men med et tydelig fall i helger. De mest besøkte dagene er mandag og tirsdag, noe som bekrefter at dette er et arbeidsverktøy brukt primært i arbeidstiden. En markant topp mot slutten av september kan tyde på en lansering eller større oppdatering i designsystemet som skapte ekstra oppmerksomhet.`,
-        },
-        {
-            title: `Topp 12 undersider under siden i 2025`,
-            sql: `SELECT\n  url_path AS side,\n  COUNT(*) AS sidevisninger\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\nGROUP BY side\nORDER BY sidevisninger DESC\nLIMIT 12;`,
-            tabOrder: ['barchart', 'table', 'piechart', 'linechart', 'areachart', 'kiforklaring'],
-            explanation: `Komponent-sidene dominerer klart, og Button er den mest besøkte enkelt-siden – et naturlig startpunkt for utviklere som utforsker designsystemet for første gang. /god-praksis og /komponenter utgjør til sammen 7 av topp-10. En overraskende lav trafikk under /mønstre tatt i betraktning innholdets relevans kan tyde på at seksjonen er vanskelig å oppdage.`,
-        },
-        {
-            title: `Sidevisninger per måned for siden i 2025`,
-            sql: `SELECT\n  EXTRACT(MONTH FROM created_at) AS maaned,\n  COUNT(*) AS sidevisninger\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\nGROUP BY maaned\nORDER BY maaned ASC;`,
-            tabOrder: ['areachart', 'linechart', 'barchart', 'table', 'piechart', 'kiforklaring'],
-            explanation: `Januar og februar er klart sterkest, noe som gjenspeiler oppstart av nye prosjekter etter nyttår. Sommermånedene juni–august viser et fall på rundt 35–40 %, typisk for et verktøy brukt primært i arbeidstiden. Høsten viser en fin oppgang igjen, men når aldri januar-nivå fullt ut – en sesongkurve som gjentar seg år etter år for verktøy i denne kategorien.`,
-        },
-        {
-            title: `Topp 15 trafikkilder for siden i november 2025`,
-            sql: `SELECT\n  COALESCE(NULLIF(referrer_domain, ''), '(direkte)') AS kilde,\n  COUNT(*) AS sidevisninger\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\n  AND EXTRACT(MONTH FROM created_at) = 11\nGROUP BY kilde\nORDER BY sidevisninger DESC\nLIMIT 15;`,
-            tabOrder: ['barchart', 'piechart', 'table', 'linechart', 'areachart', 'kiforklaring'],
-            explanation: `Nesten halvparten av trafikken i november kom direkte – brukerne har bokmerket siden eller kjenner URLen godt. Google stod for rundt 31 %, mens intern trafikk fra nav.no bidro med 12 %. Sosiale medier og nyhetsbrev utgjorde tilnærmet null, noe som er forventet for et profesjonelt designverktøy som ikke er rettet mot allmennheten.`,
-        },
-        {
-            title: `Hvilke nettsider sender besøkende til siden? Topp inngående trafikkilder, unike besøkende per kilde i 2025`,
-            sql: `SELECT\n  COALESCE(NULLIF(referrer_domain, ''), '(direkte)') AS kilde,\n  COUNT(DISTINCT session_id) AS unike_besokende\nFROM \`fagtorsdag-prod-81a6.umami_student.event\`\nWHERE\n  event_type = 1\n  AND website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM created_at) = 2025\nGROUP BY kilde\nORDER BY unike_besokende DESC\nLIMIT 1000;`,
-            tabOrder: ['barchart', 'piechart', 'table', 'linechart', 'areachart', 'kiforklaring'],
-            explanation: `De aller fleste innkommende lenkene kommer fra interne NAV-systemer og GitHub. google.com og github.com er de to klart største eksterne kildene, noe som tyder på at dokumentasjonen brukes aktivt som referanse i utviklingsarbeid. Sporadisk trafikk fra dev.to og stackoverflow antyder at internasjonale fagmiljøer også har funnet veien hit.`,
-        },
-        {
-            title: `Lineær regresjon: er trenden i daglige sidevisninger for siden stigende eller fallende i 2025?`,
-            sql: buildRegressionSQLInline(),
-            tabOrder: ['kiforklaring', 'table', 'linechart', 'areachart', 'barchart', 'piechart'],
-            explanation: `Et stigningstall på –0.83 tyder på at antall daglige sidevisninger avtar med nesten én visning per dag gjennom 2025. R² på 0.18 betyr at modellen forklarer rundt 18 % av variasjonen – resten er støy fra helger, helligdager og enkelttopper. RMSE på 42 sidevisninger tilsvarer omtrent ett standardavvik i normal daglig variasjon. Retningen er klar, men datagrunnlaget er for støyete til å trekke sterke konklusjoner om fremtidig utvikling.`,
-        },
-        {
-            title: `Nøkkeltall for siden i 2025`,
-            sql: `WITH sessions AS (
-  SELECT
-    session_id,
-    COUNT(*) AS page_count,
-    COUNTIF(event_type = 2) AS event_count
-  FROM \`fagtorsdag-prod-81a6.umami_student.event\`
-  WHERE
-    event_type IN (1, 2)
-    AND website_id = '${websiteId}'
-    ${pathConditionSQL}
-    AND EXTRACT(YEAR FROM created_at) = 2025
-  GROUP BY session_id
-)
-SELECT 'Unike besøkende' AS kategori, COUNT(*) AS sesjoner FROM sessions
-UNION ALL
-SELECT 'Utførte handlinger', COUNTIF(event_count > 0) FROM sessions
-UNION ALL
-SELECT 'Navigering uten handling', COUNTIF(event_count = 0 AND page_count > 1) FROM sessions
-UNION ALL
-SELECT 'Forlot nettstedet', COUNTIF(page_count = 1 AND event_count = 0) FROM sessions;`,
-            tabOrder: ['statcards', 'table', 'barchart', 'piechart', 'linechart', 'areachart', 'kiforklaring'],
-            explanation: `Av de besøkende i 2025 utførte nesten to tredeler minst én aktiv handling – et tegn på høy intensjonalitet. At rundt én av tre navigerte videre uten å klikke på noe er normalt for dokumentasjon der man gjerne leser uten å interagere. Kun et mindretall forlot siden uten noen form for videre engasjement, noe som er bemerkelsesverdig lavt og tyder på at landingssidene treffer brukernes behov godt.`,
-        },
-        {
-            title: `Hvilke handlinger utfører brukerne på siden i 2025? Vis første handling per sesjon, topp 20`,
-            sql: `WITH sessions_on_page AS (
-  -- Sessions that had custom events fired on this exact page
-  SELECT DISTINCT session_id
-  FROM \`fagtorsdag-prod-81a6.umami_student.event\`
-  WHERE event_type = 2
-    AND website_id = '${websiteId}'
-    AND url_path = '${path}'
-    AND EXTRACT(YEAR FROM created_at) = 2025
-),
-events_labeled AS (
-  SELECT
-    e.session_id,
-    e.event_id,
-    e.created_at,
-    CASE
-      WHEN e.event_name = 'navigere' THEN
-        CONCAT(
-          COALESCE(MAX(CASE WHEN p.data_key = 'kilde' THEN p.string_value END), '?'),
-          ' → ',
-          COALESCE(MAX(CASE WHEN p.data_key = 'url' THEN p.string_value END), '?')
-        )
-      ELSE e.event_name
-    END AS handling
-  FROM sessions_on_page s
-  JOIN \`fagtorsdag-prod-81a6.umami_student.event\` e
-    ON s.session_id = e.session_id
-    AND e.website_id = '${websiteId}'
-    AND e.event_type = 2
-    AND e.url_path = '${path}'
-    AND EXTRACT(YEAR FROM e.created_at) = 2025
-  LEFT JOIN \`fagtorsdag-prod-81a6.umami_student.event_data\` d
-    ON e.event_id = d.website_event_id AND e.website_id = d.website_id AND e.created_at = d.created_at
-  LEFT JOIN UNNEST(d.event_parameters) AS p
-  GROUP BY e.session_id, e.event_id, e.event_name, e.created_at
-),
-events_numbered AS (
-  SELECT session_id, handling,
-    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) AS steg_num
-  FROM events_labeled
-),
-total AS (SELECT COUNT(*) AS n FROM sessions_on_page),
-first_actions AS (
-  SELECT session_id,
-    MAX(CASE WHEN steg_num = 1 THEN handling END) AS handling
-  FROM events_numbered
-  GROUP BY session_id
-)
-SELECT
-  COALESCE(handling, '(ingen hendelser)') AS handling,
-  COUNT(*) AS antall,
-  CONCAT(ROUND(COUNT(*) * 100.0 / MAX(total.n), 1), '%') AS andel
-FROM first_actions, total
-GROUP BY handling
-ORDER BY antall DESC
-LIMIT 20;`,
-            tabOrder: ['table', 'barchart', 'piechart', 'linechart', 'areachart', 'kiforklaring'],
-            explanation: `Den klart vanligste brukersekvensen er å navigere via header-menyen til en annen hoveddel av nettstedet. Introkort-klikk er nest vanligst og tyder på at brukerne aktivt utforsker underkategorier. Svært få gjennomfører mer enn tre handlinger på én og samme side – besøkene er korte og målrettede, ikke utforskende.`,
-        },
-        {
-            title: `Hvilket operativsystem bruker de besøkende på siden i 2025?`,
-            sql: `SELECT\n  COALESCE(NULLIF(s.os, ''), '(ukjent)') AS operativsystem,\n  COUNT(DISTINCT e.session_id) AS unike_besokende\nFROM \`fagtorsdag-prod-81a6.umami_student.event\` e\nLEFT JOIN \`fagtorsdag-prod-81a6.umami_student.session\` s\n  ON e.session_id = s.session_id\nWHERE\n  e.event_type = 1\n  AND e.website_id = '${websiteId}'\n  ${pathConditionSQL}\n  AND EXTRACT(YEAR FROM e.created_at) = 2025\nGROUP BY operativsystem\nORDER BY unike_besokende DESC\nLIMIT 12;`,
-            tabOrder: ['piechart', 'barchart', 'table', 'areachart', 'linechart', 'kiforklaring'],
-            explanation: `Mac dominerer med over 58 % – ikke overraskende for en brukergruppe som i stor grad består av designere og frontend-utviklere. Windows 10 er nest størst, mens iOS og Android til sammen utgjør under 16 %. Dette bekrefter at designsystemet primært er et desktop-verktøy brukt i arbeidssituasjonen.`,
-        },
-        {
-            title: `Hvor navigerer brukere etter å ha søkt på siden i 2025?`,
-            sql: `WITH sok_events AS (
-  SELECT session_id, created_at AS sok_tid
-  FROM \`fagtorsdag-prod-81a6.umami_student.event\`
-  WHERE event_type = 2
-    AND event_name = 'sok'
-    AND website_id = '${websiteId}'
-    ${pathConditionSQL}
-    AND EXTRACT(YEAR FROM created_at) = 2025
-),
-neste_sider AS (
-  SELECT
-    s.session_id,
-    e.url_path AS side,
-    ROW_NUMBER() OVER (PARTITION BY s.session_id, s.sok_tid ORDER BY e.created_at ASC) AS rn
-  FROM sok_events s
-  JOIN \`fagtorsdag-prod-81a6.umami_student.event\` e
-    ON s.session_id = e.session_id
-    AND e.event_type = 1
-    AND e.created_at > s.sok_tid
-    AND e.website_id = '${websiteId}'
-    AND EXTRACT(YEAR FROM e.created_at) = 2025
-)
-SELECT
-  side AS neste_side,
-  COUNT(*) AS antall_sok
-FROM neste_sider
-WHERE rn = 1
-GROUP BY side
-ORDER BY antall_sok DESC
-LIMIT 25;`,
-            tabOrder: ['table', 'barchart', 'piechart', 'linechart', 'areachart', 'kiforklaring'],
-            explanation: `Etter søk ender nesten halvparten av brukerne opp på en komponent-side, med Button og Input som klare favoritter. Rundt 20 % navigerer til god-praksis-seksjonen, noe som tyder på at søk brukes like mye for konseptuelle spørsmål som for å finne spesifikke komponenter. Andelen som endte tilbake på forsiden var svært lav, noe som tyder på at søkeresultatene sjelden skuffer.`,
-        },
+        { title: `Daglige sidevisninger for siden i 2025` },
+        { title: `Topp 12 undersider under siden i 2025` },
+        { title: `Sidevisninger per måned for siden i 2025` },
+        { title: `Topp 15 trafikkilder for siden i november 2025` },
+        { title: `Hvilke nettsider sender besøkende til siden? Topp inngående trafikkilder, unike besøkende per kilde i 2025` },
+        { title: `Nøkkeltall for siden i 2025` },
+        { title: `Hvilke handlinger utfører brukerne på siden i 2025? Vis første handling per sesjon, topp 20` },
+        { title: `Hvilket operativsystem bruker de besøkende på siden i 2025?` },
+        { title: `Hvor navigerer brukere etter å ha søkt på siden i 2025?` },
     ];
 
     const extractWebsiteId = (sql: string) => {
@@ -389,8 +156,7 @@ LIMIT 25;`,
 
     const generateSqlFromAi = async () => {
         const basePrompt = aiPrompt.trim() || `Vis meg daglige sidevisninger for ${pathLabel} i 2025`;
-        const effectiveDomain = domain || 'aksel.nav.no';
-        const fullUrl = `https://${effectiveDomain}${path}`;
+        const fullUrl = `https://${domain || 'aksel.nav.no'}${path}`;
 
         setError(null);
         let sqlOk = false;
@@ -399,53 +165,29 @@ LIMIT 25;`,
             const response = await fetch(`${ragApiBase}/api/sql`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    query: basePrompt,
-                    url: fullUrl
-                }),
+                body: JSON.stringify({ query: basePrompt, url: fullUrl }),
             });
             if (!response.ok) {
+                // RAG already provides error messages (Ollama down, bad request, etc.)
                 const errData = await response.json().catch(() => null);
-                const errMsg = errData?.error || `RAG API feilet (${response.status})`;
-                setError(errMsg);
-                setQuery(`-- Feil fra KI-tjenesten: ${errMsg}\n\n${defaultQuery}`);
-            } else {
-                const data = await response.json();
-                let rawSql: string | undefined;
-                if (typeof data?.sql === 'string') {
-                    rawSql = data.sql;
-                } else if (data?.sql?.response) {
-                    rawSql = data.sql.response;
-                } else if (data?.response) {
-                    rawSql = data.response;
-                }
-                if (rawSql) {
-                    if (rawSql.includes('```')) {
-                        rawSql = rawSql.replaceAll('```sql\n', '').replaceAll('```sql', '').replaceAll('```\n', '').replaceAll('```', '');
-                    }
-                    
-                    // Add debug info as SQL comments if present
-                    let finalSql = rawSql.trim();
-                    if (data.debugInfo?.queryType) {
-                        finalSql = `-- Query Type: ${data.debugInfo.queryType}\n\n` + finalSql;
-                    }
-                    
-                    setQuery(finalSql);
-                    sqlOk = true;
-                } else {
-                    setError('KI-tjenesten returnerte ingen SQL');
-                    setQuery('-- Ingen SQL i svaret\n' + JSON.stringify(data, null, 2));
-                }
+                throw new Error(errData?.error || `RAG API feilet (${response.status})`);
             }
-        } catch {
-            setError('Kunne ikke koble til KI-tjenesten');
-            setQuery(`-- Feil: Kunne ikke koble til AI-serveren\n\n${defaultQuery}`);
+            const data = await response.json();
+            const rawSql = typeof data?.sql === 'string' ? data.sql : data?.sql?.response;
+            if (!rawSql) throw new Error('RAG returnerte ingen SQL');
+
+            const cleanSql = rawSql.replace(/```sql\n?|```\n?|```/g, '').trim();
+            const prefix = data.debugInfo?.queryType ? `-- Query Type: ${data.debugInfo.queryType}\n\n` : '';
+            setQuery(prefix + cleanSql);
+            sqlOk = true;
+        } catch (err: any) {
+            const msg = err.message === 'Failed to fetch'
+                ? 'Kunne ikke koble til RAG-tjenesten'
+                : err.message;
+            setError(msg);
         } finally {
-            const guessed = guessChartType(basePrompt);
-            setP2Tab(guessed);
-            if (guessed === 'regresjon') setRegressionTitle(basePrompt || defaultRegressionTitle);
-            // Only auto-execute if we got valid SQL from RAG
-            shouldAutoExecuteRef.current = sqlOk && guessed !== 'stegvisning';
+            setP2Tab(guessChartType(basePrompt));
+            shouldAutoExecuteRef.current = sqlOk;
             setStep(2);
         }
     };
@@ -521,227 +263,25 @@ LIMIT 25;`,
         } catch { /* ignore */ }
     };
 
-    const [journeyError, setJourneyError] = useState<string | null>(null);
-
-    const fetchJourneyData = async () => {
-        setJourneyLoading(true);
-        setJourneyData(null);
-        setJourneyError(null);
-        try {
-            const now = new Date();
-            const resolvedEnd = propEndDate ?? now;
-            const resolvedStart = propStartDate ?? (() => { const d = new Date(resolvedEnd); d.setDate(d.getDate() - 30); return d; })();
-            const startUrl = (path && path !== '') ? path : '/';
-            const response = await fetch('/api/bigquery/journeys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    websiteId,
-                    startUrl,
-                    startDate: resolvedStart.toISOString(),
-                    endDate: resolvedEnd.toISOString(),
-                    steps: 3,
-                    limit: 5,
-                    direction: 'forward',
-                }),
-            });
-            if (!response.ok) throw new Error(`Feil fra server: ${response.status}`);
-            const data = await response.json();
-            if (data.nodes?.length && data.links?.length) {
-                setJourneyData({ nodes: data.nodes, links: data.links });
-            } else {
-                setJourneyError('Ingen sideflyt-data tilgjengelig for denne perioden og siden.');
-            }
-        } catch (e: any) {
-            setJourneyError(e.message || 'Kunne ikke laste sideflyt');
-        } finally {
-            setJourneyLoading(false);
-        }
-    };
+    // All chart types now use the same RAG-based SQL generation flow
+    // No special handling for any chart type
 
     useEffect(() => {
         if (step !== 2) return;
-        if (p2Tab === 'stegvisning' && !journeyLoading) {
-            fetchJourneyData();
-        } else if (p2Tab === 'regresjon' && !result && !loading) {
-            const sql = buildRegressionSQL();
-            setQuery(sql);
-            // Call the API directly with the built SQL — cannot rely on setQuery having
-            // updated the `query` state yet (React state updates are asynchronous).
-            setLoading(true);
-            setError(null);
-            setResult(null);
+        // Auto-execute query if shouldAutoExecuteRef is true (set after RAG generation)
+        if (shouldAutoExecuteRef.current && !loading && query.trim()) {
+            shouldAutoExecuteRef.current = false;
             fetch('/api/bigquery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: sql, analysisType: 'KI bygger - regresjon' }),
+                body: JSON.stringify({ query, analysisType: 'KI bygger' }),
             })
                 .then(r => r.json().then(d => { if (!r.ok) throw new Error(d.error || 'Query failed'); setResult(d); }))
                 .catch((err: any) => setError(err.message || 'An error occurred'))
                 .finally(() => setLoading(false));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [p2Tab, step]);
-
-    const buildJourneySQL = () => {
-        const now = new Date();
-        const resolvedEnd = propEndDate ?? now;
-        const resolvedStart = propStartDate ?? (() => { const d = new Date(resolvedEnd); d.setDate(d.getDate() - 30); return d; })();
-        const startUrl = (path && path !== '') ? path : '/';
-        const steps = 3;
-        const limit = 5;
-        const direction: string = 'forward';
-        const windowFn = direction === 'backward' ? 'LAG' : 'LEAD';
-        const nextCol = direction === 'backward' ? 'prev_url' : 'next_url';
-        const timeOp = direction === 'backward' ? '<=' : '>=';
-        const orderDir = direction === 'backward' ? 'DESC' : 'ASC';
-        return `WITH session_events AS (
-  SELECT
-    session_id,
-    CASE
-      WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-      THEN '/'
-      ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-    END AS url_path,
-    created_at,
-    MIN(CASE
-      WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = '${startUrl}'
-      THEN created_at
-    END) OVER (PARTITION BY session_id) AS start_time
-  FROM \`fagtorsdag-prod-81a6.umami_student.event\`
-  WHERE website_id = '${websiteId}'
-    AND created_at BETWEEN '${resolvedStart.toISOString()}' AND '${resolvedEnd.toISOString()}'
-    AND event_type = 1
-),
-journey_steps AS (
-  SELECT
-    session_id,
-    url_path,
-    created_at,
-    ${windowFn}(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS ${nextCol}
-  FROM session_events
-  WHERE start_time IS NOT NULL
-    AND created_at ${timeOp} start_time
-),
-renumbered_steps AS (
-  SELECT
-    session_id,
-    url_path,
-    ${nextCol},
-    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at ${orderDir}) - 1 AS step
-  FROM journey_steps
-),
-raw_flows AS (
-  SELECT
-    step,
-    url_path AS source,
-    ${nextCol} AS target,
-    COUNT(*) AS value
-  FROM renumbered_steps
-  WHERE step < ${steps}
-    AND ${nextCol} IS NOT NULL
-    AND url_path != ${nextCol}
-    AND (step > 0 OR url_path = '${startUrl}')
-    AND NOT (step > 0 AND url_path = '${startUrl}')
-    AND NOT (step > 0 AND ${nextCol} = '${startUrl}')
-  GROUP BY 1, 2, 3
-),
-ranked AS (
-  SELECT *, ROW_NUMBER() OVER (PARTITION BY step ORDER BY value DESC) AS rank_in_step
-  FROM raw_flows
-),
-top_flows AS (
-  SELECT step, source, target, value
-  FROM ranked
-  WHERE rank_in_step <= ${limit}
-),
-valid_pages_per_step AS (
-  SELECT 0 AS step, '${startUrl}' AS page
-  UNION ALL
-  SELECT step + 1 AS step, target AS page FROM top_flows
-)
-SELECT t.step, t.source, t.target, t.value
-FROM top_flows t
-INNER JOIN valid_pages_per_step v
-  ON v.step = t.step AND v.page = t.source
-ORDER BY step, value DESC`;
-    };
-
-    const buildRegressionSQL = () => {
-        const pathFilter = pathConditionSQL.trim();
-        return `WITH base AS (
-  SELECT CAST(x AS FLOAT64) AS x, CAST(y AS FLOAT64) AS y FROM (
-    SELECT
-      DATE_DIFF(DATE(created_at), DATE('2025-01-01'), DAY) + 1 AS x,
-      COUNT(*) AS y
-    FROM \`fagtorsdag-prod-81a6.umami_student.event\`
-    WHERE event_type = 1
-      AND website_id = '${websiteId}'
-      ${pathFilter}
-      AND EXTRACT(YEAR FROM created_at) = 2025
-    GROUP BY x
-  )
-),
-stats AS (
-  SELECT COUNT(*) AS n, AVG(x) AS x_bar, AVG(y) AS y_bar,
-         VAR_SAMP(x) AS var_x, COVAR_SAMP(x, y) AS cov_xy
-  FROM base
-),
-params AS (
-  SELECT n, x_bar, y_bar,
-    SAFE_DIVIDE(cov_xy, var_x) AS slope,
-    y_bar - SAFE_DIVIDE(cov_xy, var_x) * x_bar AS intercept
-  FROM stats
-),
-resid AS (
-  SELECT b.x, b.y, p.n, p.x_bar, p.y_bar, p.slope, p.intercept,
-    b.y - (p.intercept + p.slope * b.x) AS r
-  FROM base b CROSS JOIN params p
-),
-sums AS (
-  SELECT MIN(n) AS n, MIN(intercept) AS a, MIN(slope) AS b,
-         MIN(x_bar) AS x_bar, MIN(y_bar) AS y_bar,
-    SUM(POW(r, 2)) AS sse,
-    SUM(POW(y - y_bar, 2)) AS sst,
-    SUM(POW(x - x_bar, 2)) AS sxx
-  FROM resid
-),
-m AS (
-  SELECT n, a, b,
-    1 - SAFE_DIVIDE(sse, sst) AS r2,
-    SQRT(SAFE_DIVIDE(sse, n - 2)) AS rmse,
-    SQRT(SAFE_DIVIDE(SAFE_DIVIDE(sse, n - 2), sxx)) AS se_b,
-    SQRT(SAFE_DIVIDE(sse, n - 2) * (1.0 / n + POW(x_bar, 2) / sxx)) AS se_a
-  FROM sums
-),
-pv AS (
-  SELECT n, a, b, r2, rmse, se_a, se_b,
-    SAFE_DIVIDE(a, se_a) AS t_a,
-    SAFE_DIVIDE(b, se_b) AS t_b,
-    -- Two-tailed p-value via Abramowitz & Stegun normal approximation
-    GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(a, se_a)), 2)) / 2.506628 * (
-       0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)))
-      - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 2)
-      + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 3))) AS p_a,
-    GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(b, se_b)), 2)) / 2.506628 * (
-       0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)))
-      - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 2)
-      + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 3))) AS p_b
-  FROM m
-)
-SELECT 'Skjæringspunkt (a)' AS term,
-  ROUND(a, 4) AS estimat, ROUND(se_a, 4) AS std_feil,
-  ROUND(t_a, 3) AS t_verdi, ROUND(p_a, 4) AS p_verdi,
-  ROUND(r2, 4) AS r2, ROUND(rmse, 3) AS rmse, n
-FROM pv
-UNION ALL
-SELECT 'Stigningstall (b)',
-  ROUND(b, 4), ROUND(se_b, 4),
-  ROUND(t_b, 3), ROUND(p_b, 4),
-  ROUND(r2, 4), ROUND(rmse, 3), n
-FROM pv
-ORDER BY term`;
-    };
+    }, [step, query]);
 
     const { prepareLineChartData, prepareBarChartData, preparePieChartData } = useChartDataPrep(result);
 
@@ -819,10 +359,7 @@ ORDER BY term`;
                             style={{ height: '80%', overflow: 'hidden', cursor: onAddWidget ? 'grab' : undefined, position: 'relative' }}
                             draggable={!!onAddWidget}
                             onDragStart={onAddWidget ? (e) => {
-                                const widgetResult = p2Tab === 'stegvisning' ? journeyData
-                                    : p2Tab === 'kiforklaring' ? { text: currentExplanation ?? '' }
-                                        : p2Tab === 'regresjon' ? { rows: result?.data, r2: result?.data?.[0]?.r2, rmse: result?.data?.[0]?.rmse, n: result?.data?.[0]?.n, title: regressionTitle }
-                                            : result;
+                                const widgetResult = p2Tab === 'kiforklaring' ? { text: currentExplanation ?? '' } : result;
                                 const sizes = WIDGET_SIZES[p2Tab] ?? [{ cols: 1, rows: 1, name: 'Standard' }];
                                 const defaultSize = sizes.find(s => s.cols === 2 && s.rows === 1) ?? sizes[0];
                                 e.dataTransfer.setData('application/aibygger', JSON.stringify({ chartType: p2Tab, sql: query, result: widgetResult, title: aiPrompt, aiPrompt, size: defaultSize }));
@@ -845,16 +382,7 @@ ORDER BY term`;
                                 />
                             )}
                             <div style={{ width: '90%', height: '100%', overflow: 'auto', margin: '0 auto' }}>
-                                {p2Tab === 'stegvisning' ? (
-                                    journeyLoading
-                                        ? <div className="flex items-center justify-center h-full text-gray-500">Laster sideflyt...</div>
-                                        : journeyData
-                                            ? <UmamiJourneyView nodes={journeyData.nodes} links={journeyData.links} journeyDirection="forward" websiteId={websiteId} />
-                                            : <div className="flex flex-col items-center justify-center h-full gap-3">
-                                                <p className="text-gray-500 text-sm text-center">{journeyError ?? 'Ingen navigasjonsdata for valgt side og periode.'}</p>
-                                                <button type="button" className="text-sm text-blue-600 underline" onClick={fetchJourneyData}>Last inn på nytt</button>
-                                            </div>
-                                ) : p2Tab === 'statcards' ? (
+                                {p2Tab === 'statcards' ? (
                                     result
                                         ? <DashboardStatCards result={result} title={aiPrompt} />
                                         : <div className="flex items-center justify-center h-full text-gray-500 text-sm">Kjør spørringen for å se nøkkeltall</div>
@@ -878,13 +406,10 @@ ORDER BY term`;
                                 <Button
                                     variant="primary" size="small"
                                     data-tour="legg-til"
-                                    disabled={p2Tab === 'stegvisning' ? !journeyData : p2Tab === 'kiforklaring' ? !currentExplanation : !result?.data?.length}
+                                    disabled={p2Tab === 'kiforklaring' ? !currentExplanation : !result?.data?.length}
                                     onClick={() => {
                                         const sizes = WIDGET_SIZES[p2Tab] ?? [{ cols: 1, rows: 1, name: 'Standard' }];
-                                        const widgetResult = p2Tab === 'stegvisning' ? journeyData
-                                            : p2Tab === 'kiforklaring' ? { text: currentExplanation ?? '' }
-                                                : p2Tab === 'regresjon' ? { rows: result?.data, r2: result?.data?.[0]?.r2, rmse: result?.data?.[0]?.rmse, n: result?.data?.[0]?.n, title: regressionTitle }
-                                                    : result;
+                                        const widgetResult = p2Tab === 'kiforklaring' ? { text: currentExplanation ?? '' } : result;
                                         if (sizes.length === 1) {
                                             onAddWidget(query, p2Tab, widgetResult, sizes[0], aiPrompt, aiPrompt);
                                         } else {
@@ -906,12 +431,7 @@ ORDER BY term`;
                         chartType={p2Tab}
                         defaultTitle={aiPrompt}
                         sizes={WIDGET_SIZES[p2Tab] ?? [{ cols: 1, rows: 1, name: 'Standard' }]}
-                        result={
-                            p2Tab === 'stegvisning' ? journeyData
-                                : p2Tab === 'kiforklaring' ? { text: currentExplanation ?? '' }
-                                    : p2Tab === 'regresjon' ? { rows: result?.data, r2: result?.data?.[0]?.r2, rmse: result?.data?.[0]?.rmse, n: result?.data?.[0]?.n, title: regressionTitle }
-                                        : result
-                        }
+                        result={p2Tab === 'kiforklaring' ? { text: currentExplanation ?? '' } : result}
                     />}
                     <DownloadResultsModal
                         result={result}
@@ -955,23 +475,15 @@ ORDER BY term`;
                         <h2 className="text-lg font-semibold text-gray-800">Avansert spørring</h2>
                     </div>
                     <div style={{ height: '80%', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-                        {isApiOnly ? (
-                            <div style={{ padding: '16px' }}>
-                                <div className="navds-alert navds-alert--info navds-alert--medium" role="alert">
-                                    Dette elementet henter data via API og har ingen SQL-kode.
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="border rounded overflow-hidden" style={{ flex: 1, minHeight: 0 }}>
+                        <div className="border rounded overflow-hidden" style={{ flex: 1, minHeight: 0 }}>
                                 <Editor
                                     height="100%" defaultLanguage="sql"
-                                    value={p2Tab === 'stegvisning' ? buildJourneySQL() : p2Tab === 'regresjon' ? buildRegressionSQL() : query}
-                                    onChange={(v) => { if (p2Tab !== 'stegvisning' && p2Tab !== 'regresjon') { setQuery(v || ''); setFormatSuccess(false); } }}
+                                    value={query}
+                                    onChange={(v) => { setQuery(v || ''); setFormatSuccess(false); }}
                                     theme="vs-dark"
                                     options={{ minimap: { enabled: false }, fontSize: 14, lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 2, wordWrap: 'on', fixedOverflowWidgets: true, stickyScroll: { enabled: false }, lineNumbersMinChars: 4, glyphMargin: false }}
                                 />
                             </div>
-                        )}
                         {showValidation && validateError && (
                             <div className={`relative rounded px-3 py-2 mt-1 text-sm flex-shrink-0 ${validateError === 'SQL er gyldig!' ? 'bg-green-100 border border-green-400 text-green-800' : 'bg-red-100 border border-red-400 text-red-800'}`}>
                                 <span>{validateError}</span>
@@ -1072,32 +584,12 @@ ORDER BY term`;
                     <Button variant="primary" disabled={selectedTidligere === null} onClick={() => {
                         if (selectedTidligere !== null) {
                             const item = examplesAiBuilder[selectedTidligere];
-                            const order = item.tabOrder ?? [];
-                            setTabOrder(order);
-                            setIsApiOnly(!!(item as any).apiOnly);
                             setAiPrompt(item.title);
-                            setCurrentExplanation((item as any).explanation ?? null);
-                            if ((item as any).apiOnly) {
-                                // Use pre-fetched journey mockup data
-                                const jd = mockupJourneyData as { nodes: any[]; links: any[] };
-                                if (jd.nodes.length > 0) setJourneyData(jd);
-                                setP2Tab(order[0] ?? 'stegvisning');
-                                setStep(2);
-                            } else {
-                                setQuery(item.sql);
-                                // Use pre-fetched mockup result if available
-                                const mockRows = (mockupExampleResults as Record<string, any[]>)[String(selectedTidligere)];
-                                if (mockRows) {
-                                    setResult({ success: true, data: mockRows, rowCount: mockRows.length });
-                                    shouldAutoExecuteRef.current = false;
-                                } else {
-                                    setResult(null);
-                                    shouldAutoExecuteRef.current = true;
-                                }
-                                setP2Tab(order[0] ?? 'table');
-                                setStep(2);
-                            }
+                            // All examples now trigger RAG generation instead of using hardcoded SQL
                             setTidligereOpen(false);
+                            // Auto-trigger RAG SQL generation
+                            shouldAutoExecuteRef.current = true;
+                            generateSqlFromAi();
                         }
                     }}>Kjør</Button>
                     <Button variant="tertiary" onClick={() => setTidligereOpen(false)}>Avbryt</Button>
