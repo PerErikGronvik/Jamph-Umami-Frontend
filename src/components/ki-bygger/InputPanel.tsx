@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, HelpText, Label, Textarea, TextField } from '@navikt/ds-react';
+import { Alert, Button, HelpText, Label, Textarea, TextField } from '@navikt/ds-react';
 
 const KiIcon = () => (
     <span
@@ -33,6 +33,8 @@ interface InputPanelProps {
     onKiPromptChange: (v: string) => void;
     kiSuggestion: string | null;
     onHentGraf: () => void;
+    loading?: boolean;
+    error?: string | null;
 }
 
 export default function InputPanel({
@@ -42,6 +44,8 @@ export default function InputPanel({
     onKiPromptChange,
     kiSuggestion,
     onHentGraf,
+    loading = false,
+    error = null,
 }: InputPanelProps) {
     const [urlTouched, setUrlTouched] = useState(false);
     const urlError = urlTouched ? validateNavUrl(url) : null;
@@ -90,6 +94,12 @@ export default function InputPanel({
                         Hent graf
                     </Button>
                 </div>
+
+                {error && (
+                    <Alert variant="error" size="small" className="mt-3">
+                        {error}
+                    </Alert>
+                )}
 
                 {kiSuggestion !== null && (
                     <div className="mt-3 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">

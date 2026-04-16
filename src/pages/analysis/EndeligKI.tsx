@@ -5,7 +5,7 @@ import GrafPanel from '../../components/ki-bygger/GrafPanel';
 import DashboardTab from '../../components/ki-bygger/DashboardTab';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
-
+/*
 const MOCK_CHART_DATA = [
     { date: '2025-01-01', sidevisninger: 1240 },
     { date: '2025-01-02', sidevisninger: 980 },
@@ -24,17 +24,16 @@ WHERE website_id = 'example-website-id'
 GROUP BY DATE(created_at)
 ORDER BY dato ASC;`;
 
-const KI_SUGGESTION = 'Ditt spørsmål er veldig spennende! Hva med å legge til «i måneden»?';
-const KI_SUGGESTION_ADDITION = ' i måneden';
-
-type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'nokkeltall' | 'ki-forklaring';
-
+*/
 interface DashboardGraph {
     title: string;
     data: unknown[];
     size: 'half' | 'full';
 }
+   const KI_SUGGESTION = 'Ditt spørsmål er veldig spennende! Hva med å legge til «i måneden»?';
+   const KI_SUGGESTION_ADDITION = ' i måneden';
 
+   type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'nokkeltall' | 'ki-forklaring';
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function EndeligKI() {
@@ -49,7 +48,12 @@ export default function EndeligKI() {
     const [previewResult, setPreviewResult] = useState<unknown[] | null>(null);
     const [grafTitle, setGrafTitle] = useState('Sidevisninger per dag');
     const [grafTab, setGrafTab] = useState<GrafTab>('linechart');
-    const [sqlValue, setSqlValue] = useState(MOCK_SQL);
+    const [sqlValue, setSqlValue] = useState('');
+    
+    // Loading & error states
+    const [ragLoading, setRagLoading] = useState(false);
+    const [queryLoading, setQueryLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Dashboard state
     const [dashboards, setDashboards] = useState<string[]>(() => {
@@ -77,11 +81,66 @@ export default function EndeligKI() {
 
     // ── Handlers ──────────────────────────────────────────────────────────────
 
-    const handleHentGraf = () => {
-        setPreviewResult(MOCK_CHART_DATA);
-        setSqlValue(MOCK_SQL);
-        setKiSuggestion(KI_SUGGESTION);
-        setGrafTitle(kiPrompt.trim() || 'Sidevisninger per dag');
+    const handleHentGraf = async () => {
+        const trimmedUrl = url.trim();
+        const trimmedPrompt = kiPrompt.trim();
+        
+        if (!trimmedUrl || !trimmedPrompt) {
+            setError('Både URL og spørsmål må fylles ut');
+            return;
+        }
+
+        setError(null);
+        setRagLoading(true);
+        setPreviewResult(null);
+        
+        try {
+            // Generate SQL from RAG API
+            const ragApiBase = import.meta.env.VITE_RAG_API_URL ?? '';
+            const response = await fetch(`${ragApiBase}/api/sql`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: trimmedPrompt, url: trimmedUrl }),
+            });
+            
+            if (!response.ok) {
+                const errData = await response.json().catch(() => null);
+                throw new Error(errData?.error || `RAG API feilet (${response.status})`);
+            }
+            
+            const data = await response.json();
+            const rawSql = typeof data?.sql === 'string' ? data.sql : data?.sql?.response;
+            if (!rawSql) throw new Error('RAG returnerte ingen SQL');
+
+            const cleanSql = rawSql.replace(/```sql\n?|```\n?|```/g, '').trim();
+            const prefix = data.debugInfo?.queryType ? `-- Query Type: ${data.debugInfo.queryType}\n\n` : '';
+            const finalSql = prefix + cleanSql;
+            setSqlValue(finalSql);
+            setGrafTitle(trimmedPrompt);
+            
+            // Execute the query
+            setQueryLoading(true);
+            const queryResponse = await fetch('/api/bigquery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: finalSql, analysisType: 'EndeligKI' }),
+            });
+            
+            const queryData = await queryResponse.json();
+            if (!queryResponse.ok) throw new Error(queryData.error || 'Query failed');
+            
+            setPreviewResult(queryData.data || []);
+            setKiSuggestion(null); // Could add actual suggestions from RAG later
+            
+        } catch (err: any) {
+            const msg = err.message === 'Failed to fetch'
+                ? 'Kunne ikke koble til RAG-tjenesten'
+                : err.message;
+            setError(msg);
+        } finally {
+            setRagLoading(false);
+            setQueryLoading(false);
+        }
     };
 
     const handleAddToDashboard = (dashboard: string, size: 'half' | 'full') => {
@@ -101,7 +160,8 @@ export default function EndeligKI() {
 
     const handleOpenInGrafbygger = (graph: DashboardGraph) => {
         setPreviewResult(graph.data as unknown[]);
-        setSqlValue(MOCK_SQL);
+        setGrafTitle(graph.title);
+        setSqlValue(''); // SQL not stored in dashboard graphs currently
         setKiSuggestion(null);
         setActiveTab('grafbygger');
     };
@@ -124,6 +184,8 @@ export default function EndeligKI() {
                         onKiPromptChange={setKiPrompt}
                         kiSuggestion={kiSuggestion}
                         onHentGraf={handleHentGraf}
+                        loading={ragLoading || queryLoading}
+                        error={error}
                     />
                     <GrafPanel
                         previewResult={previewResult}
