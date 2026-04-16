@@ -332,7 +332,7 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
                         </Button>
                         <Button variant="secondary" size="small" iconPosition="right" icon={<ChevronRight size={16} />}
                             data-tour="lag-graf"
-                            disabled={ragLoading}
+                            loading={ragLoading}
                             onClick={() => { shouldAutoExecuteRef.current = true; generateSqlFromAi(); }}>
                             {ragLoading ? `Genererer... ${ragCounter}s` : 'Til resultater'}
                         </Button>
