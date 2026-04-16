@@ -173,6 +173,13 @@ function Home() {
                         >
                             Endelig prototype
                         </Link>
+                        <Link
+                            href="/endelig-ki"
+                            className="primary-button"
+                            style={grayPrototypeButtonStyle}
+                        >
+                            Endelig KI ✨
+                        </Link>
                     </div>
                 </div>
 

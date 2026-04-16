@@ -15,6 +15,7 @@ import Prototype3 from "./pages/analysis/Prototype3.tsx";
 import AiBygger from "./pages/analysis/AiBygger.tsx";
 import KiBygger from "./pages/analysis/KiBygger.tsx";
 import EndeligPrototype from "./pages/analysis/EndeligPrototype.tsx";
+import EndeligKI from "./pages/analysis/EndeligKI.tsx";
 import Grafdeling from "./pages/analysis/Grafdeling.tsx";
 import WidgetVisning from "./pages/analysis/WidgetVisning.tsx";
 import UserJourney from "./pages/analysis/UserJourney.tsx";
@@ -51,6 +52,7 @@ const routes = [
     { path: "/ai-bygger", component: <AiBygger /> },
     { path: "/ki-bygger", component: <KiBygger /> },
     { path: "/endelig-prototype", component: <EndeligPrototype /> },
+    { path: "/endelig-ki", component: <EndeligKI /> },
     { path: "/metabase", component: <MetabaseGuide /> },
 
     { path: "/sql", component: <SqlEditor /> },
