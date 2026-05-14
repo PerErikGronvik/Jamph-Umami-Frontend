@@ -1,15 +1,7 @@
 export type DashboardWidgetType =
-    | 'table'
-    | 'regresjon'
-    | 'linechart'
-    | 'areachart'
-    | 'barchart'
-    | 'piechart'
-    | 'statcards'
-    | 'stegvisning'
-    | 'kiforklaring'
-    | 'pageflow'
-    | 'metrics';
+    | 'table' | 'regresjon' | 'linechart' | 'areachart' | 'barchart'
+    | 'piechart' | 'statcards' | 'stegvisning' | 'kiforklaring'
+    | 'pageflow' | 'metrics';
 
 export interface DashboardWidgetSize {
     cols: number;
