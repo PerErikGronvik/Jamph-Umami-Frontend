@@ -114,9 +114,9 @@ function TestModell() {
                         href="/prototype3"
                         style={{
                             padding: '10px 24px',
-                            backgroundColor: '#f3f4f6',
-                            color: '#4b5563',
-                            border: '1px solid #d1d5db',
+                            backgroundColor: '#0067C5',
+                            color: 'white',
+                            border: 'none',
                             borderRadius: '6px',
                             fontSize: '15px',
                             cursor: 'pointer',

@@ -156,7 +156,7 @@ function Home() {
                         <Link
                             href="/endelig-ki"
                             className="primary-button"
-                            style={grayPrototypeButtonStyle}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                         >
                             <RobotSmileIcon title="KI analyseverktøy" fontSize="1.5rem" />
                             KI analyseverktøy
