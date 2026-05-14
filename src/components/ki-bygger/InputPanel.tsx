@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, BodyShort, Button, Label, Textarea, TextField } from '@navikt/ds-react';
+import { RobotSmileIcon } from '@navikt/aksel-icons';
 
 const KiIcon = () => (
     <span
@@ -68,7 +69,8 @@ export default function InputPanel({
             {/* Boks 2 – KI-Assistent */}
             <div className="border border-gray-200 rounded-lg bg-white p-4">
                 <div className="flex items-center gap-2 mb-2">
-                    <Label>✨ KI-Assistent</Label>
+                    <RobotSmileIcon title="KI-Assistent" fontSize="1.25rem" />
+                    <Label>KI-Assistent</Label>
                 </div>
 
                 <div className="flex gap-2 items-end">
