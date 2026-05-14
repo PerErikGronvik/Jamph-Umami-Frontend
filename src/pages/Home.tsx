@@ -1,4 +1,5 @@
 import { Heading, Link, Page } from "@navikt/ds-react";
+import { RobotSmileIcon } from '@navikt/aksel-icons';
 
 import UrlSearchForm from "../components/dashboard/UrlSearchForm";
 import { analyticsPages } from "../components/analysis/AnalyticsNavigation";
@@ -153,32 +154,12 @@ function Home() {
                             Gå til Grafbyggeren
                         </Link>
                         <Link
-                            href="/prototype3"
-                            className="primary-button"
-                            style={grayPrototypeButtonStyle}
-                        >
-                            Prototype 3
-                        </Link>
-                        <Link
-                            href="/ki-bygger"
-                            className="primary-button"
-                            style={grayPrototypeButtonStyle}
-                        >
-                            KI-bygger
-                        </Link>
-                        <Link
-                            href="/endelig-prototype"
-                            className="primary-button"
-                            style={grayPrototypeButtonStyle}
-                        >
-                            Endelig prototype
-                        </Link>
-                        <Link
                             href="/endelig-ki"
                             className="primary-button"
                             style={grayPrototypeButtonStyle}
                         >
-                            Endelig KI ✨
+                            <RobotSmileIcon title="KI analyseverktøy" fontSize="1.5rem" />
+                            KI analyseverktøy
                         </Link>
                     </div>
                 </div>

@@ -110,6 +110,21 @@ function TestModell() {
                     >
                         {benchmarkLoading ? 'Kjører benchmark…' : 'Test modell'}
                     </button>
+                    <a
+                        href="/prototype3"
+                        style={{
+                            padding: '10px 24px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#4b5563',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '15px',
+                            cursor: 'pointer',
+                            textDecoration: 'none',
+                        }}
+                    >
+                        Manual review
+                    </a>
                 </div>
 
                 {benchmarkError && (
