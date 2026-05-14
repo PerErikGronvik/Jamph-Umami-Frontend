@@ -14,6 +14,25 @@ function Oppsett() {
                 Her finner du guider, utviklerverktøy og <Link href="#sporingskoder">sporingskoder</Link> for Umami.
             </BodyShort>
 
+            <div style={{
+                border: '1px solid #ddd',
+                marginBottom: '24px',
+                padding: '32px',
+                backgroundColor: '#fff',
+                borderRadius: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: '12px'
+            }}>
+                <Heading as="h2" size="small" style={{ marginBottom: '0' }}>
+                    TestSuite for trening av maskinlæringsmodeller
+                </Heading>
+                <BodyShort size="large" style={{ margin: 0, maxWidth: '760px' }}>
+                    For å vurdere modeller, besøk <Link href="/testmodell">vår nye TestSuite</Link> for å vurdere modeller og RAG-strukturer.
+                </BodyShort>
+            </div>
+
             {/* Kom i gang CTA */}
             <div style={{
                 border: '1px solid #ddd',
