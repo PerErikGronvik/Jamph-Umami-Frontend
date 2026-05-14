@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Alert, BodyShort, Button, Label, Textarea, TextField } from '@navikt/ds-react';
-import { RobotSmileIcon } from '@navikt/aksel-icons';
+import { Alert, BodyShort, Button, Label, Textarea, TextField, Dialog, BodyLong } from '@navikt/ds-react';
+import { RobotSmileIcon, QuestionmarkCircleIcon } from '@navikt/aksel-icons';
 
 const KiIcon = () => (
     <span
@@ -71,6 +71,33 @@ export default function InputPanel({
                 <div className="flex items-center gap-2 mb-2">
                     <RobotSmileIcon title="KI-Analyseassistent" fontSize="1.25rem" />
                     <Label>KI-Analyseassistent</Label>
+                    <Dialog>
+                        <Dialog.Trigger asChild>
+                            <Button variant="tertiary-neutral" size="xsmall" style={{ padding: 0, minWidth: 0, marginLeft: 4, display: 'flex', alignItems: 'center' }}>
+                                <QuestionmarkCircleIcon title="Hva kan jeg spørre om?" fontSize="1.5rem" />
+                            </Button>
+                        </Dialog.Trigger>
+                        <Dialog.Popup>
+                            <Dialog.Header>
+                                <Dialog.Title>Hva kan jeg spørre om?</Dialog.Title>
+                                <Dialog.Description>Eksempler på spørsmål KI-modellen forstår best:</Dialog.Description>
+                            </Dialog.Header>
+                            <Dialog.Body>
+                                <BodyLong>
+                                    <ul style={{ paddingLeft: 20, margin: 0 }}>
+                                        <li>Skriv inn spørsmål du lurer på. Akkurat nå er modellen flinkest på hvor mange av noe det er i 2025 gruppert etter dag/måned.</li>
+                                        <li>Rangeringer av ulike ting, som operativsystem eller hvilke undersider som er populære.</li>
+                                        <li>Hvor mange fullfører en søknad som begynner på <code>/start</code> og slutter på <code>/slutt</code>.</li>
+                                    </ul>
+                                </BodyLong>
+                            </Dialog.Body>
+                            <Dialog.Footer>
+                                <Dialog.CloseTrigger>
+                                    <Button variant="secondary">Lukk</Button>
+                                </Dialog.CloseTrigger>
+                            </Dialog.Footer>
+                        </Dialog.Popup>
+                    </Dialog>
                 </div>
 
                 <div className="flex gap-2 items-end">
