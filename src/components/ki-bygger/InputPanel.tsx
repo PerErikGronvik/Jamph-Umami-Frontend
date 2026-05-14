@@ -12,17 +12,16 @@ const KiIcon = () => (
     </span>
 );
 
-const NAV_DOMAINS = ['nav.no', 'aksel.nav.no', 'arbeidsplassen.nav.no'];
+const ALLOWED_HOSTNAME = 'aksel.nav.no';
 
 function validateNavUrl(value: string): string | null {
     if (!value.trim()) return null;
     const normalized = /^https?:\/\//i.test(value) ? value : `https://${value}`;
     try {
         const { hostname } = new URL(normalized);
-        const isNav = NAV_DOMAINS.some((d) => hostname === d || hostname.endsWith('.' + d));
-        if (!isNav) return 'URL må være en nav.no-adresse (f.eks. nav.no/sykepenger)';
+        if (hostname !== ALLOWED_HOSTNAME) return 'URL må være aksel.nav.no (f.eks. aksel.nav.no/komponenter)';
     } catch {
-        return 'Ugyldig URL. Eksempel: nav.no/sykepenger';
+        return 'Ugyldig URL. Eksempel: aksel.nav.no/komponenter';
     }
     return null;
 }
@@ -57,7 +56,7 @@ export default function InputPanel({
             <div className="border border-gray-200 rounded-lg bg-white p-4">
                 <TextField
                     label="Lim inn URL for å se webstatistikk"
-                    placeholder="https://www.nav.no/..."
+                    placeholder="https://aksel.nav.no/..."
                     value={url}
                     onChange={(e) => { onUrlChange(e.target.value); setUrlTouched(true); }}
                     onBlur={() => setUrlTouched(true)}
@@ -71,11 +70,10 @@ export default function InputPanel({
                 <div className="flex items-center gap-2 mb-2">
                     <RobotSmileIcon title="KI-Analyseassistent" fontSize="1.25rem" />
                     <Label>KI-Analyseassistent</Label>
+                    {/* https://aksel.nav.no/komponenter/core/dialog */}
                     <Dialog>
-                        <Dialog.Trigger asChild>
-                            <Button variant="tertiary-neutral" size="xsmall" style={{ padding: 0, minWidth: 0, marginLeft: 4, display: 'flex', alignItems: 'center' }}>
-                                <QuestionmarkCircleIcon title="Hva kan jeg spørre om?" fontSize="1.5rem" />
-                            </Button>
+                        <Dialog.Trigger aria-label="Hva kan jeg spørre om?" style={{ padding: 0, minWidth: 0, marginLeft: 4, display: 'flex', alignItems: 'center' }}>
+                            <QuestionmarkCircleIcon title="Hva kan jeg spørre om?" fontSize="1.5rem" />
                         </Dialog.Trigger>
                         <Dialog.Popup>
                             <Dialog.Header>
