@@ -66,11 +66,11 @@ export default function InputPanel({
                 />
             </div>
 
-            {/* Boks 2 – KI-Assistent */}
+            {/* Boks 2 – KI-Analyseassistent */}
             <div className="border border-gray-200 rounded-lg bg-white p-4">
                 <div className="flex items-center gap-2 mb-2">
-                    <RobotSmileIcon title="KI-Assistent" fontSize="1.25rem" />
-                    <Label>KI-Assistent</Label>
+                    <RobotSmileIcon title="KI-Analyseassistent" fontSize="1.25rem" />
+                    <Label>KI-Analyseassistent</Label>
                 </div>
 
                 <div className="flex gap-2 items-end">
