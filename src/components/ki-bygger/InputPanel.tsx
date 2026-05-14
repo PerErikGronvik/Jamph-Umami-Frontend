@@ -82,11 +82,9 @@ export default function InputPanel({
                             </Dialog.Header>
                             <Dialog.Body>
                                 <BodyLong>
-                                    <ul style={{ paddingLeft: 20, margin: 0 }}>
-                                        <li>Skriv inn spørsmål du lurer på. Akkurat nå er modellen flinkest på hvor mange av noe det er i 2025 gruppert etter dag/måned.</li>
-                                        <li>Rangeringer av ulike ting, som operativsystem eller hvilke undersider som er populære.</li>
-                                        <li>Hvor mange fullfører en søknad som begynner på <code>/start</code> og slutter på <code>/slutt</code>.</li>
-                                    </ul>
+                                    <p>Skriv inn spørsmål du lurer på. Akkurat nå er modellen flinkest på hvor mange av noe det er i 2025 gruppert etter dag/måned.</p>
+                                    <p>Rangeringer av ulike ting, som operativsystem eller hvilke undersider som er populære.</p>
+                                    <p>Hvor mange fullfører en søknad som begynner på <code>/start</code> og slutter på <code>/slutt</code>.</p>
                                 </BodyLong>
                             </Dialog.Body>
                             <Dialog.Footer>
