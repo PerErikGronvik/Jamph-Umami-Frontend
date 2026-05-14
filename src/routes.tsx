@@ -52,7 +52,7 @@ const routes = [
     { path: "/ai-bygger", component: <AiBygger /> },
     { path: "/ki-bygger", component: <KiBygger /> },
     { path: "/endelig-prototype", component: <EndeligPrototype /> },
-    { path: "/endelig-ki", component: <EndeligKI /> },
+    { path: "/ki-analyseverktøy", component: <EndeligKI /> },
     { path: "/metabase", component: <MetabaseGuide /> },
 
     { path: "/sql", component: <SqlEditor /> },

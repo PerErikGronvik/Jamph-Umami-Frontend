@@ -77,7 +77,7 @@ function Home() {
                             Gå til Grafbyggeren
                         </Link>
                         <Link
-                            href="/endelig-ki"
+                            href="/ki-analyseverktøy"
                             className="primary-button"
                             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                         >
