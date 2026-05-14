@@ -23,6 +23,8 @@ interface GrafPanelProps {
     onGrafTabChange: (tab: GrafTab) => void;
     sqlValue: string;
     onSqlChange: (v: string) => void;
+    onOppdaterGraf: () => Promise<boolean>;
+    oppdaterLoading?: boolean;
     dashboards: string[];
     onAddToDashboard: (dashboard: string, size: 'half' | 'full') => void;
     onCreateNewDashboard: (name: string) => void;
@@ -35,6 +37,8 @@ export default function GrafPanel({
     onGrafTabChange,
     sqlValue,
     onSqlChange,
+    onOppdaterGraf,
+    oppdaterLoading = false,
     dashboards,
     onAddToDashboard,
     onCreateNewDashboard,
@@ -89,6 +93,14 @@ export default function GrafPanel({
             setSqlFeedback({ variant: 'error', message: err instanceof Error ? err.message : 'Kunne ikke estimere kostnad.' });
         } finally {
             setEstimating(false);
+        }
+    };
+
+    const handleOppdater = async () => {
+        setSqlFeedback(null);
+        const ok = await onOppdaterGraf();
+        if (ok) {
+            setSqlFeedback({ variant: 'success', message: 'Graf oppdatert med ny SQL.' });
         }
     };
 
@@ -270,13 +282,14 @@ export default function GrafPanel({
                         {previewResult ? (
                             <>
                                 <SqlCodeEditor value={sqlValue} onChange={onSqlChange} />
-                                <div className="flex justify-between items-center mt-3 flex-wrap gap-2">
+                                <div className="flex items-center mt-3 flex-wrap gap-2">
                                     <div className="flex gap-2">
                                         <CopyButton copyText={sqlValue} text="Kopier" activeText="Kopiert!" size="small" />
                                         <Button variant="secondary" size="small" onClick={handleFormater}>Formater</Button>
                                         <Button variant="secondary" size="small" onClick={handleValider}>Valider</Button>
+                                        <Button variant="secondary" size="small" loading={estimating} onClick={handleKostnad}>Kostnad</Button>
+                                        <Button variant="secondary" size="small" loading={oppdaterLoading} onClick={handleOppdater}>Oppdater</Button>
                                     </div>
-                                    <Button variant="secondary" size="small" loading={estimating} onClick={handleKostnad}>Kostnad</Button>
                                 </div>
                                 {sqlFeedback && (
                                     <Alert variant={sqlFeedback.variant} size="small" className="mt-3">{sqlFeedback.message}</Alert>

@@ -84,6 +84,33 @@ export default function EndeligKI() {
 
     // ── Handlers ──────────────────────────────────────────────────────────────
 
+    const executeSqlQuery = async (query: string) => {
+        setQueryLoading(true);
+        setError(null);
+
+        try {
+            const queryResponse = await fetch('/api/bigquery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, analysisType: 'EndeligKI' }),
+            });
+
+            const queryData = await queryResponse.json();
+            if (!queryResponse.ok) throw new Error(queryData.error || 'Query failed');
+
+            setPreviewResult(queryData.data || []);
+            return true;
+        } catch (err: any) {
+            const msg = err.message === 'Failed to fetch'
+                ? 'Kunne ikke koble til RAG-tjenesten'
+                : err.message;
+            setError(msg);
+            return false;
+        } finally {
+            setQueryLoading(false);
+        }
+    };
+
     const handleHentGraf = async () => {
         const trimmedUrl = url.trim();
         const trimmedPrompt = kiPrompt.trim();
@@ -120,19 +147,8 @@ export default function EndeligKI() {
             const finalSql = prefix + cleanSql;
             setSqlValue(finalSql);
             setGrafTitle(trimmedPrompt);
-            
-            // Execute the query
-            setQueryLoading(true);
-            const queryResponse = await fetch('/api/bigquery', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: finalSql, analysisType: 'EndeligKI' }),
-            });
-            
-            const queryData = await queryResponse.json();
-            if (!queryResponse.ok) throw new Error(queryData.error || 'Query failed');
-            
-            setPreviewResult(queryData.data || []);
+
+            await executeSqlQuery(finalSql);
             setKiSuggestion(null); // Could add actual suggestions from RAG later
             
         } catch (err: any) {
@@ -144,6 +160,14 @@ export default function EndeligKI() {
             setRagLoading(false);
             setQueryLoading(false);
         }
+    };
+
+    const handleOppdaterGrafFromSql = async () => {
+        if (!sqlValue.trim()) {
+            setError('SQL kan ikke være tom.');
+            return false;
+        }
+        return executeSqlQuery(sqlValue);
     };
 
     const handleAddToDashboard = (dashboard: string, size: 'half' | 'full') => {
@@ -198,6 +222,8 @@ export default function EndeligKI() {
                         onGrafTabChange={setGrafTab}
                         sqlValue={sqlValue}
                         onSqlChange={setSqlValue}
+                        onOppdaterGraf={handleOppdaterGrafFromSql}
+                        oppdaterLoading={queryLoading}
                         dashboards={dashboards}
                         onAddToDashboard={handleAddToDashboard}
                         onCreateNewDashboard={handleCreateNewDashboard}
