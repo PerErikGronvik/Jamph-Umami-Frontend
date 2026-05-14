@@ -29,7 +29,7 @@ function Oppsett() {
                     TestSuite for trening av maskinlæringsmodeller
                 </Heading>
                 <BodyShort size="large" style={{ margin: 0, maxWidth: '760px' }}>
-                    For å vurdere modeller, besøk <Link href="/testmodell">vår nye TestSuite</Link> for å vurdere modeller og RAG-strukturer.
+                    Besøk <Link href="/testmodell">vår nye TestSuite</Link> for å vurdere modeller og RAG-strukturer.
                 </BodyShort>
             </div>
 
