@@ -30,11 +30,6 @@ const sections = [
 ];
 
 function Home() {
-    const grayPrototypeButtonStyle = {
-        backgroundColor: '#f3f4f6',
-        color: '#4b5563',
-        border: '1px solid #d1d5db'
-    };
 
     return (
         <>
@@ -53,6 +48,45 @@ function Home() {
             </div>
 
             <Page.Block width="xl" gutters>
+                {/* Grafbygger section */}
+                <div style={{
+                    border: '1px solid #ddd',
+                    marginTop: '32px',
+                    marginBottom: '40px',
+                    padding: '40px',
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '24px'
+                }}>
+                    <div>
+                        <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
+                            Lag tilpassede grafer og tabeller
+                        </Heading>
+                        <p style={{ margin: 0, color: '#444', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
+                            Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase.
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <Link
+                            href="/grafbygger"
+                            className="primary-button"
+                        >
+                            Gå til Grafbyggeren
+                        </Link>
+                        <Link
+                            href="/endelig-ki"
+                            className="primary-button"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                        >
+                            <RobotSmileIcon title="KI analyseverktøy" fontSize="1.5rem" />
+                            KI analyseverktøy
+                        </Link>
+                    </div>
+                </div>
+
                 <div style={{ marginTop: "38px", marginBottom: "32px" }}>
                     <Heading as="h3" size="medium">Hva ønsker du å analysere?</Heading>
                 </div>
@@ -123,45 +157,6 @@ function Home() {
                             </nav>
                         </div>
                     ))}
-                </div>
-
-                {/* Grafbygger section */}
-                <div style={{
-                    border: '1px solid #ddd',
-                    marginTop: '32px',
-                    marginBottom: '40px',
-                    padding: '40px',
-                    backgroundColor: 'white',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '24px'
-                }}>
-                    <div>
-                        <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
-                            Lag tilpassede grafer og tabeller
-                        </Heading>
-                        <p style={{ margin: 0, color: '#444', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
-                            Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase.
-                        </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                        <Link
-                            href="/grafbygger"
-                            className="primary-button"
-                        >
-                            Gå til Grafbyggeren
-                        </Link>
-                        <Link
-                            href="/endelig-ki"
-                            className="primary-button"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                        >
-                            <RobotSmileIcon title="KI analyseverktøy" fontSize="1.5rem" />
-                            KI analyseverktøy
-                        </Link>
-                    </div>
                 </div>
 
             </Page.Block>
