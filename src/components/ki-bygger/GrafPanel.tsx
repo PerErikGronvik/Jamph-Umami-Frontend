@@ -43,7 +43,6 @@ export default function GrafPanel({
     onAddToDashboard,
     onCreateNewDashboard,
 }: GrafPanelProps) {
-    const [grafColSpan, setGrafColSpan] = useState(1);
     const [sqlOpen, setSqlOpen] = useState(false);
     const [lastNedOpen, setLastNedOpen] = useState(false);
     const [delOpen, setDelOpen] = useState(false);
@@ -180,7 +179,7 @@ export default function GrafPanel({
                 </div>
 
                 {/* Diagramtype-velger */}
-                <div className="mb-4 border-b border-gray-200 flex items-end justify-between gap-2 flex-wrap">
+                <div className="mb-4 border-b border-gray-200">
                     <ToggleGroup
                         value={grafTab}
                         onChange={(v) => onGrafTabChange(v as GrafTab)}
@@ -193,16 +192,6 @@ export default function GrafPanel({
                         <ToggleGroup.Item value="nokkeltall">Nøkkeltall</ToggleGroup.Item>
                         <ToggleGroup.Item value="ki-forklaring">KI-forklaring</ToggleGroup.Item>
                     </ToggleGroup>
-                    {grafTab === 'piechart' && (
-                        <ToggleGroup
-                            value={String(grafColSpan)}
-                            onChange={(v) => setGrafColSpan(Number(v))}
-                            size="small"
-                        >
-                            <ToggleGroup.Item value="1">1×1</ToggleGroup.Item>
-                            <ToggleGroup.Item value="2">2×1</ToggleGroup.Item>
-                        </ToggleGroup>
-                    )}
                 </div>
 
                 {/* Nøkkeltall-panel */}
@@ -236,7 +225,6 @@ export default function GrafPanel({
                             result={{ data: previewResult }}
                             chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
                             title={grafTitle}
-                            colSpan={grafColSpan}
                         />
                     ) : (
                         <div className="flex items-center justify-center h-80 text-gray-400 text-sm">
