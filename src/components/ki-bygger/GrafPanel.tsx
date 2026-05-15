@@ -62,24 +62,29 @@ export default function GrafPanel({
         const prompt = mode === 'ki-forklaring'
             ? 'Forklar disse dataene og hva det betyr'
             : 'Hent ut de viktigste tallene og presenter dem.';
-        const ollamaUrl = (import.meta.env.VITE_OLLAMA_URL ?? '').replace(/\/$/, '');
+        const ragApiBase = (import.meta.env.VITE_RAG_API_URL ?? '').replace(/\/$/, '');
         setKiLoadingFor(mode);
         try {
-            const response = await fetch(`${ollamaUrl}/api/generate`, {
+            const response = await fetch(`${ragApiBase}/api/passthrough/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'qwen2.5-coder:7b',
-                    prompt: `${prompt}\n\nData:\n${JSON.stringify(data, null, 2)}`,
-                    stream: false,
+                    prompt,
+                    data,
                 }),
             });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => null);
+                throw new Error(errData?.error ?? `KI-tjenesten svarte med feil (${response.status})`);
+            }
             const result = await response.json();
             const text = result?.response ?? 'Ingen respons fra KI.';
             if (mode === 'ki-forklaring') setKiForklaring(text);
             else setNokkeltall(text);
-        } catch {
-            const fallback = 'Kunne ikke koble til KI-tjenesten.';
+        } catch (err: any) {
+            const fallback = err?.message?.includes('Failed to fetch')
+                ? 'Kunne ikke koble til KI-tjenesten. Sjekk at RAG-APIet kjører.'
+                : `KI-feil: ${err?.message ?? 'Ukjent feil'}`;
             if (mode === 'ki-forklaring') setKiForklaring(fallback);
             else setNokkeltall(fallback);
         } finally {
