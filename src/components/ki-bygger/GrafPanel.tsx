@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, BodyShort, CopyButton, Heading, Label, Modal, TextField, ToggleGroup } from '@navikt/ds-react';
 import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, ExternalLinkIcon, PlusIcon } from '@navikt/aksel-icons';
 import { format as formatSql } from 'sql-formatter';
@@ -54,6 +54,48 @@ export default function GrafPanel({
     const [sqlFeedback, setSqlFeedback] = useState<{ variant: 'success' | 'error' | 'info'; message: string } | null>(null);
     const [estimating, setEstimating] = useState(false);
     const [infoPanelMode, setInfoPanelMode] = useState<'ki-forklaring' | 'nokkeltall'>('ki-forklaring');
+    const [kiForklaring, setKiForklaring] = useState<string | null>(null);
+    const [nokkeltall, setNokkeltall] = useState<string | null>(null);
+    const [kiLoadingFor, setKiLoadingFor] = useState<'ki-forklaring' | 'nokkeltall' | null>(null);
+
+    const fetchKiResponse = async (mode: 'ki-forklaring' | 'nokkeltall', data: unknown[]) => {
+        const prompt = mode === 'ki-forklaring'
+            ? 'Forklar disse dataene og hva det betyr'
+            : 'Hent ut de viktigste tallene og presenter dem.';
+        const ollamaUrl = (import.meta.env.VITE_OLLAMA_URL ?? '').replace(/\/$/, '');
+        setKiLoadingFor(mode);
+        try {
+            const response = await fetch(`${ollamaUrl}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'qwen2.5-coder:7b',
+                    prompt: `${prompt}\n\nData:\n${JSON.stringify(data, null, 2)}`,
+                    stream: false,
+                }),
+            });
+            const result = await response.json();
+            const text = result?.response ?? 'Ingen respons fra KI.';
+            if (mode === 'ki-forklaring') setKiForklaring(text);
+            else setNokkeltall(text);
+        } catch {
+            const fallback = 'Kunne ikke koble til KI-tjenesten.';
+            if (mode === 'ki-forklaring') setKiForklaring(fallback);
+            else setNokkeltall(fallback);
+        } finally {
+            setKiLoadingFor(null);
+        }
+    };
+
+    useEffect(() => {
+        if (previewResult && previewResult.length > 0) {
+            setKiForklaring(null);
+            setNokkeltall(null);
+            setInfoPanelMode('ki-forklaring');
+            fetchKiResponse('ki-forklaring', previewResult);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [previewResult]);
 
     const handleFormater = () => {
         try {
@@ -197,32 +239,45 @@ export default function GrafPanel({
                 {/* KI-forklaring / Nøkkeltall — click to toggle */}
                 <div
                     className={`rounded-lg p-4 mb-4 cursor-pointer select-none ${infoPanelMode === 'ki-forklaring' ? 'bg-blue-50' : 'bg-gray-50'}`}
-                    onClick={() => setInfoPanelMode(m => m === 'ki-forklaring' ? 'nokkeltall' : 'ki-forklaring')}
+                    onClick={() => {
+                        const next = infoPanelMode === 'ki-forklaring' ? 'nokkeltall' : 'ki-forklaring';
+                        setInfoPanelMode(next);
+                        if (next === 'nokkeltall' && nokkeltall === null && kiLoadingFor === null && previewResult && previewResult.length > 0) {
+                            fetchKiResponse('nokkeltall', previewResult);
+                        }
+                    }}
                     title={infoPanelMode === 'ki-forklaring' ? 'Klikk for å se Nøkkeltall' : 'Klikk for å se KI-forklaring'}
                 >
                     {infoPanelMode === 'ki-forklaring' ? (
                         <>
                             <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">KI-forklaring</BodyShort>
                             <BodyShort size="small">
-                                {previewResult
-                                    ? 'Trafikken økte 45 % fra start til slutt av perioden med to tydelige topper.'
-                                    : 'Hent graf for å se KI-forklaring.'}
+                                {!previewResult
+                                    ? 'Hent graf for å se KI-forklaring.'
+                                    : kiLoadingFor === 'ki-forklaring'
+                                    ? 'Venter på KI...'
+                                    : (kiForklaring ?? 'Venter på KI...')}
                             </BodyShort>
                         </>
                     ) : (
                         <>
                             <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">Nøkkeltall</BodyShort>
                             <BodyShort size="small">
-                                {previewResult
-                                    ? '10 840 sidevisninger totalt · Snitt 1 548 / dag'
-                                    : 'Hent graf for å se nøkkeltall.'}
+                                {!previewResult
+                                    ? 'Hent graf for å se nøkkeltall.'
+                                    : kiLoadingFor === 'nokkeltall'
+                                    ? 'Venter på KI...'
+                                    : (nokkeltall ?? 'Venter på KI...')}
                             </BodyShort>
                         </>
                     )}
                 </div>
 
                 {/* Grafvisning */}
-                <div className="min-h-80 border border-gray-100 rounded-lg p-2 bg-white mb-4">
+                <div
+                    className="border border-gray-100 rounded-lg p-2 bg-white mb-4"
+                    style={{ height: '320px', position: 'relative' }}
+                >
                     {previewResult ? (
                         <PinnedWidget
                             result={{ data: previewResult }}
@@ -231,7 +286,7 @@ export default function GrafPanel({
                             colSpan={grafTab === 'piechart' || grafTab === 'statcards' ? 2 : 1}
                         />
                     ) : (
-                        <div className="flex items-center justify-center h-80 text-gray-400 text-sm">
+                        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                             Grafen vises her etter at du trykker «Hent graf»
                         </div>
                     )}
