@@ -327,9 +327,14 @@ export function AiByggerPanel({ websiteId, domain, path, pathOperator, startDate
 
                     </div>
                     <div style={{ height: '10%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Button variant="secondary" size="small" onClick={() => { setSelectedTidligere(null); setTidligereOpen(true); }}>
-                            Eksempler
-                        </Button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <Button variant="secondary" size="small" onClick={() => { setSelectedTidligere(null); setTidligereOpen(true); }}>
+                                Eksempler
+                            </Button>
+                            <Button variant="secondary" size="small" onClick={() => setLagEgenSqlOpen(true)}>
+                                Gå til SQL-editor
+                            </Button>
+                        </div>
                         <Button variant="secondary" size="small" iconPosition="right" icon={<ChevronRight size={16} />}
                             data-tour="lag-graf"
                             loading={ragLoading}
