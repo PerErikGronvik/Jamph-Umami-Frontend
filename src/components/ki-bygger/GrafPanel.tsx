@@ -225,6 +225,7 @@ export default function GrafPanel({
                             result={{ data: previewResult }}
                             chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
                             title={grafTitle}
+                            colSpan={grafTab === 'piechart' ? 2 : 1}
                         />
                     ) : (
                         <div className="flex items-center justify-center h-80 text-gray-400 text-sm">
