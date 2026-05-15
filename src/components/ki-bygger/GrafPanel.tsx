@@ -8,7 +8,7 @@ import DownloadResultsModal from '../chartbuilder/results/DownloadResultsModal';
 import ShareResultsModal from '../chartbuilder/results/ShareResultsModal';
 import { SqlCodeEditor } from '../../client/shared/ui/sql';
 
-type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'nokkeltall' | 'ki-forklaring';
+type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards' | 'nokkeltall' | 'ki-forklaring';
 
 interface DashboardEntry {
     title: string;
@@ -189,6 +189,7 @@ export default function GrafPanel({
                         <ToggleGroup.Item value="barchart">Stolpe</ToggleGroup.Item>
                         <ToggleGroup.Item value="piechart">Kake</ToggleGroup.Item>
                         <ToggleGroup.Item value="table">Tabell</ToggleGroup.Item>
+                        <ToggleGroup.Item value="statcards">Cards</ToggleGroup.Item>
                         <ToggleGroup.Item value="nokkeltall">Nøkkeltall</ToggleGroup.Item>
                         <ToggleGroup.Item value="ki-forklaring">KI-forklaring</ToggleGroup.Item>
                     </ToggleGroup>
@@ -225,7 +226,7 @@ export default function GrafPanel({
                             result={{ data: previewResult }}
                             chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
                             title={grafTitle}
-                            colSpan={grafTab === 'piechart' ? 2 : 1}
+                            colSpan={grafTab === 'piechart' || grafTab === 'statcards' ? 2 : 1}
                         />
                     ) : (
                         <div className="flex items-center justify-center h-80 text-gray-400 text-sm">
