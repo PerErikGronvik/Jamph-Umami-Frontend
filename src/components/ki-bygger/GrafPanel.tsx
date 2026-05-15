@@ -237,7 +237,7 @@ export default function GrafPanel({
                         <ToggleGroup.Item value="barchart">Stolpe</ToggleGroup.Item>
                         <ToggleGroup.Item value="piechart">Kake</ToggleGroup.Item>
                         <ToggleGroup.Item value="table">Tabell</ToggleGroup.Item>
-                        <ToggleGroup.Item value="statcards">Cards</ToggleGroup.Item>
+                        <ToggleGroup.Item value="statcards">Kort</ToggleGroup.Item>
                     </ToggleGroup>
                 </div>
 
