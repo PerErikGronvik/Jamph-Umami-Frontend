@@ -311,6 +311,10 @@ export default function GrafPanel({
                 onClose={() => setLastNedOpen(false)}
                 chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
                 title={grafTitle}
+                pngSizes={[
+                    { cols: 1, rows: 1, name: '1×1' },
+                    { cols: 2, rows: 1, name: '2×1' },
+                ]}
                 prepareLineChartData={prepareLineChartData}
                 prepareBarChartData={prepareBarChartData}
                 preparePieChartData={preparePieChartData}
