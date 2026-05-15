@@ -110,6 +110,7 @@ export default function InputPanel({
                         variant="primary"
                         size="small"
                         onClick={onHentGraf}
+                        loading={loading}
                         disabled={!url.trim() || !kiPrompt.trim() || !!validateNavUrl(url)}
                         style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                     >
