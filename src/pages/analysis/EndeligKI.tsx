@@ -36,7 +36,7 @@ interface DashboardGraph {
    const KI_SUGGESTION = 'Ditt spørsmål er veldig spennende! Hva med å legge til «i måneden»?';
    const KI_SUGGESTION_ADDITION = ' i måneden';
 
-   type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards' | 'nokkeltall' | 'ki-forklaring';
+   type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards';
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function EndeligKI() {

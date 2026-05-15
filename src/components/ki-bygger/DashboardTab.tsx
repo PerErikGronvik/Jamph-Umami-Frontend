@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { BodyShort, Button, Modal, TextField } from '@navikt/ds-react';
 import PinnedWidget from '../dashboard/PinnedWidget';
 
-type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards' | 'nokkeltall' | 'ki-forklaring';
+type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards';
 
 interface DashboardGraph {
     title: string;

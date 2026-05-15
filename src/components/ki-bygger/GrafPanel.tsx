@@ -8,7 +8,7 @@ import DownloadResultsModal from '../chartbuilder/results/DownloadResultsModal';
 import ShareResultsModal from '../chartbuilder/results/ShareResultsModal';
 import { SqlCodeEditor } from '../../client/shared/ui/sql';
 
-type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards' | 'nokkeltall' | 'ki-forklaring';
+type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards';
 
 interface DashboardEntry {
     title: string;
@@ -53,6 +53,7 @@ export default function GrafPanel({
     const newDashboardInputRef = useRef<HTMLInputElement>(null);
     const [sqlFeedback, setSqlFeedback] = useState<{ variant: 'success' | 'error' | 'info'; message: string } | null>(null);
     const [estimating, setEstimating] = useState(false);
+    const [infoPanelMode, setInfoPanelMode] = useState<'ki-forklaring' | 'nokkeltall'>('ki-forklaring');
 
     const handleFormater = () => {
         try {
@@ -190,41 +191,42 @@ export default function GrafPanel({
                         <ToggleGroup.Item value="piechart">Kake</ToggleGroup.Item>
                         <ToggleGroup.Item value="table">Tabell</ToggleGroup.Item>
                         <ToggleGroup.Item value="statcards">Cards</ToggleGroup.Item>
-                        <ToggleGroup.Item value="nokkeltall">Nøkkeltall</ToggleGroup.Item>
-                        <ToggleGroup.Item value="ki-forklaring">KI-forklaring</ToggleGroup.Item>
                     </ToggleGroup>
                 </div>
 
-                {/* Nøkkeltall-panel */}
-                {grafTab === 'nokkeltall' && (
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">Nøkkeltall</BodyShort>
-                        <BodyShort size="small">
-                            {previewResult
-                                ? '10 840 sidevisninger totalt · Snitt 1 548 / dag'
-                                : 'Hent graf for å se nøkkeltall.'}
-                        </BodyShort>
-                    </div>
-                )}
-
-                {/* KI-forklaring-panel */}
-                {grafTab === 'ki-forklaring' && (
-                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                        <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">KI-forklaring</BodyShort>
-                        <BodyShort size="small">
-                            {previewResult
-                                ? 'Trafikken økte 45 % fra start til slutt av perioden med to tydelige topper.'
-                                : 'Hent graf for å se KI-forklaring.'}
-                        </BodyShort>
-                    </div>
-                )}
+                {/* KI-forklaring / Nøkkeltall — click to toggle */}
+                <div
+                    className={`rounded-lg p-4 mb-4 cursor-pointer select-none ${infoPanelMode === 'ki-forklaring' ? 'bg-blue-50' : 'bg-gray-50'}`}
+                    onClick={() => setInfoPanelMode(m => m === 'ki-forklaring' ? 'nokkeltall' : 'ki-forklaring')}
+                    title={infoPanelMode === 'ki-forklaring' ? 'Klikk for å se Nøkkeltall' : 'Klikk for å se KI-forklaring'}
+                >
+                    {infoPanelMode === 'ki-forklaring' ? (
+                        <>
+                            <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">KI-forklaring</BodyShort>
+                            <BodyShort size="small">
+                                {previewResult
+                                    ? 'Trafikken økte 45 % fra start til slutt av perioden med to tydelige topper.'
+                                    : 'Hent graf for å se KI-forklaring.'}
+                            </BodyShort>
+                        </>
+                    ) : (
+                        <>
+                            <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">Nøkkeltall</BodyShort>
+                            <BodyShort size="small">
+                                {previewResult
+                                    ? '10 840 sidevisninger totalt · Snitt 1 548 / dag'
+                                    : 'Hent graf for å se nøkkeltall.'}
+                            </BodyShort>
+                        </>
+                    )}
+                </div>
 
                 {/* Grafvisning */}
                 <div className="min-h-80 border border-gray-100 rounded-lg p-2 bg-white mb-4">
                     {previewResult ? (
                         <PinnedWidget
                             result={{ data: previewResult }}
-                            chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
+                            chartType={grafTab}
                             title={grafTitle}
                             colSpan={grafTab === 'piechart' || grafTab === 'statcards' ? 2 : 1}
                         />
@@ -311,7 +313,7 @@ export default function GrafPanel({
                 result={{ data: previewResult }}
                 open={lastNedOpen}
                 onClose={() => setLastNedOpen(false)}
-                chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
+                chartType={grafTab}
                 title={grafTitle}
                 pngSizes={[
                     { cols: 1, rows: 1, name: '1×1' },
