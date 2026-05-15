@@ -156,7 +156,7 @@ export default function DashboardTab({
                                     style={{ gridColumn: g.size === 'full' ? 'span 2' : 'span 1' }}
                                 >
                                     <div className="h-64 relative overflow-hidden">
-                                        <PinnedWidget result={{ data: g.data }} chartType={g.grafTab || 'linechart'} title={g.title} />
+                                        <PinnedWidget result={{ data: g.data }} chartType={g.grafTab || 'linechart'} title={g.title} colSpan={g.size === 'full' ? 2 : 1} />
                                     </div>
 
                                     {/* expand overlay */}
