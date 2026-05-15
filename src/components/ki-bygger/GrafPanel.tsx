@@ -60,8 +60,8 @@ export default function GrafPanel({
 
     const fetchKiResponse = async (mode: 'ki-forklaring' | 'nokkeltall', data: unknown[]) => {
         const prompt = mode === 'ki-forklaring'
-            ? 'Forklar disse dataene og hva det betyr'
-            : 'Hent ut de viktigste tallene og presenter dem.';
+            ? 'Du er en hjelpsom assistent. Forklar disse dataene og hva det betyr. Bruk kun muntlig språk. Unngå tegn og kode.'
+            : 'Du er en hjelpsom assistent. Hent ut de viktigste tallene og presenter dem. Bruk kun muntlig språk. Unngå tegn og kode.';
         const ragApiBase = (import.meta.env.VITE_RAG_API_URL ?? '').replace(/\/$/, '');
         setKiLoadingFor(mode);
         try {
