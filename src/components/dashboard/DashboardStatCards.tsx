@@ -79,7 +79,7 @@ export default function DashboardStatCards({ result, title }: Props) {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: 6,
-                                padding: '16px 8px',
+                                padding: '28px 8px',
                                 background: color.bg,
                                 border: `1.5px solid ${color.border}`,
                                 borderRadius: 12,

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, BodyShort, CopyButton, Heading, Label, Modal, TextField, ToggleGroup } from '@navikt/ds-react';
 import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, ExternalLinkIcon, PlusIcon } from '@navikt/aksel-icons';
 import { format as formatSql } from 'sql-formatter';
@@ -8,7 +8,7 @@ import DownloadResultsModal from '../chartbuilder/results/DownloadResultsModal';
 import ShareResultsModal from '../chartbuilder/results/ShareResultsModal';
 import { SqlCodeEditor } from '../../client/shared/ui/sql';
 
-type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'nokkeltall' | 'ki-forklaring';
+type GrafTab = 'linechart' | 'barchart' | 'piechart' | 'table' | 'statcards';
 
 interface DashboardEntry {
     title: string;
@@ -23,6 +23,8 @@ interface GrafPanelProps {
     onGrafTabChange: (tab: GrafTab) => void;
     sqlValue: string;
     onSqlChange: (v: string) => void;
+    onOppdaterGraf: () => Promise<boolean>;
+    oppdaterLoading?: boolean;
     dashboards: string[];
     onAddToDashboard: (dashboard: string, size: 'half' | 'full') => void;
     onCreateNewDashboard: (name: string) => void;
@@ -35,6 +37,8 @@ export default function GrafPanel({
     onGrafTabChange,
     sqlValue,
     onSqlChange,
+    onOppdaterGraf,
+    oppdaterLoading = false,
     dashboards,
     onAddToDashboard,
     onCreateNewDashboard,
@@ -49,6 +53,56 @@ export default function GrafPanel({
     const newDashboardInputRef = useRef<HTMLInputElement>(null);
     const [sqlFeedback, setSqlFeedback] = useState<{ variant: 'success' | 'error' | 'info'; message: string } | null>(null);
     const [estimating, setEstimating] = useState(false);
+    const [infoPanelMode, setInfoPanelMode] = useState<'ki-forklaring' | 'nokkeltall'>('ki-forklaring');
+    const [kiForklaring, setKiForklaring] = useState<string | null>(null);
+    const [nokkeltall, setNokkeltall] = useState<string | null>(null);
+    const [kiLoadingFor, setKiLoadingFor] = useState<'ki-forklaring' | 'nokkeltall' | null>(null);
+
+    const fetchKiResponse = async (mode: 'ki-forklaring' | 'nokkeltall', data: unknown[]) => {
+        const role = mode === 'ki-forklaring'
+            ? 'Forklar disse dataene og hva det betyr. Bruk kun muntlig språk. Unngå tegn og kode.'
+            : 'Hent ut de viktigste tallene og presenter dem. Bruk kun muntlig språk. Unngå tegn og kode.';
+        const ragApiBase = (import.meta.env.VITE_RAG_API_URL ?? '').replace(/\/$/, '');
+        setKiLoadingFor(mode);
+        try {
+            const response = await fetch(`${ragApiBase}/api/passthrough/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    role,
+                    question: grafTitle,
+                    code: sqlValue,
+                    data,
+                }),
+            });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => null);
+                throw new Error(errData?.error ?? `KI-tjenesten svarte med feil (${response.status})`);
+            }
+            const result = await response.json();
+            const text = result?.response ?? 'Ingen respons fra KI.';
+            if (mode === 'ki-forklaring') setKiForklaring(text);
+            else setNokkeltall(text);
+        } catch (err: any) {
+            const fallback = err?.message?.includes('Failed to fetch')
+                ? 'Kunne ikke koble til KI-tjenesten. Sjekk at RAG-APIet kjører.'
+                : `KI-feil: ${err?.message ?? 'Ukjent feil'}`;
+            if (mode === 'ki-forklaring') setKiForklaring(fallback);
+            else setNokkeltall(fallback);
+        } finally {
+            setKiLoadingFor(null);
+        }
+    };
+
+    useEffect(() => {
+        if (previewResult && previewResult.length > 0) {
+            setKiForklaring(null);
+            setNokkeltall(null);
+            setInfoPanelMode('ki-forklaring');
+            fetchKiResponse('ki-forklaring', previewResult);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [previewResult]);
 
     const handleFormater = () => {
         try {
@@ -74,8 +128,8 @@ export default function GrafPanel({
         try {
             formatSql(sqlValue);
             setSqlFeedback({ variant: 'success', message: 'SQL er gyldig!' });
-        } catch (e: any) {
-            setSqlFeedback({ variant: 'error', message: 'Ugyldig SQL: ' + (e.message || 'Syntaksfeil') });
+        } catch (e: unknown) {
+            setSqlFeedback({ variant: 'error', message: 'Ugyldig SQL: ' + (e instanceof Error ? e.message : 'Syntaksfeil') });
         }
     };
 
@@ -85,10 +139,18 @@ export default function GrafPanel({
         try {
             const stats = await estimateBigQueryQuery(sqlValue, 'Endelig KI');
             setSqlFeedback({ variant: 'info', message: `Estimert kostnad: $${stats?.estimatedCostUSD} USD · ${stats?.totalBytesProcessedGB} GB behandlet` });
-        } catch (err: any) {
-            setSqlFeedback({ variant: 'error', message: err.message || 'Kunne ikke estimere kostnad.' });
+        } catch (err: unknown) {
+            setSqlFeedback({ variant: 'error', message: err instanceof Error ? err.message : 'Kunne ikke estimere kostnad.' });
         } finally {
             setEstimating(false);
+        }
+    };
+
+    const handleOppdater = async () => {
+        setSqlFeedback(null);
+        const ok = await onOppdaterGraf();
+        if (ok) {
+            setSqlFeedback({ variant: 'success', message: 'Graf oppdatert med ny SQL.' });
         }
     };
 
@@ -177,45 +239,61 @@ export default function GrafPanel({
                         <ToggleGroup.Item value="barchart">Stolpe</ToggleGroup.Item>
                         <ToggleGroup.Item value="piechart">Kake</ToggleGroup.Item>
                         <ToggleGroup.Item value="table">Tabell</ToggleGroup.Item>
-                        <ToggleGroup.Item value="nokkeltall">Nøkkeltall</ToggleGroup.Item>
-                        <ToggleGroup.Item value="ki-forklaring">KI-forklaring</ToggleGroup.Item>
+                        <ToggleGroup.Item value="statcards">Kort</ToggleGroup.Item>
                     </ToggleGroup>
                 </div>
 
-                {/* Nøkkeltall-panel */}
-                {grafTab === 'nokkeltall' && (
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">Nøkkeltall</BodyShort>
-                        <BodyShort size="small">
-                            {previewResult
-                                ? '10 840 sidevisninger totalt · Snitt 1 548 / dag'
-                                : 'Hent graf for å se nøkkeltall.'}
-                        </BodyShort>
-                    </div>
-                )}
-
-                {/* KI-forklaring-panel */}
-                {grafTab === 'ki-forklaring' && (
-                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                        <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">KI-forklaring</BodyShort>
-                        <BodyShort size="small">
-                            {previewResult
-                                ? 'Trafikken økte 45 % fra start til slutt av perioden med to tydelige topper.'
-                                : 'Hent graf for å se KI-forklaring.'}
-                        </BodyShort>
-                    </div>
-                )}
+                {/* KI-forklaring / Nøkkeltall — click to toggle */}
+                <div
+                    className={`rounded-lg p-4 mb-4 cursor-pointer select-none ${infoPanelMode === 'ki-forklaring' ? 'bg-blue-50' : 'bg-gray-50'}`}
+                    onClick={() => {
+                        const next = infoPanelMode === 'ki-forklaring' ? 'nokkeltall' : 'ki-forklaring';
+                        setInfoPanelMode(next);
+                        if (next === 'nokkeltall' && nokkeltall === null && kiLoadingFor === null && previewResult && previewResult.length > 0) {
+                            fetchKiResponse('nokkeltall', previewResult);
+                        }
+                    }}
+                    title={infoPanelMode === 'ki-forklaring' ? 'Klikk for å se Nøkkeltall' : 'Klikk for å se KI-forklaring'}
+                >
+                    {infoPanelMode === 'ki-forklaring' ? (
+                        <>
+                            <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">KI-forklaring</BodyShort>
+                            <BodyShort size="small">
+                                {!previewResult
+                                    ? 'Hent graf for å se KI-forklaring.'
+                                    : kiLoadingFor === 'ki-forklaring'
+                                    ? 'Venter på KI...'
+                                    : (kiForklaring ?? 'Venter på KI...')}
+                            </BodyShort>
+                        </>
+                    ) : (
+                        <>
+                            <BodyShort size="small" weight="semibold" className="mb-1 text-blue-600">Nøkkeltall</BodyShort>
+                            <BodyShort size="small">
+                                {!previewResult
+                                    ? 'Hent graf for å se nøkkeltall.'
+                                    : kiLoadingFor === 'nokkeltall'
+                                    ? 'Venter på KI...'
+                                    : (nokkeltall ?? 'Venter på KI...')}
+                            </BodyShort>
+                        </>
+                    )}
+                </div>
 
                 {/* Grafvisning */}
-                <div className="min-h-80 border border-gray-100 rounded-lg p-2 bg-white mb-4">
+                <div
+                    className="border border-gray-100 rounded-lg p-2 bg-white mb-4"
+                    style={{ height: '320px', position: 'relative' }}
+                >
                     {previewResult ? (
                         <PinnedWidget
                             result={{ data: previewResult }}
-                            chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
+                            chartType={grafTab}
                             title={grafTitle}
+                            colSpan={grafTab === 'piechart' || grafTab === 'statcards' ? 2 : 1}
                         />
                     ) : (
-                        <div className="flex items-center justify-center h-80 text-gray-400 text-sm">
+                        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                             Grafen vises her etter at du trykker «Hent graf»
                         </div>
                     )}
@@ -252,6 +330,7 @@ export default function GrafPanel({
             <div className="border border-gray-200 rounded-lg bg-white mt-4">
                 <div className="flex items-center justify-between p-4">
                     <button
+                        type="button"
                         className="flex items-center gap-2 bg-transparent border-0 cursor-pointer"
                         onClick={() => setSqlOpen(!sqlOpen)}
                         aria-expanded={sqlOpen}
@@ -269,13 +348,14 @@ export default function GrafPanel({
                         {previewResult ? (
                             <>
                                 <SqlCodeEditor value={sqlValue} onChange={onSqlChange} />
-                                <div className="flex justify-between items-center mt-3 flex-wrap gap-2">
+                                <div className="flex items-center mt-3 flex-wrap gap-2">
                                     <div className="flex gap-2">
                                         <CopyButton copyText={sqlValue} text="Kopier" activeText="Kopiert!" size="small" />
                                         <Button variant="secondary" size="small" onClick={handleFormater}>Formater</Button>
                                         <Button variant="secondary" size="small" onClick={handleValider}>Valider</Button>
+                                        <Button variant="secondary" size="small" loading={estimating} onClick={handleKostnad}>Kostnad</Button>
+                                        <Button variant="secondary" size="small" loading={oppdaterLoading} onClick={handleOppdater}>Oppdater</Button>
                                     </div>
-                                    <Button variant="secondary" size="small" loading={estimating} onClick={handleKostnad}>Kostnad</Button>
                                 </div>
                                 {sqlFeedback && (
                                     <Alert variant={sqlFeedback.variant} size="small" className="mt-3">{sqlFeedback.message}</Alert>
@@ -295,8 +375,12 @@ export default function GrafPanel({
                 result={{ data: previewResult }}
                 open={lastNedOpen}
                 onClose={() => setLastNedOpen(false)}
-                chartType={grafTab === 'ki-forklaring' || grafTab === 'nokkeltall' ? 'linechart' : grafTab}
+                chartType={grafTab}
                 title={grafTitle}
+                pngSizes={[
+                    { cols: 1, rows: 1, name: '1×1' },
+                    { cols: 2, rows: 1, name: '2×1' },
+                ]}
                 prepareLineChartData={prepareLineChartData}
                 prepareBarChartData={prepareBarChartData}
                 preparePieChartData={preparePieChartData}
