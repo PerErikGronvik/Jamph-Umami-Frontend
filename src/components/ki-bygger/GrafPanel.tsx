@@ -59,9 +59,9 @@ export default function GrafPanel({
     const [kiLoadingFor, setKiLoadingFor] = useState<'ki-forklaring' | 'nokkeltall' | null>(null);
 
     const fetchKiResponse = async (mode: 'ki-forklaring' | 'nokkeltall', data: unknown[]) => {
-        const prompt = mode === 'ki-forklaring'
-            ? 'Du er en hjelpsom assistent. Forklar disse dataene og hva det betyr. Bruk kun muntlig språk. Unngå tegn og kode.'
-            : 'Du er en hjelpsom assistent. Hent ut de viktigste tallene og presenter dem. Bruk kun muntlig språk. Unngå tegn og kode.';
+        const role = mode === 'ki-forklaring'
+            ? 'Forklar disse dataene og hva det betyr. Bruk kun muntlig språk. Unngå tegn og kode.'
+            : 'Hent ut de viktigste tallene og presenter dem. Bruk kun muntlig språk. Unngå tegn og kode.';
         const ragApiBase = (import.meta.env.VITE_RAG_API_URL ?? '').replace(/\/$/, '');
         setKiLoadingFor(mode);
         try {
@@ -69,7 +69,9 @@ export default function GrafPanel({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    prompt,
+                    role,
+                    question: grafTitle,
+                    code: sqlValue,
                     data,
                 }),
             });
