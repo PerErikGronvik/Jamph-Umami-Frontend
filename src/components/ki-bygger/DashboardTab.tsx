@@ -173,7 +173,7 @@ export default function DashboardTab({
                                                 Åpne i Grafbygger
                                             </Button>
                                             <Button
-                                                variant="secondary"
+                                                variant="primary"
                                                 type="button"
                                                 onClick={() => handleToggleSize(i)}
                                             >
